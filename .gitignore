@@ -1,0 +1,12 @@
+*.swp
+target/
+.idea/
+*.iml
+.DS_Store
+*.keys
+release/
+stat_saved/
+*.exp
+*krb5.conf
+*.keytab
+*.args

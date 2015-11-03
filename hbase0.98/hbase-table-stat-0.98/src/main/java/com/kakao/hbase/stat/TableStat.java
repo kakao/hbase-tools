@@ -69,7 +69,7 @@ public class TableStat {
                 + "    --" + Args.OPTION_REGION + ": Stats on region level.\n"
                 + "    --" + Args.OPTION_REGION_SERVER + "=<rs name regex> : "
                 + "Show stats of specific region server at region level.\n"
-                + "    --" + Args.OPTION_OUTPUT + " : File name. Save stats in csv format.\n"
+                + "    --" + Args.OPTION_OUTPUT + "=<file name> : Save stats into a file with CSV format.\n"
                 + "    --" + Args.OPTION_HTTP_PORT + "=<http port> : Http server port. Default 0.\n"
                 + dynamicOptions()
                 + Args.commonUsage();

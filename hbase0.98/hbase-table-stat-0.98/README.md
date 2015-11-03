@@ -17,7 +17,7 @@ usage: hbase-table-stat (<zookeeper quorum>|<args file>) [table] [options]
     --interval=<secs> : Iteration interval in seconds. Default 10 secs.
     --region: Stats on region level.
     --rs=<rs name regex> : Show stats of specific region server at region level.
-    --output : File name. Save stats in csv format.
+    --output=<file name> : Save stats into a file with CSV format.
     --port=<http port> : Http server port. Default 0.
   dynamic options:
     h - show this help message

@@ -6,7 +6,7 @@ Collection of command-line tools for HBase. This is developed and tested with CD
 Usage
 ===
 1. Download jars from [releases](../../../releases) page
-    - Or build it by using [package.sh](../package.sh) on your Mac
+    - Or build it by using [package.sh](../package.sh) on your PC
 1. `java -jar [module-name]-[hbase_version]-[letest_version].jar`
 
 Common Options for All Modules

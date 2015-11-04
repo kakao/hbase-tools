@@ -31,7 +31,7 @@ public class LevelClass {
     public LevelClass(boolean multiTable, Args args) {
         if (multiTable && !args.has(Args.OPTION_REGION_SERVER) && !args.has(Args.OPTION_REGION)) {
             this.levelClass = TableName.class;
-        } else if (args.has(Args.OPTION_REGION) || args.valueOf(Args.OPTION_REGION_SERVER) != null) {
+        } else if (args.has(Args.OPTION_REGION)) {
             this.levelClass = RegionName.class;
         } else {
             this.levelClass = ServerName.class;

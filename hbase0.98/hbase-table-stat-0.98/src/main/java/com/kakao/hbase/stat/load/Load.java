@@ -235,10 +235,9 @@ public class Load {
                         && !CommandAdapter.getTableName(hRegionInfo).startsWith(Constant.UNIT_TEST_TABLE_PREFIX))
                     continue;
 
-                if (tableInfo.getServerIndex(args) != TableInfo.INDEX_NOT_SET) {
+                if (tableInfo.getServerIndexes(args).size() > 0) {
                     int serverIndex = tableInfo.serverIndex(hRegionInfo);
-                    int serverIndexArg = tableInfo.getServerIndex(args);
-                    if (serverIndex != serverIndexArg) continue;
+                    if (!tableInfo.getServerIndexes(args).contains(serverIndex)) continue;
                 }
 
                 final Level level = levelClass.createLevel(hRegionInfo, tableInfo);

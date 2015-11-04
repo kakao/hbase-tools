@@ -36,8 +36,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class TableInfo {
-    static final int INDEX_NOT_SET = -1;
-    private static final int INDEX_NOT_INITIALIZED = -2;
     private final HBaseAdmin admin;
     private final Load load;
     private final String tableName;
@@ -46,7 +44,7 @@ public class TableInfo {
     private Map<byte[], HRegionInfo> regionMap;
     private Set<ServerName> serverNameSet = new TreeSet<>();
     private RegionLoadAdapter regionLoadAdapter;
-    private int indexRS = INDEX_NOT_INITIALIZED;
+    private Set<Integer> indexRSs = null;
 
     public TableInfo(HBaseAdmin admin, String tableName, Args args) throws Exception {
         super();
@@ -87,7 +85,7 @@ public class TableInfo {
             return tableName.equals(Args.ALL_TABLES) || !admin.tableExists(tableName);
         } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("Illegal character code")
-                    || e.getMessage().contains("Namespaces can only start with alphanumeric characters"))
+                || e.getMessage().contains("Namespaces can only start with alphanumeric characters"))
                 return true;
             throw e;
         }
@@ -135,10 +133,10 @@ public class TableInfo {
         Set<String> tables = tables(admin, tableName);
         if (tables == null) {
             regionServerMap = CommandAdapter.regionServerMap(args, admin.getConfiguration()
-                    , admin.getConnection(), false);
+                , admin.getConnection(), false);
         } else {
             regionServerMap = CommandAdapter.regionServerMap(args, admin.getConfiguration()
-                    , admin.getConnection(), tables, false);
+                , admin.getConnection(), tables, false);
         }
         clean(regionServerMap);
 
@@ -228,27 +226,26 @@ public class TableInfo {
         return Arrays.asList(serverNameSet.toArray()).indexOf(serverName);
     }
 
-    int getServerIndex(Args args) {
-        if (indexRS == INDEX_NOT_INITIALIZED) {
+    Set<Integer> getServerIndexes(Args args) {
+        if (indexRSs == null) {
+            indexRSs = new HashSet<>();
             if (args.has(Args.OPTION_REGION_SERVER)) {
                 Object arg = args.valueOf(Args.OPTION_REGION_SERVER);
-                if (arg == null) {
-                    return INDEX_NOT_SET;
-                } else {
+                if (arg != null) {
                     int i = 0;
                     for (ServerName serverName : serverNameSet) {
                         if (serverName.getServerName().matches((String) arg)) {
-                            indexRS = i;
-                            return indexRS;
+                            indexRSs.add(i);
                         }
                         i++;
                     }
-                    throw new IllegalStateException(arg + " is invalid");
+
+                    if (indexRSs.size() == 0)
+                        throw new IllegalStateException(arg + " is invalid");
                 }
-            } else {
-                return INDEX_NOT_SET;
             }
-        } else
-            return indexRS;
+        }
+
+        return indexRSs;
     }
 }

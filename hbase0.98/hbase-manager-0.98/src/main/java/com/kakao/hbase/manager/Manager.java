@@ -99,7 +99,8 @@ public class Manager {
 
         return new Reflections(new ConfigurationBuilder()
                 .setScanners(new SubTypesScanner(false /* don't exclude Object.class */), new ResourcesScanner())
-                .setUrls(ClasspathHelper.forClassLoader(classLoadersList.toArray(new ClassLoader[classLoadersList.size()])))
+                .setUrls(ClasspathHelper.forManifest(ClasspathHelper.forClassLoader(
+                    classLoadersList.toArray(new ClassLoader[classLoadersList.size()]))))
                 .filterInputsBy(new FilterBuilder().include(FilterBuilder.prefix("com.kakao.hbase.manager.command"))));
     }
 

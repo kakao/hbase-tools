@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
-set -eu
+set -e
 set -o pipefail
 
-if ! export JAVA_HOME=$(/usr/libexec/java_home -v1.7); then
-  echo JDK7 is required
-  exit 1
-fi
+[ -z $JAVA_HOME ] && (echo "JAVA_HOME is not set."; exit 1)
+JAVA_VER=$($JAVA_HOME/bin/java -version 2>&1 | sed 's/java version "\(.*\)\.\(.*\)\..*"/\1\2/; 1q')
+[ "$JAVA_VER" -eq 17 ] || (echo "JDK7 is required."; exit 1)
 
 LIFECYCLE=${1:-package}
 

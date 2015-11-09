@@ -20,7 +20,7 @@ import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.HBaseClient;
 import com.kakao.hbase.common.InvalidTableException;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.common.util.AlertSender;
 import com.kakao.hbase.common.util.AlertSenderTest;
 import com.kakao.hbase.manager.command.Command;

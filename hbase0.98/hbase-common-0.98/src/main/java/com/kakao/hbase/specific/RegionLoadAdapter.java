@@ -18,7 +18,7 @@ package com.kakao.hbase.specific;
 
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.LoadEntry;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 

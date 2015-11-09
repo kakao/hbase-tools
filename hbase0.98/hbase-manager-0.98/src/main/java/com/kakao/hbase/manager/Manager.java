@@ -21,7 +21,7 @@ import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.HBaseClient;
 import com.kakao.hbase.common.InvalidTableException;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.manager.command.Command;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.reflections.Reflections;

@@ -16,6 +16,7 @@
 
 package com.kakao.hbase.common;
 
+import com.kakao.hbase.common.util.Util;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import org.apache.commons.lang.ArrayUtils;

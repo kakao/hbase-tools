@@ -18,7 +18,7 @@ package com.kakao.hbase.manager.command;
 
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
 import com.kakao.hbase.stat.load.TableInfo;

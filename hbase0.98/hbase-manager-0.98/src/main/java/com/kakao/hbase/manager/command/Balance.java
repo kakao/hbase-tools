@@ -19,7 +19,7 @@ package com.kakao.hbase.manager.command;
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;

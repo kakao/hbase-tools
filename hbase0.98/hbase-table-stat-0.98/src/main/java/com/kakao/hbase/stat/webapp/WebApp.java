@@ -18,7 +18,7 @@ package com.kakao.hbase.stat.webapp;
 
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.stat.KeyInputListener;
 import com.kakao.hbase.stat.TableStat;
 import com.kakao.hbase.stat.print.Formatter;

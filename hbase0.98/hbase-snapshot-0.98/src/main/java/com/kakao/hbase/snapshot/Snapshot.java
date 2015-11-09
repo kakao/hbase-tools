@@ -20,7 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.kakao.hbase.SnapshotArgs;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.HBaseClient;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.SnapshotAdapter;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;

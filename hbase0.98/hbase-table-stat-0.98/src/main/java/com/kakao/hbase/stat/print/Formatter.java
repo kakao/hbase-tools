@@ -17,7 +17,7 @@
 package com.kakao.hbase.stat.print;
 
 import com.kakao.hbase.common.Args;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.stat.load.Load;
 import com.google.common.annotations.VisibleForTesting;
 

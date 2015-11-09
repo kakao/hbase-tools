@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package com.kakao.hbase.common;
+package com.kakao.hbase.common.util;
 
-import com.kakao.hbase.common.util.AlertSender;
+import com.kakao.hbase.common.Args;
+import com.kakao.hbase.common.Constant;
+import com.kakao.hbase.common.InvalidTableException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;

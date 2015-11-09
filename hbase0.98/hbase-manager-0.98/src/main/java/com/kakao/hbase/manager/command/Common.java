@@ -17,7 +17,7 @@
 package com.kakao.hbase.manager.command;
 
 import com.kakao.hbase.common.Constant;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.NotServingRegionException;

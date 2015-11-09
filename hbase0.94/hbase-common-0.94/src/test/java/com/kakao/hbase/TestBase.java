@@ -19,7 +19,7 @@ package com.kakao.hbase;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.HBaseClient;
 import com.kakao.hbase.common.InvalidTableException;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.HBaseAdminWrapper;
 import joptsimple.OptionParser;

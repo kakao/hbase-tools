@@ -19,7 +19,7 @@ package com.kakao.hbase.stat;
 import com.google.common.annotations.VisibleForTesting;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.HBaseClient;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.stat.load.*;
 import com.kakao.hbase.stat.print.Formatter;
 import com.kakao.hbase.stat.webapp.WebApp;

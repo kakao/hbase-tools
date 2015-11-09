@@ -17,6 +17,7 @@
 package com.kakao.hbase.common;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.HBaseAdminWrapper;
 import org.apache.hadoop.conf.Configuration;

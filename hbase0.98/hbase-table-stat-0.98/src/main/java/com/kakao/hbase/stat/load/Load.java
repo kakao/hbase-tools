@@ -20,7 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.LoadEntry;
-import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;

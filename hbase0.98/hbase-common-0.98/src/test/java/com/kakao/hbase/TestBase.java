@@ -17,6 +17,7 @@
 package com.kakao.hbase;
 
 import com.kakao.hbase.common.*;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.HBaseAdminWrapper;
 import joptsimple.OptionParser;
 import org.apache.commons.logging.Log;

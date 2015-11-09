@@ -71,8 +71,6 @@ public class Snapshot implements Watcher {
                 + "=<tables in list type> : List to override.\n"
                 + "    --" + SnapshotArgs.OPTION_EXCLUDE
                 + "=<tables expression> : Tables to be excluded.\n"
-                + "    --" + SnapshotArgs.OPTION_ALERT_SCRIPT
-                + "=<alert script> : The script to run when an error occurs.\n"
                 + "    --" + SnapshotArgs.OPTION_CLEAR_WATCH_LEAK
                 + " : Clear watch leaks. Workaround for HBASE-13885. This is not necessary as of HBase 0.98.14.\n"
                 + "    --" + SnapshotArgs.OPTION_CLEAR_WATCH_LEAK_ONLY
@@ -135,10 +133,10 @@ public class Snapshot implements Watcher {
                     deleteOldSnapshots(admin, tableName);
                 }
             }
+            Util.sendAlertAfterFinished(args, this.getClass(), "Successfully finished");
         } catch (Throwable e) {
             System.out.println("\n" + timestamp(TimestampFormat.log) + " - " + errorMessage(e));
-            if (args.alertScript() != null)
-                AlertSender.send(args.alertScript(), errorMessage(e));
+            Util.sendAlertAfterFailed(args, this.getClass(), errorMessage(e));
             throw e;
         } finally {
             if (zooKeeper != null && zooKeeper.getState().isConnected()) {

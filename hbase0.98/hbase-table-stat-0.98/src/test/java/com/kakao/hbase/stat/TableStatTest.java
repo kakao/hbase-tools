@@ -16,7 +16,10 @@
 
 package com.kakao.hbase.stat;
 
+import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.LoadEntry;
+import com.kakao.hbase.common.util.AlertSender;
+import com.kakao.hbase.common.util.AlertSenderTest;
 import com.kakao.hbase.stat.load.Level;
 import com.kakao.hbase.stat.load.RegionName;
 import com.kakao.hbase.stat.load.SortKey;
@@ -871,5 +874,37 @@ public class TableStatTest extends StatTestBase {
 
         command.run();
         Assert.assertEquals("Region (RS Index)", command.getLoad().getLevelClass().getLevelTypeString());
+    }
+
+    @Test
+    public void testAfterFinished() throws Exception {
+        String tableNameRegex = tableName + ".*";
+        String[] args = {"zookeeper", tableNameRegex, "--interval=0", "--rs",
+            "--" + Args.OPTION_AFTER_FINISHED + "=" + AlertSenderTest.ALERT_SCRIPT};
+        TableStat command = new TableStat(admin, new StatArgs(args));
+
+        int sendCountBefore = AlertSender.getSendCount();
+
+        command.run();
+
+        Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
+    }
+
+    @Test
+    public void testAfterFailed() throws Exception {
+        String tableNameRegex = tableName + ".*";
+        String[] args = {"zookeeper", tableNameRegex, "--interval=-1", "--rs",
+            "--" + Args.OPTION_AFTER_FAILED + "=" + AlertSenderTest.ALERT_SCRIPT};
+        TableStat command = new TableStat(admin, new StatArgs(args));
+
+        int sendCountBefore = AlertSender.getSendCount();
+
+        try {
+            command.run();
+            fail();
+        } catch (IllegalArgumentException ignore) {
+        }
+
+        Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
     }
 }

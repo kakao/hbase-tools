@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.kakao.hbase.snapshot;
+package com.kakao.hbase.common.util;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.atomic.AtomicInteger;
 
-class AlertSender {
+public class AlertSender {
     private static AtomicInteger sendCounter = new AtomicInteger();
 
     private AlertSender() {
@@ -55,7 +55,7 @@ class AlertSender {
     }
 
     @VisibleForTesting
-    static int getSendCount() {
+    public static int getSendCount() {
         return sendCounter.get();
     }
 }

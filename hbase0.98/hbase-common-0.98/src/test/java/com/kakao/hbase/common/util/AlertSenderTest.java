@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.kakao.hbase.snapshot;
+package com.kakao.hbase.common.util;
 
 import org.junit.Assert;
 import org.junit.Test;

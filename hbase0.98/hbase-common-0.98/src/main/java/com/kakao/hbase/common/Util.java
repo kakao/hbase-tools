@@ -16,6 +16,7 @@
 
 package com.kakao.hbase.common;
 
+import com.kakao.hbase.common.util.AlertSender;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -186,10 +187,27 @@ public class Util {
         return tableSet;
     }
 
+    @SuppressWarnings("deprecation")
     public static String getRegionInfoString(HRegionInfo regionA) {
         return "{TABLE => " + Bytes.toString(regionA.getTableName())
-                + ", ENCODED => " + regionA.getEncodedName()
-                + ", STARTKEY => '" + Bytes.toStringBinary(regionA.getStartKey())
-                + "', ENDKEY => '" + Bytes.toStringBinary(regionA.getEndKey()) + "'";
+            + ", ENCODED => " + regionA.getEncodedName()
+            + ", STARTKEY => '" + Bytes.toStringBinary(regionA.getStartKey())
+            + "', ENDKEY => '" + Bytes.toStringBinary(regionA.getEndKey()) + "'";
+    }
+
+    public static void sendAlertAfterFailed(Args args, Class clazz, String message) {
+        if (args != null && args.getAfterFailedScript() != null)
+            AlertSender.send(args.getAfterFailedScript(),
+                "FAILED - " + clazz.getSimpleName()
+                    + " - " + message
+                    + " - " + args.toString());
+    }
+
+    public static void sendAlertAfterFinished(Args args, Class clazz, String message) {
+        if (args != null && args.getAfterFinishedScript() != null)
+            AlertSender.send(args.getAfterFinishedScript(),
+                "FINISHED - " + clazz.getSimpleName()
+                    + " - " + message
+                    + " - " + args.toString());
     }
 }

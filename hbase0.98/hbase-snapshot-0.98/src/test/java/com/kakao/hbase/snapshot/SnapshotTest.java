@@ -18,6 +18,9 @@ package com.kakao.hbase.snapshot;
 
 import com.kakao.hbase.SnapshotArgs;
 import com.kakao.hbase.TestBase;
+import com.kakao.hbase.common.Args;
+import com.kakao.hbase.common.util.AlertSender;
+import com.kakao.hbase.common.util.AlertSenderTest;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.junit.Assert;
@@ -413,7 +416,7 @@ public class SnapshotTest extends TestBase {
     }
 
     @Test
-    public void testAlert() throws Exception {
+    public void testAfterFailed() throws Exception {
         class SnapshotArgsTest extends SnapshotArgs {
             public SnapshotArgsTest(String[] args) throws IOException {
                 super(args);
@@ -431,7 +434,8 @@ public class SnapshotTest extends TestBase {
         SnapshotArgs args;
         Snapshot app;
 
-        argsParam = new String[]{"localhost", ".*", "--alert-script=" + AlertSenderTest.ALERT_SCRIPT};
+        argsParam = new String[]{"localhost", ".*",
+            "--" + Args.OPTION_AFTER_FAILED + "=" + AlertSenderTest.ALERT_SCRIPT};
         args = new SnapshotArgsTest(argsParam);
         app = new Snapshot(admin, args);
 
@@ -443,6 +447,26 @@ public class SnapshotTest extends TestBase {
             if (!e.getMessage().contains("Table 'INVALID_TABLE' doesn't exist, can't take snapshot"))
                 throw e;
         }
+        Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
+    }
+
+    @Test
+    public void testAfterFinished() throws Exception {
+        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+
+        // all tables, keep unlimited
+        String[] argsParam = {"localhost", ".*", "--test",
+            "--" + Args.OPTION_AFTER_FINISHED + "=" + AlertSenderTest.ALERT_SCRIPT};
+        SnapshotArgs args = new SnapshotArgs(argsParam);
+        Snapshot app = new Snapshot(admin, args);
+
+        int sendCountBefore = AlertSender.getSendCount();
+
+        // create snapshot
+        app.run();
+        snapshotDescriptions = listSnapshots(tableName + ".*");
+        assertEquals(1, snapshotDescriptions.size());
+
         Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
     }
 }

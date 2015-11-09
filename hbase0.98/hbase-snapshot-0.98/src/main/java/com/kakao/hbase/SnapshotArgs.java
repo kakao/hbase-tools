@@ -61,7 +61,6 @@ public class SnapshotArgs extends Args {
         optionParser.accepts(OPTION_SKIP_FLUSH).withRequiredArg();
         optionParser.accepts(OPTION_EXCLUDE).withRequiredArg();
         optionParser.accepts(OPTION_OVERRIDE).withRequiredArg();
-        optionParser.accepts(OPTION_ALERT_SCRIPT).withRequiredArg();
         optionParser.accepts(OPTION_CLEAR_WATCH_LEAK);
         optionParser.accepts(OPTION_CLEAR_WATCH_LEAK_ONLY);
         return optionParser;
@@ -139,14 +138,6 @@ public class SnapshotArgs extends Args {
             for (HTableDescriptor hTableDescriptor : admin.listTables(tableName)) {
                 tableSet.add(hTableDescriptor.getNameAsString());
             }
-        }
-    }
-
-    public String alertScript() {
-        if (optionSet.has(OPTION_ALERT_SCRIPT)) {
-            return (String) optionSet.valueOf(OPTION_ALERT_SCRIPT);
-        } else {
-            return null;
         }
     }
 }

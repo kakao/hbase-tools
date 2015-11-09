@@ -18,8 +18,11 @@ package com.kakao.hbase.manager;
 
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
+import com.kakao.hbase.common.HBaseClient;
 import com.kakao.hbase.common.InvalidTableException;
 import com.kakao.hbase.common.Util;
+import com.kakao.hbase.common.util.AlertSender;
+import com.kakao.hbase.common.util.AlertSenderTest;
 import com.kakao.hbase.manager.command.Command;
 import joptsimple.OptionException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -139,5 +142,43 @@ public class ManagerTest extends TestBase {
         String[] args = {commandName, "zookeeper", "table"};
         Args argsObject = Manager.parseArgs(args);
         new Manager(argsObject, commandName);
+    }
+
+    @Test
+    public void testAfterFailed() throws Exception {
+        HBaseClient.setAdminForTesting(admin);
+
+        String commandName = "assign";
+        String[] args = {commandName, "localhost", "balancer", "invalid",
+            "--" + Args.OPTION_AFTER_FAILED + "=" + AlertSenderTest.ALERT_SCRIPT};
+        Args argsObject = Manager.parseArgs(args);
+        Manager manager = new Manager(argsObject, commandName);
+
+        int sendCountBefore = AlertSender.getSendCount();
+
+        try {
+            manager.run();
+            Assert.fail();
+        } catch (IllegalArgumentException ignore) {
+        }
+
+        Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
+    }
+
+    @Test
+    public void testAfterFinished() throws Exception {
+        HBaseClient.setAdminForTesting(admin);
+
+        String commandName = "assign";
+        String[] args = {commandName, "localhost", "balancer", "on",
+            "--" + Args.OPTION_AFTER_FINISHED + "=" + AlertSenderTest.ALERT_SCRIPT};
+        Args argsObject = Manager.parseArgs(args);
+        Manager manager = new Manager(argsObject, commandName);
+
+        int sendCountBefore = AlertSender.getSendCount();
+
+        manager.run();
+
+        Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
     }
 }

@@ -46,7 +46,7 @@ public class KeyInputListener implements Runnable {
                 break;
             case "q":
                 System.out.println("Bye!");
-                System.exit(0);
+                tableStat.exit(0, null);
                 break;
             case "d":
                 result = tableStat.toggleDiffFromStart();

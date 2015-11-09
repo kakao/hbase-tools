@@ -39,7 +39,8 @@ public abstract class Args {
     public static final String OPTION_SKIP_FLUSH = "skip-flush";
     public static final String OPTION_EXCLUDE = "exclude";
     public static final String OPTION_OVERRIDE = "override";
-    public static final String OPTION_ALERT_SCRIPT = "alert-script";
+    public static final String OPTION_AFTER_FAILED = "after-failed";
+    public static final String OPTION_AFTER_FINISHED = "after-finished";
     public static final String OPTION_CLEAR_WATCH_LEAK = "clear-watch-leak";
     public static final String OPTION_CLEAR_WATCH_LEAK_ONLY = "clear-watch-leak-only";
     public static final String OPTION_OPTIMIZE = "optimize";
@@ -77,18 +78,22 @@ public abstract class Args {
 
     public static String commonUsage() {
         return "  args file:\n"
-                + "    Plain text file that contains args and options.\n"
-                + "  common options:\n"
-                + "    --" + Args.OPTION_FORCE_PROCEED + ": Do not ask whether to proceed.\n"
-                + "    --" + Args.OPTION_TEST + ": Set test mode.\n"
-                + "    --" + Args.OPTION_DEBUG + ": Print debug log.\n"
-                + "    --" + Args.OPTION_VERBOSE + ": Print some more messages.\n"
-                + "    --" + Args.OPTION_KEY_TAB + "=<keytab file>: Kerberos keytab file. Use absolute path.\n"
-                + "    --" + Args.OPTION_PRINCIPAL + "=<principal>: Kerberos principal.\n"
-                + "    --" + Args.OPTION_REALM + "=<realm>: Kerberos realm to use." +
-                " Set this arg if it is not the default realm.\n"
-                + "    --" + Args.OPTION_KERBEROS_CONFIG + "=<kerberos config file>: Kerberos config file." +
-                " Use absolute path.\n";
+            + "    Plain text file that contains args and options.\n"
+            + "  common options:\n"
+            + "    --" + Args.OPTION_FORCE_PROCEED + ": Do not ask whether to proceed.\n"
+            + "    --" + Args.OPTION_TEST + ": Set test mode.\n"
+            + "    --" + Args.OPTION_DEBUG + ": Print debug log.\n"
+            + "    --" + Args.OPTION_VERBOSE + ": Print some more messages.\n"
+            + "    --" + Args.OPTION_AFTER_FAILED
+            + "=<script> : The script to run when this running is failed.\n"
+            + "    --" + Args.OPTION_AFTER_FINISHED
+            + "=<script> : The script to run when this running is successfully finished.\n"
+            + "    --" + Args.OPTION_KEY_TAB + "=<keytab file>: Kerberos keytab file. Use absolute path.\n"
+            + "    --" + Args.OPTION_PRINCIPAL + "=<principal>: Kerberos principal.\n"
+            + "    --" + Args.OPTION_REALM + "=<realm>: Kerberos realm to use."
+            + " Set this arg if it is not the default realm.\n"
+            + "    --" + Args.OPTION_KERBEROS_CONFIG + "=<kerberos config file>: Kerberos config file." +
+            " Use absolute path.\n";
     }
 
     public static String[] parseArgsFile(String fileName) throws IOException {
@@ -103,6 +108,14 @@ public abstract class Args {
             string = Util.readFromFile(fileName);
         }
         return string.split("[ \n]");
+    }
+
+    @Override
+    public String toString() {
+        if (optionSet == null) return "";
+
+        return (optionSet.nonOptionArguments() == null ? "" : optionSet.nonOptionArguments().toString())
+            + " - " + (optionSet.asMap() == null ? "" : optionSet.asMap().toString());
     }
 
     public String getTableName() {
@@ -129,7 +142,25 @@ public abstract class Args {
         optionParser.accepts(OPTION_PRINCIPAL).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_REALM).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_KERBEROS_CONFIG).withRequiredArg().ofType(String.class);
+        optionParser.accepts(OPTION_AFTER_FAILED).withRequiredArg().ofType(String.class);
+        optionParser.accepts(OPTION_AFTER_FINISHED).withRequiredArg().ofType(String.class);
         return optionParser;
+    }
+
+    public String getAfterFailedScript() {
+        if (optionSet.has(OPTION_AFTER_FAILED)) {
+            return (String) optionSet.valueOf(OPTION_AFTER_FAILED);
+        } else {
+            return null;
+        }
+    }
+
+    public String getAfterFinishedScript() {
+        if (optionSet.has(OPTION_AFTER_FINISHED)) {
+            return (String) optionSet.valueOf(OPTION_AFTER_FINISHED);
+        } else {
+            return null;
+        }
     }
 
     public int getIntervalMS() {

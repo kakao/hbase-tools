@@ -16,6 +16,7 @@
 
 package com.kakao.hbase.common;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.HBaseAdminWrapper;
 import org.apache.hadoop.conf.Configuration;
@@ -204,5 +205,10 @@ public class HBaseClient {
         validateAuthentication();
 
         return admin;
+    }
+
+    @VisibleForTesting
+    public static void setAdminForTesting(HBaseAdmin admin) {
+        HBaseClient.admin = admin;
     }
 }

@@ -16,13 +16,13 @@
 
 package com.kakao.hbase.manager;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.HBaseClient;
 import com.kakao.hbase.common.InvalidTableException;
 import com.kakao.hbase.common.Util;
 import com.kakao.hbase.manager.command.Command;
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.reflections.Reflections;
 import org.reflections.scanners.ResourcesScanner;
@@ -98,10 +98,10 @@ public class Manager {
         classLoadersList.add(ClasspathHelper.staticClassLoader());
 
         return new Reflections(new ConfigurationBuilder()
-                .setScanners(new SubTypesScanner(false /* don't exclude Object.class */), new ResourcesScanner())
-                .setUrls(ClasspathHelper.forManifest(ClasspathHelper.forClassLoader(
-                    classLoadersList.toArray(new ClassLoader[classLoadersList.size()]))))
-                .filterInputsBy(new FilterBuilder().include(FilterBuilder.prefix("com.kakao.hbase.manager.command"))));
+            .setScanners(new SubTypesScanner(false /* don't exclude Object.class */), new ResourcesScanner())
+            .setUrls(ClasspathHelper.forManifest(ClasspathHelper.forClassLoader(
+                classLoadersList.toArray(new ClassLoader[classLoadersList.size()]))))
+            .filterInputsBy(new FilterBuilder().include(FilterBuilder.prefix("com.kakao.hbase.manager.command"))));
     }
 
     @VisibleForTesting
@@ -141,7 +141,8 @@ public class Manager {
     }
 
     private static void printUsage() {
-        System.out.println("Usage: " + Manager.class.getSimpleName() + " <command> (<zookeeper quorum>|<args file>) [args...]");
+        System.out.println("Usage: " + Manager.class.getSimpleName()
+            + " <command> (<zookeeper quorum>|<args file>) [args...]");
         System.out.println("  commands:");
         for (String c : getCommandNames()) System.out.println("    " + c);
         System.out.println(Args.commonUsage());
@@ -171,6 +172,10 @@ public class Manager {
                 Util.validateTable(admin, args.getTableName());
             }
             command.run();
+            Util.sendAlertAfterFinished(args, this.getClass(), "Successfully finished");
+        } catch (Throwable e) {
+            Util.sendAlertAfterFailed(args, this.getClass(), e.getMessage());
+            throw e;
         }
     }
 

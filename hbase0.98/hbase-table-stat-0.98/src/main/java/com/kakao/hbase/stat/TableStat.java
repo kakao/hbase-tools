@@ -51,61 +51,72 @@ public class TableStat {
             Args args = new StatArgs(argsParam);
 
             try (HBaseAdmin admin = HBaseClient.getAdmin(args)) {
-                new TableStat(admin, args).run();
-            } catch (Exception e) {
+                TableStat tableStat = new TableStat(admin, args);
+                tableStat.run();
+                tableStat.exit(0, null);
+            } catch (Throwable e) {
                 System.out.println(e.getMessage());
                 e.printStackTrace();
+                System.exit(1);
             }
-        } catch (IllegalArgumentException e) {
+        } catch (Throwable e) {
             System.out.println(usage());
         }
     }
 
     public static String usage() {
         return "Show some important metrics periodically.\n"
-                + "usage: hbase-table-stat (<zookeeper quorum>|<args file>) [table] [options]\n"
-                + "  options:\n"
-                + "    --" + Args.OPTION_INTERVAL + "=<secs> : Iteration interval in seconds. Default 10 secs.\n"
-                + "    --" + Args.OPTION_REGION + ": Stats on region level.\n"
-                + "    --" + Args.OPTION_REGION_SERVER + "=<rs name regex> : "
-                + "Show stats of specific region server at region level.\n"
-                + "    --" + Args.OPTION_OUTPUT + "=<file name> : Save stats into a file with CSV format.\n"
-                + "    --" + Args.OPTION_HTTP_PORT + "=<http port> : Http server port. Default 0.\n"
-                + dynamicOptions()
-                + Args.commonUsage();
+            + "usage: hbase-table-stat (<zookeeper quorum>|<args file>) [table] [options]\n"
+            + "  options:\n"
+            + "    --" + Args.OPTION_INTERVAL + "=<secs> : Iteration interval in seconds. Default 10 secs.\n"
+            + "    --" + Args.OPTION_REGION + ": Stats on region level.\n"
+            + "    --" + Args.OPTION_REGION_SERVER + "=<rs name regex> : "
+            + "Show stats of specific region server at region level.\n"
+            + "    --" + Args.OPTION_OUTPUT + "=<file name> : Save stats into a file with CSV format.\n"
+            + "    --" + Args.OPTION_HTTP_PORT + "=<http port> : Http server port. Default 0.\n"
+            + dynamicOptions()
+            + Args.commonUsage();
     }
 
     public static String dynamicOptions() {
         return "  dynamic options:\n"
-                + "    h - show this help message\n"
-                + "    q - quit this app\n"
-                + "    p - pause iteration. toggle\n"
-                + "    d - show differences from the start. toggle\n"
-                + "    R - reset diff start point to now\n"
-                + "    c - show changed records only. toggle\n"
-                + "    r - show change rate instead of diff. toggle\n"
-                + "    [shift]0-9 - sort by selected column value or diff (with shift). in ascending order\n"
-                + "    S - save current load data to a csv file\n"
-                + "    L - load a saved csv file and set it as diff start point\n"
-                + "    C - show connection information\n";
+            + "    h - show this help message\n"
+            + "    q - quit this app\n"
+            + "    p - pause iteration. toggle\n"
+            + "    d - show differences from the start. toggle\n"
+            + "    R - reset diff start point to now\n"
+            + "    c - show changed records only. toggle\n"
+            + "    r - show change rate instead of diff. toggle\n"
+            + "    [shift]0-9 - sort by selected column value or diff (with shift). in ascending order\n"
+            + "    S - save current load data to a csv file\n"
+            + "    L - load a saved csv file and set it as diff start point\n"
+            + "    C - show connection information\n";
     }
 
     public void run() throws Exception {
-        if (intervalMS == 0) {
-            runInternal();
-        } else {
-            runKeyInputListener();
+        try {
+            if (intervalMS < 0) {
+                throw new IllegalArgumentException("intervalMS is invalid - " + intervalMS);
+            } else if (intervalMS == 0) {
+                runInternal();
+            } else {
+                runKeyInputListener();
 
-            //noinspection InfiniteLoopStatement
-            while (true) {
-                long timestamp = System.currentTimeMillis();
-                if (!paused) runInternal();
-                long duration = System.currentTimeMillis() - timestamp;
-                long sleepMillis = intervalMS - duration;
-                sleepMillis = sleepMillis < 0 ? 0 : sleepMillis;
-                Util.printVerboseMessage(args, "Sleep " + sleepMillis + " milliseconds");
-                Thread.sleep(sleepMillis);
+                //noinspection InfiniteLoopStatement
+                while (true) {
+                    long timestamp = System.currentTimeMillis();
+                    if (!paused) runInternal();
+                    long duration = System.currentTimeMillis() - timestamp;
+                    long sleepMillis = intervalMS - duration;
+                    sleepMillis = sleepMillis < 0 ? 0 : sleepMillis;
+                    Util.printVerboseMessage(args, "Sleep " + sleepMillis + " milliseconds");
+                    Thread.sleep(sleepMillis);
+                }
             }
+            Util.sendAlertAfterFinished(args, this.getClass(), "Successfully finished");
+        } catch (Throwable e) {
+            Util.sendAlertAfterFailed(args, this.getClass(), e.getMessage());
+            throw e;
         }
     }
 
@@ -124,9 +135,18 @@ public class TableStat {
             } catch (Throwable e) {
                 System.out.println(e.getMessage());
                 e.printStackTrace();
-                System.exit(1);
+                exit(1, e);
             }
         }
+    }
+
+    void exit(int exitCode, Throwable e) {
+        if (exitCode == 0) {
+            Util.sendAlertAfterFinished(args, this.getClass(), "Successfully finished");
+        } else {
+            Util.sendAlertAfterFailed(args, this.getClass(), e.getMessage());
+        }
+        System.exit(exitCode);
     }
 
     void printStat() {

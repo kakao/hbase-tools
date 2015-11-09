@@ -79,7 +79,7 @@ public abstract class Args {
         return "  args file:\n"
                 + "    Plain text file that contains args and options.\n"
                 + "  common options:\n"
-                + "    --" + Args.OPTION_FORCE_PROCEED + ": Do not ask whether proceed or not.\n"
+                + "    --" + Args.OPTION_FORCE_PROCEED + ": Do not ask whether to proceed.\n"
                 + "    --" + Args.OPTION_TEST + ": Set test mode.\n"
                 + "    --" + Args.OPTION_DEBUG + ": Print debug log.\n"
                 + "    --" + Args.OPTION_VERBOSE + ": Print some more messages.\n"

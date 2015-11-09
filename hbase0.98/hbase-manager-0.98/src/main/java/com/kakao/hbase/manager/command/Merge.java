@@ -67,7 +67,6 @@ public class Merge implements Command {
                 + "  actions:\n"
                 + "    empty-fast       - Merge adjacent 2 empty regions only.\n"
                 + "    empty            - Merge all empty regions.\n"
-                + "    size <threshold> - Merge all regions smaller then threshold.\n"
                 + "  options:\n"
                 + "    --" + Args.OPTION_MAX_ITERATION + " - Set max iteration.\n"
                 + Args.commonUsage();

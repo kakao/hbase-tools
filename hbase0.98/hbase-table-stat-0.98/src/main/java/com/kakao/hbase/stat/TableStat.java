@@ -127,16 +127,16 @@ public class TableStat {
     }
 
     private void runInternal() throws Exception {
-        synchronized (this) {
-            try {
+        try {
+            synchronized (this) {
                 tableInfo.refresh();
-
-                printStat();
-            } catch (Throwable e) {
-                System.out.println(e.getMessage());
-                e.printStackTrace();
-                exit(1, e);
             }
+
+            printStat();
+        } catch (Throwable e) {
+            System.out.println(e.getMessage());
+            e.printStackTrace();
+            exit(1, e);
         }
     }
 

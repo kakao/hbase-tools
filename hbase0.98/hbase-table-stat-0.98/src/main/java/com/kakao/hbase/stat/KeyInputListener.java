@@ -38,11 +38,13 @@ public class KeyInputListener implements Runnable {
         if (option.matches("^[0-9~!@#$%^&*()_+]")) {
             result = tableStat.setSort(option);
             System.out.println(result);
+            tableStat.printStat();
             return result;
         }
         switch (option) {
             case "h":
-                result = TableStat.dynamicOptions().toString();
+                result = TableStat.dynamicOptions();
+                if (result != null) System.out.println(result);
                 break;
             case "q":
                 System.out.println("Bye!");
@@ -50,24 +52,34 @@ public class KeyInputListener implements Runnable {
                 break;
             case "d":
                 result = tableStat.toggleDiffFromStart();
+                if (result != null) System.out.println(result);
+                tableStat.printStat();
                 break;
             case "c":
                 result = tableStat.toggleShowChangedOnly();
+                if (result != null) System.out.println(result);
+                tableStat.printStat();
                 break;
             case "p":
                 result = tableStat.togglePause();
+                if (result != null) System.out.println(result);
                 break;
             case "R":
                 result = tableStat.resetDiffStartPoint();
+                if (result != null) System.out.println(result);
                 break;
             case "r":
                 result = tableStat.toggleShowRate();
+                if (result != null) System.out.println(result);
+                tableStat.printStat();
                 break;
             case "C":
                 result = tableStat.showConnectionInfo();
+                if (result != null) System.out.println(result);
                 break;
             case "S":
                 result = tableStat.save();
+                if (result != null) System.out.println(result);
                 break;
             case "L":
                 result = tableStat.showFiles();
@@ -75,12 +87,12 @@ public class KeyInputListener implements Runnable {
                     tableStat.pause();
                     fileLoadMode = true;
                 }
+                System.out.println(result);
                 break;
             default:
                 result = option + " is an invalid option.";
+                System.out.println(result);
         }
-        if (result != null)
-            System.out.println(result);
         return result;
     }
 

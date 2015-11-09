@@ -21,8 +21,10 @@
     printData(count);
     startRefresh();
 
+    var paused = false;
+    var intervalId;
     function startRefresh() {
-        setInterval(function () {
+        intervalId = setInterval(function () {
             printData();
         }, interval);
     }
@@ -30,7 +32,7 @@
     function rollDiv() {
         count++;
         $('#stat').append($('<div>', {id: 'stat' + count.toString()})).appendTo('#stat');
-        $('#stat' + (count - 100).toString()).remove();
+        $('#stat' + (count - 360).toString()).remove();
     }
 
     function printData() {
@@ -61,10 +63,20 @@
     $(document).keypress(function (e) {
         rollDiv();
         $.post("keyInput", {key: String.fromCharCode(e.keyCode || e.which)}, function (data) {
+                    var key = String.fromCharCode(e.keyCode || e.which);
+                    if (key == "p") {
+                        if (paused) {
+                            startRefresh();
+                        } else {
+                            window.clearInterval(intervalId);
+                        }
+                        paused = !paused;
+                    }
                     $('#stat' + count.toString()).html("<pre>" + data + "</pre>");
                     if (scrollToBottom) {
                         $('html, body').scrollTop($(document).height());
                     }
+                    if (!paused) printData();
                 }
         );
     });

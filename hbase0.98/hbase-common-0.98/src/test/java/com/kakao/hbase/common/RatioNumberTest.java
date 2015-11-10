@@ -105,6 +105,16 @@ public class RatioNumberTest {
     }
 
     @Test
+    public void testAddZero() throws Exception {
+        Number ratioNumber = new RatioNumber(10, 0.1);
+        Number zero = 0;
+
+        assertEquals(ratioNumber, LoadEntry.DataLocality.add(ratioNumber, zero));
+        assertEquals(ratioNumber, LoadEntry.DataLocality.add(zero, ratioNumber));
+        assertEquals(zero, LoadEntry.DataLocality.add(zero, zero));
+    }
+
+    @Test
     public void testValueOf() throws Exception {
         assertEquals(new RatioNumber(3, 4), RatioNumber.valueOf("3:4"));
         assertEquals(new RatioNumber(0, 0), RatioNumber.valueOf("0:0"));

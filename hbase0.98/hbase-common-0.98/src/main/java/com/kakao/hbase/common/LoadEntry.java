@@ -440,7 +440,9 @@ public enum LoadEntry {
         } else {
             if (two == null) return one;
             else {
-                if (two == 0) {
+                if (one == 0) {
+                    return two;
+                } else if (two == 0) {
                     return one;
                 } else {
                     return ((RatioNumber) one).add((RatioNumber) two);

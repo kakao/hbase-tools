@@ -17,6 +17,7 @@
 package com.kakao.hbase.common;
 
 import com.kakao.hbase.specific.RegionLoadDelegator;
+import org.apache.hadoop.util.StringUtils;
 
 public enum LoadEntry {
     Reads {
@@ -260,12 +261,12 @@ public enum LoadEntry {
         @Override
         public String toRateString(Number value, long duration) {
             Number rate = rateRatioNumber(value, duration);
-            return rate == null ? NOT_AVAILABLE : (rate.toString() + "/s");
+            return rate == null ? NOT_AVAILABLE : (StringUtils.formatPercent(rate.doubleValue(), 2) + "/s");
         }
 
         @Override
         public String toString(Number value) {
-            return value == null ? NOT_AVAILABLE : Double.toString(value.doubleValue());
+            return value == null ? NOT_AVAILABLE : StringUtils.formatPercent(value.doubleValue(), 2);
         }
 
         @Override
@@ -524,12 +525,7 @@ public enum LoadEntry {
         Double number = (Double) value;
         if (number == 0.0) return 0.0;
 
-        double rate = number / (duration / 1000.0);
-        if (rate < 10.0) {
-            return Math.round(rate * 10.0) / 10.0;
-        } else {
-            return Math.round(rate);
-        }
+        return number / (duration / 1000.0);
     }
 
     private static int compareInt(Number one, Number two) {

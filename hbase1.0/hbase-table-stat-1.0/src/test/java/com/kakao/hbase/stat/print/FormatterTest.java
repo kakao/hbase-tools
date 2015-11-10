@@ -78,9 +78,9 @@ public class FormatterTest {
         resultString = formatter.buildString(false, Formatter.Type.ANSI);
         System.out.println(resultString);
         expected = "RegionServer    Reads      Writes                Regions    Files      FileSize   FileSizeUncomp  DataLocality  MemstoreSize   CompactedKVs  \n" +
-                " rec11          N/A | N/A               0 | N/A  N/A | N/A  N/A | N/A  N/A | N/A  N/A | N/A       0.5 | N/A     112233m | N/A  N/A | N/A     \n" +
-                " rec1122334455  N/A | N/A  11223344556677 | N/A  N/A | N/A  N/A | N/A  N/A | N/A  N/A | N/A       0.0 | N/A         N/A | N/A  N/A | N/A     \n" +
-                " Total: 2       N/A | N/A  11223344556677 | N/A  N/A | N/A  N/A | N/A  N/A | N/A  N/A | N/A       0.5 | N/A     112233m | N/A  N/A | N/A     \n";
+                " rec11          N/A | N/A               0 | N/A  N/A | N/A  N/A | N/A  N/A | N/A  N/A | N/A       50.00% | N/A  112233m | N/A  N/A | N/A     \n" +
+                " rec1122334455  N/A | N/A  11223344556677 | N/A  N/A | N/A  N/A | N/A  N/A | N/A  N/A | N/A        0.00% | N/A      N/A | N/A  N/A | N/A     \n" +
+                " Total: 2       N/A | N/A  11223344556677 | N/A  N/A | N/A  N/A | N/A  N/A | N/A  N/A | N/A       50.00% | N/A  112233m | N/A  N/A | N/A     \n";
         Assert.assertEquals(expected, Color.clearColor(resultString, Formatter.Type.ANSI));
 
         // iteration 2
@@ -99,9 +99,9 @@ public class FormatterTest {
 
         resultString = formatter.buildString(false, Formatter.Type.ANSI);
         System.out.println(resultString);
-        expected = "RegionServer  Reads      Writes               Regions    Files      FileSize   FileSizeUncomp  DataLocality  MemstoreSize  CompactedKVs  \n" +
-                " rec11        N/A | N/A  0 |               0  N/A | N/A  N/A | N/A  N/A | N/A  N/A | N/A       N/A | -0.5    112233m | 0m  N/A | N/A     \n" +
-                " Total: 1     N/A | N/A  0 | -11223344556677  N/A | N/A  N/A | N/A  N/A | N/A  N/A | N/A       1.0 |  0.5    112233m | 0m  N/A | N/A     \n";
+        expected = "RegionServer  Reads      Writes               Regions    Files      FileSize   FileSizeUncomp  DataLocality       MemstoreSize  CompactedKVs  \n" +
+            " rec11        N/A | N/A  0 |               0  N/A | N/A  N/A | N/A  N/A | N/A  N/A | N/A           N/A | -50.00%  112233m | 0m  N/A | N/A     \n" +
+            " Total: 1     N/A | N/A  0 | -11223344556677  N/A | N/A  N/A | N/A  N/A | N/A  N/A | N/A       100.00% |  50.00%  112233m | 0m  N/A | N/A     \n";
         Assert.assertEquals(expected, Color.clearColor(resultString, Formatter.Type.ANSI));
     }
 
@@ -134,8 +134,8 @@ public class FormatterTest {
         resultString = formatter.buildString(false, Formatter.Type.ANSI);
         System.out.println(resultString);
         expected = "RegionServer  Reads      Writes     Regions  Files      FileSize   FileSizeUncomp  DataLocality  MemstoreSize  CompactedKVs  \n" +
-                " rec11        N/A | N/A  N/A | N/A  1 | N/A  N/A | N/A  N/A | N/A  N/A | N/A       0.5 | N/A     N/A | N/A     N/A | N/A     \n" +
-                " Total: 1     N/A | N/A  N/A | N/A  1 | N/A  N/A | N/A  N/A | N/A  N/A | N/A       0.5 | N/A     N/A | N/A     N/A | N/A     \n";
+            " rec11        N/A | N/A  N/A | N/A  1 | N/A  N/A | N/A  N/A | N/A  N/A | N/A       50.00% | N/A  N/A | N/A     N/A | N/A     \n" +
+            " Total: 1     N/A | N/A  N/A | N/A  1 | N/A  N/A | N/A  N/A | N/A  N/A | N/A       50.00% | N/A  N/A | N/A     N/A | N/A     \n";
         Assert.assertEquals(expected, Color.clearColor(resultString, Formatter.Type.ANSI));
 
         // iteration 2
@@ -157,9 +157,9 @@ public class FormatterTest {
         resultString = formatter.buildString(false, Formatter.Type.ANSI);
         Assert.assertTrue(load.isShowRate());
         System.out.println(resultString);
-        expected = "RegionServer  Reads      Writes     Regions    Files      FileSize   FileSizeUncomp  DataLocality  MemstoreSize  CompactedKVs  \n" +
-                " rec11        N/A | N/A  N/A | N/A  1 |   0/s  N/A | N/A  N/A | N/A  N/A | N/A       0.5 | 0.0/s   N/A | N/A     N/A | N/A     \n" +
-                " Total: 1     N/A | N/A  N/A | N/A  2 | 1.0/s  N/A | N/A  N/A | N/A  N/A | N/A       1.0 | 0.5/s   N/A | N/A     N/A | N/A     \n";
+        expected = "RegionServer  Reads      Writes     Regions    Files      FileSize   FileSizeUncomp  DataLocality        MemstoreSize  CompactedKVs  \n" +
+            " rec11        N/A | N/A  N/A | N/A  1 |   0/s  N/A | N/A  N/A | N/A  N/A | N/A        50.00% |  0.00%/s  N/A | N/A     N/A | N/A     \n" +
+            " Total: 1     N/A | N/A  N/A | N/A  2 | 1.0/s  N/A | N/A  N/A | N/A  N/A | N/A       100.00% | 50.00%/s  N/A | N/A     N/A | N/A     \n";
         Assert.assertEquals(expected, Color.clearColor(resultString, Formatter.Type.ANSI));
     }
 }

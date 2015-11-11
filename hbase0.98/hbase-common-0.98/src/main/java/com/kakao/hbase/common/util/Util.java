@@ -111,9 +111,12 @@ public class Util {
         return s.toUpperCase().equals("Y");
     }
 
-    public static void printVerboseMessage(Args args, String message, long startTimestamp) {
-        if (args != null && args.has(Args.OPTION_VERBOSE))
-            System.out.println(now() + " - " + message + " - Duration(ms) - " + (System.currentTimeMillis() - startTimestamp));
+    public static long printVerboseMessage(Args args, String message, long startTimestamp) {
+        long currentTimestamp = System.currentTimeMillis();
+        if (args != null && args.has(Args.OPTION_VERBOSE)) {
+            System.out.println(now() + " - " + message + " - Duration(ms) - " + (currentTimestamp - startTimestamp));
+        }
+        return currentTimestamp;
     }
 
     public static void printVerboseMessage(Args args, String message) {

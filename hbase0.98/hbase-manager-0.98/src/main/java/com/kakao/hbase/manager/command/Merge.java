@@ -85,11 +85,15 @@ public class Merge implements Command {
 
     @Override
     public void run() throws Exception {
+        long timestampPrev;
         // todo refactoring
         if (actionParam.toLowerCase().equals("empty-fast")) {
             for (String tableName : tableNameSet) {
+                timestampPrev = System.currentTimeMillis();
                 TableInfo tableInfo = new TableInfo(admin, tableName, args);
+                timestampPrev = Util.printVerboseMessage(args, "Merge.run.new TableInfo", timestampPrev);
                 emptyFast(tableInfo);
+                Util.printVerboseMessage(args, "Merge.run.emptyFast", timestampPrev);
             }
         } else if (actionParam.toLowerCase().equals("empty")) {
             for (String tableName : tableNameSet) {
@@ -169,7 +173,7 @@ public class Merge implements Command {
                             printMergeInfo(region, targetRegion);
                             mergedRegions.add(region);
                             mergedRegions.add(targetRegion);
-                            CommandAdapter.mergeRegions(admin, region, targetRegion);
+                            CommandAdapter.mergeRegions(args, admin, region, targetRegion);
                             i++;
                         }
                     } catch (RegionException e) {
@@ -208,13 +212,17 @@ public class Merge implements Command {
     }
 
     private void emptyFast(TableInfo tableInfo) throws Exception {
+        long timestampPrev;
         boolean merged;
         for (int j = 1; j <= getMaxMaxIteration(); j++) {
             merged = false;
 
+            timestampPrev = System.currentTimeMillis();
             List<HRegionInfo> emptyRegions = findEmptyRegions(tableInfo);
+            timestampPrev = Util.printVerboseMessage(args, "Merge.emptyFast.findEmptyRegions", timestampPrev);
             if (emptyRegions.size() > 1) {
                 List<HRegionInfo> adjacentEmptyRegions = CommandAdapter.adjacentEmptyRegions(emptyRegions);
+                Util.printVerboseMessage(args, "Merge.emptyFast.adjacentEmptyRegions", timestampPrev);
                 System.out.println();
                 System.out.println("Iteration " + j + "/" + getMaxMaxIteration() + " - "
                         + adjacentEmptyRegions.size() + " adjacent empty regions are found");
@@ -236,7 +244,7 @@ public class Merge implements Command {
                 if (i != emptyRegions.size() - 1) {
                     HRegionInfo regionB = emptyRegions.get(i + 1);
 
-                    if (CommandAdapter.mergeRegions(admin, regionA, regionB)) {
+                    if (CommandAdapter.mergeRegions(args, admin, regionA, regionB)) {
                         i++;
                         printMergeInfo(regionA, regionB);
                         merged = true;

@@ -192,11 +192,15 @@ public class CommandAdapter {
         return hRegionInfo.getTable().getNameAsString();
     }
 
-    public static boolean mergeRegions(HBaseAdmin admin, HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+    public static boolean mergeRegions(Args args, HBaseAdmin admin, HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+        long timestamp = System.currentTimeMillis();
+
         if (HRegionInfo.areAdjacent(regionA, regionB)) {
             admin.mergeRegions(regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false);
+            Util.printVerboseMessage(args, "CommandAdapter.mergeRegions", timestamp);
             return true;
         } else {
+            Util.printVerboseMessage(args, "CommandAdapter.mergeRegions", timestamp);
             return false;
         }
     }

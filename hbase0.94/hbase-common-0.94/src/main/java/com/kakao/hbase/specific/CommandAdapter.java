@@ -223,7 +223,7 @@ public class CommandAdapter {
         return hRegionInfo.getTableNameAsString();
     }
 
-    public static boolean mergeRegions(HBaseAdmin admin, HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+    public static boolean mergeRegions(Args args, HBaseAdmin admin, HRegionInfo regionA, HRegionInfo regionB) throws IOException {
         throw new IllegalStateException("Not supported in this HBase version.");
     }
 

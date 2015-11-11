@@ -145,12 +145,12 @@ public class ManagerTest extends TestBase {
     }
 
     @Test
-    public void testAfterFailed() throws Exception {
+    public void testAfterFailure() throws Exception {
         HBaseClient.setAdminForTesting(admin);
 
         String commandName = "assign";
         String[] args = {commandName, "localhost", "balancer", "invalid",
-            "--" + Args.OPTION_AFTER_FAILED + "=" + AlertSenderTest.ALERT_SCRIPT};
+            "--" + Args.OPTION_AFTER_FAILURE + "=" + AlertSenderTest.ALERT_SCRIPT};
         Args argsObject = Manager.parseArgs(args);
         Manager manager = new Manager(argsObject, commandName);
 
@@ -166,12 +166,12 @@ public class ManagerTest extends TestBase {
     }
 
     @Test
-    public void testAfterFinished() throws Exception {
+    public void testAfterSuccess() throws Exception {
         HBaseClient.setAdminForTesting(admin);
 
         String commandName = "assign";
         String[] args = {commandName, "localhost", "balancer", "on",
-            "--" + Args.OPTION_AFTER_FINISHED + "=" + AlertSenderTest.ALERT_SCRIPT};
+            "--" + Args.OPTION_AFTER_SUCCESS + "=" + AlertSenderTest.ALERT_SCRIPT};
         Args argsObject = Manager.parseArgs(args);
         Manager manager = new Manager(argsObject, commandName);
 

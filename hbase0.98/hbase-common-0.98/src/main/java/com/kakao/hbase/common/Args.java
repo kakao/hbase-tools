@@ -40,8 +40,8 @@ public abstract class Args {
     public static final String OPTION_SKIP_FLUSH = "skip-flush";
     public static final String OPTION_EXCLUDE = "exclude";
     public static final String OPTION_OVERRIDE = "override";
-    public static final String OPTION_AFTER_FAILED = "after-failed";
-    public static final String OPTION_AFTER_FINISHED = "after-finished";
+    public static final String OPTION_AFTER_FAILURE = "after-failure";
+    public static final String OPTION_AFTER_SUCCESS = "after-success";
     public static final String OPTION_CLEAR_WATCH_LEAK = "clear-watch-leak";
     public static final String OPTION_CLEAR_WATCH_LEAK_ONLY = "clear-watch-leak-only";
     public static final String OPTION_OPTIMIZE = "optimize";
@@ -85,10 +85,12 @@ public abstract class Args {
             + "    --" + Args.OPTION_TEST + ": Set test mode.\n"
             + "    --" + Args.OPTION_DEBUG + ": Print debug log.\n"
             + "    --" + Args.OPTION_VERBOSE + ": Print some more messages.\n"
-            + "    --" + Args.OPTION_AFTER_FAILED
-            + "=<script> : The script to run when this running is failed.\n"
-            + "    --" + Args.OPTION_AFTER_FINISHED
+            + "    --" + Args.OPTION_AFTER_FAILURE
+            + "=<script> : The script to run when this running is failed."
+            + " The first argument of the script should be a message string.\n"
+            + "    --" + Args.OPTION_AFTER_SUCCESS
             + "=<script> : The script to run when this running is successfully finished.\n"
+            + " The first argument of the script should be a message string.\n"
             + "    --" + Args.OPTION_KEY_TAB + "=<keytab file>: Kerberos keytab file. Use absolute path.\n"
             + "    --" + Args.OPTION_PRINCIPAL + "=<principal>: Kerberos principal.\n"
             + "    --" + Args.OPTION_REALM + "=<realm>: Kerberos realm to use."
@@ -143,22 +145,22 @@ public abstract class Args {
         optionParser.accepts(OPTION_PRINCIPAL).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_REALM).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_KERBEROS_CONFIG).withRequiredArg().ofType(String.class);
-        optionParser.accepts(OPTION_AFTER_FAILED).withRequiredArg().ofType(String.class);
-        optionParser.accepts(OPTION_AFTER_FINISHED).withRequiredArg().ofType(String.class);
+        optionParser.accepts(OPTION_AFTER_FAILURE).withRequiredArg().ofType(String.class);
+        optionParser.accepts(OPTION_AFTER_SUCCESS).withRequiredArg().ofType(String.class);
         return optionParser;
     }
 
     public String getAfterFailedScript() {
-        if (optionSet.has(OPTION_AFTER_FAILED)) {
-            return (String) optionSet.valueOf(OPTION_AFTER_FAILED);
+        if (optionSet.has(OPTION_AFTER_FAILURE)) {
+            return (String) optionSet.valueOf(OPTION_AFTER_FAILURE);
         } else {
             return null;
         }
     }
 
     public String getAfterFinishedScript() {
-        if (optionSet.has(OPTION_AFTER_FINISHED)) {
-            return (String) optionSet.valueOf(OPTION_AFTER_FINISHED);
+        if (optionSet.has(OPTION_AFTER_SUCCESS)) {
+            return (String) optionSet.valueOf(OPTION_AFTER_SUCCESS);
         } else {
             return null;
         }

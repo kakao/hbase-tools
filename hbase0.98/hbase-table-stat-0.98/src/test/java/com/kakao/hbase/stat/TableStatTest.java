@@ -877,10 +877,10 @@ public class TableStatTest extends StatTestBase {
     }
 
     @Test
-    public void testAfterFinished() throws Exception {
+    public void testAfterSuccess() throws Exception {
         String tableNameRegex = tableName + ".*";
         String[] args = {"zookeeper", tableNameRegex, "--interval=0", "--rs",
-            "--" + Args.OPTION_AFTER_FINISHED + "=" + AlertSenderTest.ALERT_SCRIPT};
+            "--" + Args.OPTION_AFTER_SUCCESS + "=" + AlertSenderTest.ALERT_SCRIPT};
         TableStat command = new TableStat(admin, new StatArgs(args));
 
         int sendCountBefore = AlertSender.getSendCount();
@@ -891,10 +891,10 @@ public class TableStatTest extends StatTestBase {
     }
 
     @Test
-    public void testAfterFailed() throws Exception {
+    public void testAfterFailure() throws Exception {
         String tableNameRegex = tableName + ".*";
         String[] args = {"zookeeper", tableNameRegex, "--interval=-1", "--rs",
-            "--" + Args.OPTION_AFTER_FAILED + "=" + AlertSenderTest.ALERT_SCRIPT};
+            "--" + Args.OPTION_AFTER_FAILURE + "=" + AlertSenderTest.ALERT_SCRIPT};
         TableStat command = new TableStat(admin, new StatArgs(args));
 
         int sendCountBefore = AlertSender.getSendCount();

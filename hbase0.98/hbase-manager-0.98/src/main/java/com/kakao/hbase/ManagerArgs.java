@@ -32,10 +32,10 @@ public class ManagerArgs extends Args {
         optionParser.accepts(OPTION_OPTIMIZE).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_BALANCE_FACTOR).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_REGION_SERVER).withRequiredArg().ofType(String.class);
-        optionParser.accepts(OPTION_OUTPUT).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_TURN_BALANCER_OFF);
         optionParser.accepts(OPTION_MOVE_ASYNC);
         optionParser.accepts(OPTION_MAX_ITERATION).withRequiredArg().ofType(Integer.class);
+        optionParser.accepts(OPTION_SKIP_EXPORT);
         return optionParser;
     }
 }

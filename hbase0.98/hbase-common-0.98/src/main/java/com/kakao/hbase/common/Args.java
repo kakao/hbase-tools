@@ -28,6 +28,7 @@ import java.util.List;
 public abstract class Args {
     public static final String OPTION_REGION = "region";
     public static final String OPTION_OUTPUT = "output";
+    public static final String OPTION_SKIP_EXPORT = "skip-export";
     public static final String OPTION_VERBOSE = "verbose";
     public static final String OPTION_DEBUG = "debug";
     public static final String OPTION_KERBEROS_CONFIG = "krbconf";

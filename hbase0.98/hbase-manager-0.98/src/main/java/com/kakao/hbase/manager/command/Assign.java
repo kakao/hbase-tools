@@ -32,13 +32,14 @@ public class Assign implements Command {
         this.args = args;
     }
 
+    @SuppressWarnings("unused")
     public static String usage() {
         return "Manage assignment of regions.\n"
                 + "usage: " + Assign.class.getSimpleName().toLowerCase() + " <zookeeper quorum> <action> [options]\n"
                 + "  actions and options:\n"
                 + "    balancer <on or off> : Turn automatic balancer on or off.\n"
-                + "    empty <region server regex>: Move all regions out of these region servers.\n"
-                + "      --" + Args.OPTION_OUTPUT + "=<export output file>: Export region assignment.\n"
+                + "    empty <region server regex> <export output file>: Move all regions out of these region servers.\n"
+                + "      --" + Args.OPTION_SKIP_EXPORT + ": Empty RS without exporting assignments.\n"
                 + "    export <output file>: Export assignment of regions to a file.\n"
                 + "      --" + Args.OPTION_REGION_SERVER + "=<region server regex>: Export these region servers only.\n"
                 + "    import <input file>: Import assignment of regions from a file.\n"

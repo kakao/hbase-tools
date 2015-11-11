@@ -44,8 +44,9 @@ enum AssignAction {
             try {
                 List<ServerName> targetList = new ArrayList<>(admin.getClusterStatus().getServers());
                 String sourceRsRegex = (String) args.getOptionSet().nonOptionArguments().get(2);
-                final String expFileName = (String) args.valueOf(Args.OPTION_OUTPUT);
-                if (args.getOptionSet().nonOptionArguments().size() > 3) {
+                final String expFileName = args.has(Args.OPTION_SKIP_EXPORT) ? null :
+                    (String) args.getOptionSet().nonOptionArguments().get(3);
+                if (args.getOptionSet().nonOptionArguments().size() > 4) {
                     throw new IllegalArgumentException(Args.INVALID_ARGUMENTS);
                 }
 
@@ -55,7 +56,8 @@ enum AssignAction {
             }
         }
 
-        private void empty(HBaseAdmin admin, Args args, List<ServerName> targetList, String sourceRsRegex, String expFileName) throws IOException, InterruptedException {
+        private void empty(HBaseAdmin admin, Args args, List<ServerName> targetList,
+                           String sourceRsRegex, String expFileName) throws IOException, InterruptedException {
             List<ServerName> sourceServerNames = removeSource(sourceRsRegex, targetList);
 
             if (sourceServerNames.size() > 0) {
@@ -74,14 +76,16 @@ enum AssignAction {
                     List<Triple<String, String, String>> plan = plan(admin, targetList, sourceServerName);
 
                     if (!args.isForceProceed()) {
-                        emptyInternal(admin, targetList, sourceServerName, plan, true, args.has(Args.OPTION_MOVE_ASYNC));
+                        emptyInternal(admin, targetList, sourceServerName, plan, true,
+                            args.has(Args.OPTION_MOVE_ASYNC));
                         System.out.println(plan.size() + " regions will be moved.");
 
                         if (!Util.askProceed()) {
                             return;
                         }
                     }
-                    emptyInternal(admin, targetList, sourceServerName, plan, false, args.has(Args.OPTION_MOVE_ASYNC));
+                    emptyInternal(admin, targetList, sourceServerName, plan, false,
+                        args.has(Args.OPTION_MOVE_ASYNC));
                 }
             } else {
                 System.out.println("No region server is emptied.");
@@ -91,13 +95,15 @@ enum AssignAction {
         private void printSourceRSs(List<ServerName> sourceServerNames) {
             int i = 0;
             for (ServerName sourceServerName : sourceServerNames) {
-                System.out.println(++i + "/" + sourceServerNames.size() + " - empty - RS - " + sourceServerName.getServerName());
+                System.out.println(++i + "/" + sourceServerNames.size()
+                    + " - empty - RS - " + sourceServerName.getServerName());
             }
             System.out.println(sourceServerNames.size() + " RSs will be emptied.");
         }
 
         private void emptyInternal(HBaseAdmin admin, List<ServerName> targetList, ServerName sourceServerName
-                , List<Triple<String, String, String>> plan, boolean printPlanOnly, boolean asynchronous) throws IOException, InterruptedException {
+                , List<Triple<String, String, String>> plan, boolean printPlanOnly, boolean asynchronous)
+            throws IOException, InterruptedException {
             if (plan.size() > 0) {
                 move(admin, sourceServerName, plan, printPlanOnly, asynchronous);
 
@@ -145,12 +151,15 @@ enum AssignAction {
                 if (printPlanOnly) {
                     System.out.println();
                 } else {
-                    Common.moveWithPrintingResult(admin, targetTableName, encodedRegionName, targetServerName, asynchronous);
+                    Common.moveWithPrintingResult(admin, targetTableName, encodedRegionName, targetServerName,
+                        asynchronous);
                 }
             }
         }
 
-        private List<Triple<String, String, String>> plan(HBaseAdmin admin, List<ServerName> targetList, ServerName sourceServerName) throws IOException, InterruptedException {
+        private List<Triple<String, String, String>> plan(HBaseAdmin admin, List<ServerName> targetList,
+                                                          ServerName sourceServerName)
+            throws IOException, InterruptedException {
             List<Triple<String, String, String>> plan = new ArrayList<>();
 
             List<HRegionInfo> onlineRegions = CommandAdapter.getOnlineRegions(admin, sourceServerName);
@@ -160,9 +169,11 @@ enum AssignAction {
                     if (targetListToMove.size() == 0)
                         targetListToMove = new ArrayList<>(targetList);
 
-                    ServerName targetServerName = targetListToMove.remove(new Random().nextInt(targetListToMove.size()));
+                    ServerName targetServerName =
+                        targetListToMove.remove(new Random().nextInt(targetListToMove.size()));
                     String encodedRegionName = hRegionInfo.getEncodedName();
-                    plan.add(new ImmutableTriple<>(CommandAdapter.getTableName(hRegionInfo), targetServerName.getServerName(), encodedRegionName));
+                    plan.add(new ImmutableTriple<>(CommandAdapter.getTableName(hRegionInfo),
+                        targetServerName.getServerName(), encodedRegionName));
                 }
             }
 

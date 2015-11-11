@@ -61,7 +61,7 @@ public class AssignTest extends TestBase {
         boolean balancerRunning = false;
         try {
             balancerRunning = admin.setBalancerRunning(false, true);
-            String[] argsParam = {"zookeeper", "empty", rs1.getServerName(), "--force-proceed"};
+            String[] argsParam = {"zookeeper", "empty", rs1.getServerName(), "--skip-export", "--force-proceed"};
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
             command.run();
@@ -78,7 +78,7 @@ public class AssignTest extends TestBase {
         try {
             balancerRunning = admin.setBalancerRunning(false, true);
             String serverNameRegex = rs2.getServerName().substring(0, rs2.getServerName().lastIndexOf(',')) + ".*";
-            String[] argsParam = {"zookeeper", "empty", serverNameRegex, "--force-proceed"};
+            String[] argsParam = {"zookeeper", "empty", serverNameRegex, "--skip-export", "--force-proceed"};
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
             command.run();
@@ -99,7 +99,7 @@ public class AssignTest extends TestBase {
             try {
                 balancerRunning = admin.setBalancerRunning(false, true);
                 String serverNameRegex = ".*";
-                String[] argsParam = {"zookeeper", "empty", serverNameRegex, "--force-proceed"};
+                String[] argsParam = {"zookeeper", "empty", serverNameRegex, "--skip-export", "--force-proceed"};
                 Args args = new ManagerArgs(argsParam);
                 Assign command = new Assign(admin, args);
                 try {
@@ -144,7 +144,8 @@ public class AssignTest extends TestBase {
         // valid
         try {
             balancerRunning = false;
-            String[] argsParam = {"zookeeper", "empty", rs1.getServerName(), "--" + Args.OPTION_TURN_BALANCER_OFF, "--force-proceed"};
+            String[] argsParam = {"zookeeper", "empty", rs1.getServerName(), "--" + Args.OPTION_TURN_BALANCER_OFF,
+                "--skip-export", "--force-proceed"};
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
 
@@ -182,7 +183,8 @@ public class AssignTest extends TestBase {
         // valid export
         try {
             balancerRunning = false;
-            String[] argsParam = {"zookeeper", "export", expFileName, "--" + Args.OPTION_TURN_BALANCER_OFF, "--force-proceed"};
+            String[] argsParam = {"zookeeper", "export", expFileName, "--" + Args.OPTION_TURN_BALANCER_OFF,
+                "--skip-export", "--force-proceed"};
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
 
@@ -214,7 +216,8 @@ public class AssignTest extends TestBase {
         // valid import
         try {
             balancerRunning = false;
-            String[] argsParam = {"zookeeper", "import", expFileName, "--" + Args.OPTION_TURN_BALANCER_OFF, "--force-proceed"};
+            String[] argsParam = {"zookeeper", "import", expFileName, "--" + Args.OPTION_TURN_BALANCER_OFF,
+                "--skip-export", "--force-proceed"};
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
 
@@ -262,7 +265,7 @@ public class AssignTest extends TestBase {
         boolean balancerRunning = false;
         try {
             balancerRunning = admin.setBalancerRunning(false, true);
-            String[] argsParam = {"zookeeper", "empty", rs1.getServerName(), "--output=" + expFileName, "--force-proceed"};
+            String[] argsParam = {"zookeeper", "empty", rs1.getServerName(), expFileName, "--force-proceed"};
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
             command.run();
@@ -280,6 +283,40 @@ public class AssignTest extends TestBase {
                 }
             }
             assertEquals(regionInfoList.size(), actual);
+        } finally {
+            if (balancerRunning)
+                admin.setBalancerRunning(true, true);
+        }
+    }
+
+    @Test
+    public void testEmptySkipExport() throws Exception {
+        ArrayList<ServerName> serverNameList;
+        List<HRegionInfo> regionInfoList;
+
+        // move all regions to rs1
+        splitTable("a".getBytes());
+        splitTable("b".getBytes());
+        serverNameList = getServerNameList();
+        ServerName rs1 = serverNameList.get(0);
+        regionInfoList = getRegionInfoList(tableName);
+        assertEquals(3, regionInfoList.size());
+        for (HRegionInfo hRegionInfo : regionInfoList)
+            move(hRegionInfo, rs1);
+
+        assertEquals(regionInfoList.size(), getRegionInfoList(rs1, tableName).size());
+
+        // empty rs1 with export
+        boolean balancerRunning = false;
+        try {
+            balancerRunning = admin.setBalancerRunning(false, true);
+            String[] argsParam = {"zookeeper", "empty", rs1.getServerName(), "--skip-export", "--force-proceed"};
+            Args args = new ManagerArgs(argsParam);
+            Assign command = new Assign(admin, args);
+            command.run();
+
+            // check empty
+            assertEquals(0, getRegionInfoList(rs1, tableName).size());
         } finally {
             if (balancerRunning)
                 admin.setBalancerRunning(true, true);
@@ -453,7 +490,8 @@ public class AssignTest extends TestBase {
             assignmentList = readExportFile(expFileName);
             assertEquals(AssignAction.getExportCount(), assignmentList.size());
             for (String assignment : assignmentList) {
-                assertFalse(firstRegion.getEncodedName() + " must not be exported.", assignment.contains(firstRegion.getEncodedName()));
+                assertFalse(firstRegion.getEncodedName() + " must not be exported.",
+                    assignment.contains(firstRegion.getEncodedName()));
             }
 
             // export with regex RS name
@@ -528,8 +566,10 @@ public class AssignTest extends TestBase {
             assertEquals(region3, getRegionInfoList(rs1, tableName).get(1));
 
             // import rs2
-            String serverNameModified = rs2.getServerName().substring(0, rs2.getServerName().lastIndexOf(",")) + "," + System.currentTimeMillis();
-            argsParam = new String[]{"zookeeper", "import", expFileName, "--force-proceed", "--rs=" + serverNameModified};
+            String serverNameModified = rs2.getServerName().substring(0,
+                rs2.getServerName().lastIndexOf(",")) + "," + System.currentTimeMillis();
+            argsParam = new String[]{"zookeeper", "import", expFileName,
+                "--force-proceed", "--rs=" + serverNameModified};
             args = new ManagerArgs(argsParam);
             command = new Assign(admin, args);
             command.run();
@@ -595,7 +635,8 @@ public class AssignTest extends TestBase {
             assertEquals(region3, getRegionInfoList(rs1, tableName).get(1));
 
             // import rs2
-            argsParam = new String[]{"zookeeper", "import", expFileName, "--force-proceed", "--rs=" + rs2.getServerName()};
+            argsParam = new String[]{"zookeeper", "import", expFileName,
+                "--force-proceed", "--rs=" + rs2.getServerName()};
             args = new ManagerArgs(argsParam);
             command = new Assign(admin, args);
             command.run();
@@ -631,7 +672,8 @@ public class AssignTest extends TestBase {
 
         // split and move
         splitTable("a".getBytes());
-        Common.move(admin, tableName, serverNameList.get(1).getServerName(), regionInfoList.get(0).getEncodedName(), false);
+        Common.move(admin, tableName, serverNameList.get(1).getServerName(),
+            regionInfoList.get(0).getEncodedName(), false);
     }
 
     @Test
@@ -655,7 +697,8 @@ public class AssignTest extends TestBase {
         boolean balancerRunning = false;
         try {
             balancerRunning = admin.setBalancerRunning(false, true);
-            String[] argsParam = {"zookeeper", "empty", rs1.getServerName(), "--force-proceed", "--move-async"};
+            String[] argsParam = {"zookeeper", "empty", rs1.getServerName(),
+                "--force-proceed", "--move-async", "--skip-export"};
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
             command.run();

@@ -89,7 +89,7 @@ public abstract class Args {
             + "=<script> : The script to run when this running is failed."
             + " The first argument of the script should be a message string.\n"
             + "    --" + Args.OPTION_AFTER_SUCCESS
-            + "=<script> : The script to run when this running is successfully finished.\n"
+            + "=<script> : The script to run when this running is successfully finished."
             + " The first argument of the script should be a message string.\n"
             + "    --" + Args.OPTION_KEY_TAB + "=<keytab file>: Kerberos keytab file. Use absolute path.\n"
             + "    --" + Args.OPTION_PRINCIPAL + "=<principal>: Kerberos principal.\n"

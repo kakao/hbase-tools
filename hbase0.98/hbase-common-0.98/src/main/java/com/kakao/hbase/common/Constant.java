@@ -22,13 +22,13 @@ import java.nio.charset.StandardCharsets;
 public class Constant {
     public static final Charset CHARSET = StandardCharsets.UTF_8;
     public static final long WAIT_INTERVAL_MS = 1000;
-    public static final long MERGE_WAIT_INTERVAL_MS = 60000;
+    public static final long LARGE_WAIT_INTERVAL_MS = 60000;
+    public static final long SMALL_WAIT_INTERVAL_MS = 3000;
     public static final int TRY_MAX = 20;
     public static final String TABLE_DELIMITER = ",";
     public static final String MESSAGE_CANNOT_MOVE = "Can not move region";
     public static final String MESSAGE_DISABLED_OR_NOT_FOUND_TABLE = "Disabled or not found table";
     public static final String MESSAGE_NEED_REFRESH = "need refresh";
-    public static final long MOVE_ASYNC_WAITING_TIME_MS = 3000;
     public static final String UNIT_TEST_TABLE_PREFIX = "UNIT_TEST_";
 
     private Constant() {

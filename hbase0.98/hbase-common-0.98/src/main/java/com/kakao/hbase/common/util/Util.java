@@ -208,11 +208,15 @@ public class Util {
                     + " - " + args.toString());
     }
 
+    public static void sendAlertAfterFinished(Args args, Class clazz) {
+        sendAlertAfterFinished(args, clazz, null);
+    }
+
     public static void sendAlertAfterFinished(Args args, Class clazz, String message) {
         if (args != null && args.getAfterFinishedScript() != null)
             AlertSender.send(args.getAfterFinishedScript(),
                 "FINISHED - " + clazz.getSimpleName()
-                    + " - " + message
+                    + (message == null || message.equals("") ? "" : " - " + message)
                     + " - " + args.toString());
     }
 }

@@ -23,7 +23,6 @@ import com.kakao.hbase.common.util.AlertSenderTest;
 import com.kakao.hbase.stat.load.Level;
 import com.kakao.hbase.stat.load.RegionName;
 import com.kakao.hbase.stat.load.SortKey;
-import com.kakao.hbase.stat.load.TableInfo;
 import com.kakao.hbase.stat.print.Color;
 import com.kakao.hbase.stat.print.Formatter;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -813,7 +812,7 @@ public class TableStatTest extends StatTestBase {
 
         // test
         tableNameRegex = tableName + "2.*";
-        tableSet = TableInfo.tables(admin, tableNameRegex);
+        tableSet = Args.tables(admin, tableNameRegex);
         assertNotNull(tableSet);
         assertEquals(2, tableSet.size());
         tables = tableSet.toArray(new String[tableSet.size()]);
@@ -822,7 +821,7 @@ public class TableStatTest extends StatTestBase {
 
         // test
         tableNameRegex = tableName + ".*";
-        tableSet = TableInfo.tables(admin, tableNameRegex);
+        tableSet = Args.tables(admin, tableNameRegex);
         assertNotNull(tableSet);
         assertEquals(3, tableSet.size());
         tables = tableSet.toArray(new String[tableSet.size()]);
@@ -832,7 +831,7 @@ public class TableStatTest extends StatTestBase {
 
         // test
         tableNameRegex = tableName + "3.*";
-        tableSet = TableInfo.tables(admin, tableNameRegex);
+        tableSet = Args.tables(admin, tableNameRegex);
         assertNotNull(tableSet);
         assertEquals(0, tableSet.size());
     }

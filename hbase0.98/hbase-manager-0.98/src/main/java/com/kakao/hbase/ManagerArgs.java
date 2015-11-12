@@ -36,6 +36,9 @@ public class ManagerArgs extends Args {
         optionParser.accepts(OPTION_MOVE_ASYNC);
         optionParser.accepts(OPTION_MAX_ITERATION).withRequiredArg().ofType(Integer.class);
         optionParser.accepts(OPTION_SKIP_EXPORT);
+        optionParser.accepts(OPTION_WAIT_UNTIL_FINISH);
+        optionParser.accepts(OPTION_LOCALITY_THRESHOLD).withRequiredArg().ofType(Double.class);
+        optionParser.accepts(OPTION_CF).withRequiredArg().ofType(String.class);
         return optionParser;
     }
 }

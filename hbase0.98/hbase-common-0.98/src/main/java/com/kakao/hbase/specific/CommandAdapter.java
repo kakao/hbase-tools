@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.ClusterLoadState;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import javax.security.auth.Subject;
@@ -217,5 +219,11 @@ public class CommandAdapter {
             }
         }
         return adjacentEmptyRegions;
+    }
+
+    public static boolean isMajorCompacting(Args args, HBaseAdmin admin, String tableName)
+        throws IOException, InterruptedException {
+        CompactionState compactionState = admin.getCompactionState(tableName);
+        return compactionState == CompactionState.MAJOR_AND_MINOR || compactionState == CompactionState.MAJOR;
     }
 }

@@ -199,7 +199,7 @@ public class Balance implements Command {
         }
 
         if (asynchronous && phase == Phase.BALANCE)
-            Thread.sleep(Constant.MOVE_ASYNC_WAITING_TIME_MS);
+            Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
     }
 
     @Override

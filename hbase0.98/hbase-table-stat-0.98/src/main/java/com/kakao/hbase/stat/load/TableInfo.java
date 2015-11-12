@@ -16,7 +16,6 @@
 
 package com.kakao.hbase.stat.load;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
@@ -24,7 +23,6 @@ import com.kakao.hbase.specific.RegionLoadAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
 import com.kakao.hbase.specific.RegionLocationCleaner;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,26 +52,6 @@ public class TableInfo {
         this.args = args;
 
         load = new Load(new LevelClass(isMultiTable(), args));
-    }
-
-    @VisibleForTesting
-    public static Set<String> tables(HBaseAdmin admin, String tableName) throws IOException {
-        if (tableName.equals(Args.ALL_TABLES)) {
-            return null;
-        } else {
-            Set<String> tables = new TreeSet<>();
-
-            HTableDescriptor[] hTableDescriptors = admin.listTables(tableName);
-            if (hTableDescriptors == null) {
-                return tables;
-            } else {
-                for (HTableDescriptor hTableDescriptor : hTableDescriptors) {
-                    tables.add(hTableDescriptor.getNameAsString());
-                }
-            }
-
-            return tables;
-        }
     }
 
     public String getTableName() {
@@ -130,7 +108,7 @@ public class TableInfo {
             initializeServerNameSet();
         }
 
-        Set<String> tables = tables(admin, tableName);
+        Set<String> tables = Args.tables(admin, tableName);
         if (tables == null) {
             regionServerMap = CommandAdapter.regionServerMap(args, admin.getConfiguration()
                 , admin.getConnection(), false);

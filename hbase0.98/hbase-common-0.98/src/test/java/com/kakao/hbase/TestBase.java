@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.*;
 import org.junit.rules.TestName;
 
@@ -40,6 +41,7 @@ import java.util.*;
 
 public class TestBase extends SecureTestUtil {
     protected static final String TEST_TABLE_CF = "d";
+    protected static final String TEST_TABLE_CF2 = "e";
     protected static final String TEST_NAMESPACE = "unit_test";
     protected static final int MAX_WAIT_ITERATION = 200;
     protected static final long WAIT_INTERVAL = 100;
@@ -86,7 +88,7 @@ public class TestBase extends SecureTestUtil {
                     enableSecurity(conf);
                     verifyConfiguration(conf);
                     hbase.startMiniCluster(RS_COUNT);
-                    hbase.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+                    hbase.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName(), 10000);
                     admin = new HBaseAdminWrapper(conf);
                 } else {
                     hbase.startMiniCluster(RS_COUNT);
@@ -263,18 +265,26 @@ public class TestBase extends SecureTestUtil {
     }
 
     private String getMethodName() {
-        return Thread.currentThread().getStackTrace()[1].getMethodName();
+        return Thread.currentThread().getStackTrace()[2].getMethodName();
     }
 
     protected void waitForMoving(HRegionInfo hRegionInfo, ServerName serverName) throws Exception {
+        Map<byte[], RegionLoad> regionsLoad = null;
         for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
             ServerLoad load = admin.getClusterStatus().getLoad(serverName);
-            Map<byte[], RegionLoad> regionsLoad = load.getRegionsLoad();
+            regionsLoad = load.getRegionsLoad();
             for (byte[] regionName : regionsLoad.keySet()) {
                 if (Arrays.equals(regionName, hRegionInfo.getRegionName())) return;
             }
+            admin.move(hRegionInfo.getEncodedNameAsBytes(), serverName.getServerName().getBytes());
             Thread.sleep(WAIT_INTERVAL);
         }
+
+        System.out.println("hRegionInfo = " + Bytes.toString(hRegionInfo.getRegionName()));
+        for (Map.Entry<byte[], RegionLoad> entry : regionsLoad.entrySet()) {
+            System.out.println("regionsLoad = " + Bytes.toString(entry.getKey()) + " - " + entry.getValue());
+        }
+
         Assert.fail(getMethodName() + " failed");
     }
 
@@ -432,6 +442,17 @@ public class TestBase extends SecureTestUtil {
         int size = getRegionInfoList(tableName).size();
         admin.mergeRegions(regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false);
         waitForSplitting(tableName, size - 1);
+    }
+
+    protected RegionLoad getRegionLoad(HRegionInfo regionInfo, ServerName serverName) throws IOException {
+        ServerLoad serverLoad = admin.getClusterStatus().getLoad(serverName);
+        Map<byte[], RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
+        for (Map.Entry<byte[], RegionLoad> entry : regionsLoad.entrySet()) {
+            if (Arrays.equals(entry.getKey(), regionInfo.getRegionName())) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     public static class TestArgs extends Args {

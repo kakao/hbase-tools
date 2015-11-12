@@ -118,7 +118,7 @@ public class Merge implements Command {
         if (test)
             return Constant.WAIT_INTERVAL_MS;
         else
-            return Constant.MERGE_WAIT_INTERVAL_MS;
+            return Constant.LARGE_WAIT_INTERVAL_MS;
     }
 
     private void empty(TableInfo tableInfo) throws Exception {

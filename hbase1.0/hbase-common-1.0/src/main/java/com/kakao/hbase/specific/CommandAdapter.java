@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import javax.security.auth.Subject;
@@ -201,7 +202,7 @@ public class CommandAdapter {
     public static String getTableName(HRegionInfo hRegionInfo) {
         return hRegionInfo.getTable().getNameAsString();
     }
-    
+
     public static boolean mergeRegions(Args args, HBaseAdmin admin, HRegionInfo regionA, HRegionInfo regionB) throws IOException {
         long timestamp = System.currentTimeMillis();
 
@@ -227,5 +228,11 @@ public class CommandAdapter {
             }
         }
         return adjacentEmptyRegions;
+    }
+
+    public static boolean isMajorCompacting(Args args, HBaseAdmin admin, String tableName)
+        throws IOException, InterruptedException {
+        CompactionState compactionState = admin.getCompactionState(tableName);
+        return !(compactionState == CompactionState.NONE || compactionState == CompactionState.MINOR);
     }
 }

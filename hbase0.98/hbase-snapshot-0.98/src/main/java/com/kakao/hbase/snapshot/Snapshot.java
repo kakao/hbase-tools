@@ -133,7 +133,7 @@ public class Snapshot implements Watcher {
                     deleteOldSnapshots(admin, tableName);
                 }
             }
-            Util.sendAlertAfterFinished(args, this.getClass(), "Successfully finished");
+            Util.sendAlertAfterFinished(args, this.getClass());
         } catch (Throwable e) {
             System.out.println("\n" + timestamp(TimestampFormat.log) + " - " + errorMessage(e));
             Util.sendAlertAfterFailed(args, this.getClass(), errorMessage(e));

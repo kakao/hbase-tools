@@ -16,14 +16,17 @@
 
 package com.kakao.hbase.common;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.kakao.hbase.common.util.Util;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
+import joptsimple.OptionSpec;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public abstract class Args {
     public static final String OPTION_REGION = "region";
@@ -48,11 +51,14 @@ public abstract class Args {
     public static final String OPTION_OPTIMIZE = "optimize";
     public static final String OPTION_TURN_BALANCER_OFF = "turn-balancer-off";
     public static final String OPTION_BALANCE_FACTOR = "factor";
-    public static final String OPTION_TEST = "test";
+    public static final String OPTION_TEST = "test";    // for test cases only
     public static final String OPTION_HTTP_PORT = "port";
     public static final String OPTION_INTERVAL = "interval";
     public static final String OPTION_MOVE_ASYNC = "move-async";
     public static final String OPTION_MAX_ITERATION = "max-iteration";
+    public static final String OPTION_LOCALITY_THRESHOLD = "locality";
+    public static final String OPTION_CF = "cf";
+    public static final String OPTION_WAIT_UNTIL_FINISH = "wait";
 
     public static final String INVALID_ARGUMENTS = "Invalid arguments";
     public static final String ALL_TABLES = "";
@@ -83,7 +89,6 @@ public abstract class Args {
             + "    Plain text file that contains args and options.\n"
             + "  common options:\n"
             + "    --" + Args.OPTION_FORCE_PROCEED + ": Do not ask whether to proceed.\n"
-            + "    --" + Args.OPTION_TEST + ": Set test mode.\n"
             + "    --" + Args.OPTION_DEBUG + ": Print debug log.\n"
             + "    --" + Args.OPTION_VERBOSE + ": Print some more messages.\n"
             + "    --" + Args.OPTION_AFTER_FAILURE
@@ -114,12 +119,52 @@ public abstract class Args {
         return string.split("[ \n]");
     }
 
+    public static Set<String> tables(HBaseAdmin admin, String tableName) throws IOException {
+        if (tableName.equals(ALL_TABLES)) {
+            return null;
+        } else {
+            Set<String> tables = new TreeSet<>();
+            HTableDescriptor[] hTableDescriptors = admin.listTables(tableName);
+            if (hTableDescriptors == null) {
+                return tables;
+            } else {
+                for (HTableDescriptor hTableDescriptor : hTableDescriptors) {
+                    tables.add(hTableDescriptor.getNameAsString());
+                }
+            }
+
+            return tables;
+        }
+    }
+
     @Override
     public String toString() {
         if (optionSet == null) return "";
 
-        return (optionSet.nonOptionArguments() == null ? "" : optionSet.nonOptionArguments().toString())
-            + " - " + (optionSet.asMap() == null ? "" : optionSet.asMap().toString());
+        String nonOptionArgs = "";
+        if (optionSet.nonOptionArguments() != null) {
+            int i = 0;
+            for (Object object : optionSet.nonOptionArguments()) {
+                if (i > 0) nonOptionArgs += " ";
+                nonOptionArgs += "\"" + object.toString() + "\"";
+                i++;
+            }
+        }
+
+        String optionArgs = "";
+        if (optionSet.asMap() != null) {
+            int i = 0;
+            for (Map.Entry<OptionSpec<?>, List<?>> entry : optionSet.asMap().entrySet()) {
+                if (entry.getValue().size() > 0) {
+                    if (i > 0) optionArgs += " ";
+                    optionArgs += "--" + entry.getKey().options().get(0) + "=\"" + entry.getValue().get(0) + "\"";
+                    i++;
+                }
+            }
+
+        }
+
+        return nonOptionArgs + " " + optionArgs;
     }
 
     public String getTableName() {

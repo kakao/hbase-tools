@@ -25,12 +25,15 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
 import javax.security.auth.Subject;
 import java.io.IOException;
 import java.util.*;
+
+import static org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest.*;
 
 /**
  * For HBase 0.94
@@ -229,5 +232,11 @@ public class CommandAdapter {
 
     public static List<HRegionInfo> adjacentEmptyRegions(List<HRegionInfo> emptyRegions) {
         throw new IllegalStateException("Not supported in this HBase version.");
+    }
+
+    public static boolean isMajorCompacting(Args args, HBaseAdmin admin, String tableName)
+        throws IOException, InterruptedException {
+        CompactionState compactionState = admin.getCompactionState(tableName);
+        return !(compactionState == CompactionState.NONE || compactionState == CompactionState.MINOR);
     }
 }

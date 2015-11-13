@@ -129,7 +129,7 @@ public class MC implements Command {
             try {
                 System.out.print("Major compaction on " + cf + " CF of " +
                     (tableLevel ? "table " : "region ") + tableOrRegion +
-                    (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion) + " - "));
+                    (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
                 if (!askProceedInteractively()) return;
                 admin.majorCompact(tableOrRegion, cf);
                 mcCounter.getAndIncrement();
@@ -143,7 +143,7 @@ public class MC implements Command {
             }
         } else {
             System.out.print("Major compaction on " + (tableLevel ? "table " : "region ")
-                + tableOrRegion + (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion) + " - "));
+                + tableOrRegion + (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
             if (!askProceedInteractively()) return;
             admin.majorCompact(tableOrRegion);
             mcCounter.getAndIncrement();
@@ -162,7 +162,7 @@ public class MC implements Command {
             if (args.has(Args.OPTION_FORCE_PROCEED)) {
                 System.out.println();
             } else {
-                System.out.print(" ");
+                System.out.print(" - ");
                 if (!Util.askProceed()) return false;
             }
         } else {

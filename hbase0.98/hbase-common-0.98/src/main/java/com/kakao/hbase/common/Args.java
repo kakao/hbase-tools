@@ -59,6 +59,7 @@ public abstract class Args {
     public static final String OPTION_LOCALITY_THRESHOLD = "locality";
     public static final String OPTION_CF = "cf";
     public static final String OPTION_WAIT_UNTIL_FINISH = "wait";
+    public static final String OPTION_INTERACTIVE = "interactive";
 
     public static final String INVALID_ARGUMENTS = "Invalid arguments";
     public static final String ALL_TABLES = "";

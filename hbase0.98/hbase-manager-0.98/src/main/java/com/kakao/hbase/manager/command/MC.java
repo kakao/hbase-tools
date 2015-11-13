@@ -59,6 +59,7 @@ public class MC implements Command {
             + "usage: " + MC.class.getSimpleName().toLowerCase() + " <zookeeper quorum> <table regex> [options]\n"
             + "  options:\n"
             + "    --" + Args.OPTION_WAIT_UNTIL_FINISH + ": Wait until all of MCs are finished.\n"
+            + "    --" + Args.OPTION_INTERACTIVE + ": Ask whether to proceed MC for each region or table.\n"
             + "    --" + Args.OPTION_REGION_SERVER + "=<RS regex>: Compact the regions on these RSs.\n"
             + "    --" + Args.OPTION_CF + "=<CF>: Compact the regions of this CF.\n"
             + "    --" + Args.OPTION_LOCALITY_THRESHOLD
@@ -119,8 +120,9 @@ public class MC implements Command {
         if (args.has(Args.OPTION_CF)) {
             String cf = (String) args.valueOf(Args.OPTION_CF);
             try {
-                System.out.println("Major compaction on " + cf + " CF of " +
+                System.out.print("Major compaction on " + cf + " CF of " +
                     (tableLevel ? "table " : "region ") + tableOrRegion);
+                if (!askProceedInteractively()) return;
                 admin.majorCompact(tableOrRegion, cf);
             } catch (IOException e) {
                 String message = "column family " + cf + " does not exist";
@@ -131,11 +133,26 @@ public class MC implements Command {
                 }
             }
         } else {
-            System.out.println("Major compaction on " + (tableLevel ? "table " : "region ") + tableOrRegion);
+            System.out.print("Major compaction on " + (tableLevel ? "table " : "region ") + tableOrRegion);
+            if (!askProceedInteractively()) return;
             admin.majorCompact(tableOrRegion);
         }
 
         mcCounter.getAndIncrement();
+    }
+
+    private boolean askProceedInteractively() {
+        if (args.has(Args.OPTION_INTERACTIVE)) {
+            if (args.has(Args.OPTION_FORCE_PROCEED)) {
+                System.out.println();
+            } else {
+                System.out.print(" ");
+                if (!Util.askProceed()) return false;
+            }
+        } else {
+            System.out.println();
+        }
+        return true;
     }
 
     private void waitUntilFinish(Set<String> tables) throws IOException, InterruptedException {

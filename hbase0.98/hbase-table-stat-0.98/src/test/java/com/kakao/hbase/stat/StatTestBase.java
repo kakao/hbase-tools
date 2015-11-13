@@ -18,11 +18,28 @@ package com.kakao.hbase.stat;
 
 import com.kakao.hbase.specific.RegionLoadAdapter;
 import com.kakao.hbase.TestBase;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 
 public class StatTestBase extends TestBase {
     protected final int loadEntryLength = RegionLoadAdapter.loadEntries.length;
 
     public StatTestBase(Class c) {
         super(c);
+    }
+
+    protected void putData() throws Exception {
+        try (HTable table = (HTable) hConnection.getTable(tableName)) {
+            Put put;
+            put = new Put("0".getBytes());
+            put.add(TEST_TABLE_CF.getBytes(), "c".getBytes(), "0".getBytes());
+            table.put(put);
+            put = new Put("a".getBytes());
+            put.add(TEST_TABLE_CF.getBytes(), "c".getBytes(), "a".getBytes());
+            table.put(put);
+            put = new Put("b".getBytes());
+            put.add(TEST_TABLE_CF.getBytes(), "c".getBytes(), "b".getBytes());
+            table.put(put);
+        }
     }
 }

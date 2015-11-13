@@ -17,9 +17,7 @@
 package com.kakao.hbase.specific;
 
 import com.kakao.hbase.TestBase;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.junit.Assert;
@@ -27,9 +25,9 @@ import org.junit.Test;
 
 import java.security.PrivilegedExceptionAction;
 
-public class HBaseAdminWrapperTest extends TestBase {
-    public HBaseAdminWrapperTest() {
-        super(HBaseAdminWrapperTest.class);
+public class HBaseAdminWrapperListTableTest extends TestBase {
+    public HBaseAdminWrapperListTableTest() {
+        super(HBaseAdminWrapperListTableTest.class);
     }
 
     @Test
@@ -44,54 +42,6 @@ public class HBaseAdminWrapperTest extends TestBase {
 
         if (miniCluster) {
             Assert.assertEquals(2, tableCount);
-        }
-    }
-
-    @Test
-    public void testGetOnlineRegions() throws Exception {
-        createAdditionalTable(tableName + "2");
-
-        int regionCount = 0;
-        for (ServerName serverName : admin.getClusterStatus().getServers()) {
-            for (HRegionInfo hRegionInfo : admin.getOnlineRegions(serverName)) {
-                System.out.println(hRegionInfo);
-                regionCount++;
-            }
-        }
-
-        if (miniCluster) {
-            if (securedCluster) {
-                Assert.assertEquals(5, regionCount);
-            } else {
-                Assert.assertEquals(4, regionCount);
-            }
-        }
-    }
-
-    @Test
-    public void testGetOnlineRegionsWithOriginalHBaseAdmin() throws Exception {
-        createAdditionalTable(tableName + "2");
-
-        HBaseAdmin admin;
-        if (securedCluster) {
-            admin = new HBaseAdmin(conf);
-        } else {
-            admin = HBaseAdminWrapperTest.admin;
-        }
-        int regionCount = 0;
-        for (ServerName serverName : admin.getClusterStatus().getServers()) {
-            for (HRegionInfo hRegionInfo : admin.getOnlineRegions(serverName)) {
-                System.out.println(hRegionInfo);
-                regionCount++;
-            }
-        }
-
-        if (miniCluster) {
-            if (securedCluster) {
-                Assert.assertEquals(5, regionCount);
-            } else {
-                Assert.assertEquals(4, regionCount);
-            }
         }
     }
 

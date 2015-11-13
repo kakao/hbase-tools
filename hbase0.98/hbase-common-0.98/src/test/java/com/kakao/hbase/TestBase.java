@@ -16,7 +16,10 @@
 
 package com.kakao.hbase;
 
-import com.kakao.hbase.common.*;
+import com.kakao.hbase.common.Args;
+import com.kakao.hbase.common.Constant;
+import com.kakao.hbase.common.HBaseClient;
+import com.kakao.hbase.common.InvalidTableException;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.HBaseAdminWrapper;
 import joptsimple.OptionParser;
@@ -38,7 +41,6 @@ import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestBase extends SecureTestUtil {
     protected static final String TEST_TABLE_CF = "d";
@@ -62,7 +64,6 @@ public class TestBase extends SecureTestUtil {
     private static ArrayList<ServerName> serverNameList = null;
     private static boolean testNamespaceCreated = false;
     public final String tablePrefix;
-    protected static final AtomicInteger runCounter = new AtomicInteger();
     @Rule
     public final TestName testName = new TestName();
 
@@ -82,7 +83,7 @@ public class TestBase extends SecureTestUtil {
         if (miniCluster) {
             if (hbase == null) {
                 conf = HBaseConfiguration.create(new Configuration(true));
-                conf.setInt("hbase.master.info.port", 60010 + runCounter.getAndIncrement());
+                conf.setInt("hbase.master.info.port", -1);
                 hbase = new HBaseTestingUtility(conf);
                 conf = hbase.getConfiguration();
                 conf.set("zookeeper.session.timeout", "3600000");

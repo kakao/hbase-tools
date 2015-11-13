@@ -79,58 +79,6 @@ public class SplitTest extends TestBase {
     }
 
     @Test
-    public void testSplitWithHexStringDowncaseRule() throws Exception {
-        List<HRegionInfo> regionInfoList;
-
-        regionInfoList = getRegionInfoList(tableName);
-        assertEquals(1, regionInfoList.size());
-
-        String[] argsParam = {"zookeeper", tableName, "Rule", "hexString_down", "5", "--force-proceed"};
-        Args args = new ManagerArgs(argsParam);
-        assertEquals("zookeeper", args.getZookeeperQuorum());
-        Split command = new Split(admin, args);
-
-        command.run();
-        waitForSplitting(5);
-
-        regionInfoList = getRegionInfoList(tableName);
-        assertEquals(5, regionInfoList.size());
-        for (HRegionInfo hRegionInfo : regionInfoList) {
-            byte[] startKey = hRegionInfo.getStartKey();
-            if (startKey.length > 0) {
-                assertTrue(Bytes.toString(startKey).matches("[a-z0-9]*"));
-                assertFalse(Bytes.toString(startKey).matches("[A-Z]*"));
-            }
-        }
-    }
-
-    @Test
-    public void testSplitWithHexStringUpcaseRule() throws Exception {
-        List<HRegionInfo> regionInfoList;
-
-        regionInfoList = getRegionInfoList(tableName);
-        assertEquals(1, regionInfoList.size());
-
-        String[] argsParam = {"zookeeper", tableName, "Rule", "hexString_up", "5", "--force-proceed"};
-        Args args = new ManagerArgs(argsParam);
-        assertEquals("zookeeper", args.getZookeeperQuorum());
-        Split command = new Split(admin, args);
-
-        command.run();
-        waitForSplitting(5);
-
-        regionInfoList = getRegionInfoList(tableName);
-        assertEquals(5, regionInfoList.size());
-        for (HRegionInfo hRegionInfo : regionInfoList) {
-            byte[] startKey = hRegionInfo.getStartKey();
-            if (startKey.length > 0) {
-                assertTrue(Bytes.toString(startKey).matches("[A-Z0-9]*"));
-                assertFalse(Bytes.toString(startKey).matches("[a-z]*"));
-            }
-        }
-    }
-
-    @Test
     public void testSplitWithDecimalString() throws Exception {
         List<HRegionInfo> regionInfoList;
 
@@ -223,23 +171,5 @@ public class SplitTest extends TestBase {
             Path filePath = Paths.get(keyFileName);
             if (Files.exists(filePath)) Files.delete(filePath);
         }
-    }
-
-    @Test
-    public void testSplitRuleRegex() throws Exception {
-        String tableName2 = createAdditionalTable(tableName + "2");
-
-        // split
-        String tableNameRegex = tableName2 + ".*";
-        String[] argsParam = {"zookeeper", tableNameRegex, "Rule", "hexString_down", "3", "--force-proceed"};
-        Args args = new ManagerArgs(argsParam);
-        assertEquals("zookeeper", args.getZookeeperQuorum());
-        Command command = new Split(admin, args);
-
-        command.run();
-        waitForSplitting(tableName2, 3);
-
-        assertEquals(1, getRegionInfoList(tableName).size());
-        assertEquals(3, getRegionInfoList(tableName2).size());
     }
 }

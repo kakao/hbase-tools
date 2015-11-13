@@ -172,7 +172,7 @@ public class Manager {
                 Util.validateTable(admin, args.getTableName());
             }
             command.run();
-            Util.sendAlertAfterFinished(args, this.getClass());
+            Util.sendAlertAfterSuccess(args, this.getClass());
         } catch (Throwable e) {
             Util.sendAlertAfterFailed(args, this.getClass(), e.getMessage());
             throw e;

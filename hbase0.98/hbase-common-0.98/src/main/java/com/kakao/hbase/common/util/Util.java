@@ -201,21 +201,31 @@ public class Util {
     }
 
     public static void sendAlertAfterFailed(Args args, Class clazz, String message) {
-        if (args != null && args.getAfterFailedScript() != null)
-            AlertSender.send(args.getAfterFailedScript(),
-                "FAILED - " + clazz.getSimpleName()
+        if (args != null && args.getAfterFailureScript() != null)
+            AlertSender.send(args.getAfterFailureScript(),
+                "FAIL - " + clazz.getSimpleName()
                     + " - " + message
                     + " - " + args.toString());
+        sendAlertAfterFinish(args, clazz, message, false);
     }
 
-    public static void sendAlertAfterFinished(Args args, Class clazz) {
-        sendAlertAfterFinished(args, clazz, null);
+    public static void sendAlertAfterSuccess(Args args, Class clazz) {
+        sendAlertAfterSuccess(args, clazz, null);
     }
 
-    public static void sendAlertAfterFinished(Args args, Class clazz, String message) {
-        if (args != null && args.getAfterFinishedScript() != null)
-            AlertSender.send(args.getAfterFinishedScript(),
-                "FINISHED - " + clazz.getSimpleName()
+    public static void sendAlertAfterSuccess(Args args, Class clazz, String message) {
+        if (args != null && args.getAfterSuccessScript() != null)
+            AlertSender.send(args.getAfterSuccessScript(),
+                "SUCCESS - " + clazz.getSimpleName()
+                    + (message == null || message.equals("") ? "" : " - " + message)
+                    + " - " + args.toString());
+        sendAlertAfterFinish(args, clazz, message, true);
+    }
+
+    public static void sendAlertAfterFinish(Args args, Class clazz, String message, boolean success) {
+        if (args != null && args.getAfterFinishScript() != null)
+            AlertSender.send(args.getAfterFinishScript(),
+                (success ? "SUCCESS - " : "FAIL - ") + clazz.getSimpleName()
                     + (message == null || message.equals("") ? "" : " - " + message)
                     + " - " + args.toString());
     }

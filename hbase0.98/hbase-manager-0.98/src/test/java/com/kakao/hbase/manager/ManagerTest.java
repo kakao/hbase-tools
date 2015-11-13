@@ -181,4 +181,42 @@ public class ManagerTest extends TestBase {
 
         Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
     }
+
+    @Test
+    public void testAfterFinishFailure() throws Exception {
+        HBaseClient.setAdminForTesting(admin);
+
+        String commandName = "assign";
+        String[] args = {commandName, "localhost", "balancer", "invalid",
+            "--" + Args.OPTION_AFTER_FINISH + "=" + AlertSenderTest.ALERT_SCRIPT};
+        Args argsObject = Manager.parseArgs(args);
+        Manager manager = new Manager(argsObject, commandName);
+
+        int sendCountBefore = AlertSender.getSendCount();
+
+        try {
+            manager.run();
+            Assert.fail();
+        } catch (IllegalArgumentException ignore) {
+        }
+
+        Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
+    }
+
+    @Test
+    public void testAfterFinishSuccess() throws Exception {
+        HBaseClient.setAdminForTesting(admin);
+
+        String commandName = "assign";
+        String[] args = {commandName, "localhost", "balancer", "on",
+            "--" + Args.OPTION_AFTER_FINISH + "=" + AlertSenderTest.ALERT_SCRIPT};
+        Args argsObject = Manager.parseArgs(args);
+        Manager manager = new Manager(argsObject, commandName);
+
+        int sendCountBefore = AlertSender.getSendCount();
+
+        manager.run();
+
+        Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
+    }
 }

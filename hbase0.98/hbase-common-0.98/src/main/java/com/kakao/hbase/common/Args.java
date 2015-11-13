@@ -16,7 +16,6 @@
 
 package com.kakao.hbase.common;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.kakao.hbase.common.util.Util;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -46,6 +45,7 @@ public abstract class Args {
     public static final String OPTION_OVERRIDE = "override";
     public static final String OPTION_AFTER_FAILURE = "after-failure";
     public static final String OPTION_AFTER_SUCCESS = "after-success";
+    public static final String OPTION_AFTER_FINISH = "after-finish";
     public static final String OPTION_CLEAR_WATCH_LEAK = "clear-watch-leak";
     public static final String OPTION_CLEAR_WATCH_LEAK_ONLY = "clear-watch-leak-only";
     public static final String OPTION_OPTIMIZE = "optimize";
@@ -96,6 +96,9 @@ public abstract class Args {
             + "                               The first argument of the script should be a message string.\n"
             + "    --" + Args.OPTION_AFTER_SUCCESS
             + "=<script> : The script to run when this running is successfully finished.\n"
+            + "                               The first argument of the script should be a message string.\n"
+            + "    --" + Args.OPTION_AFTER_FINISH
+            + "=<script> : The script to run when this running is successfully finished or failed.\n"
             + "                               The first argument of the script should be a message string.\n"
             + "    --" + Args.OPTION_KEY_TAB + "=<keytab file>: Kerberos keytab file. Use absolute path.\n"
             + "    --" + Args.OPTION_PRINCIPAL + "=<principal>: Kerberos principal.\n"
@@ -193,10 +196,11 @@ public abstract class Args {
         optionParser.accepts(OPTION_KERBEROS_CONFIG).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_AFTER_FAILURE).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_AFTER_SUCCESS).withRequiredArg().ofType(String.class);
+        optionParser.accepts(OPTION_AFTER_FINISH).withRequiredArg().ofType(String.class);
         return optionParser;
     }
 
-    public String getAfterFailedScript() {
+    public String getAfterFailureScript() {
         if (optionSet.has(OPTION_AFTER_FAILURE)) {
             return (String) optionSet.valueOf(OPTION_AFTER_FAILURE);
         } else {
@@ -204,9 +208,17 @@ public abstract class Args {
         }
     }
 
-    public String getAfterFinishedScript() {
+    public String getAfterSuccessScript() {
         if (optionSet.has(OPTION_AFTER_SUCCESS)) {
             return (String) optionSet.valueOf(OPTION_AFTER_SUCCESS);
+        } else {
+            return null;
+        }
+    }
+
+    public String getAfterFinishScript() {
+        if (optionSet.has(OPTION_AFTER_FINISH)) {
+            return (String) optionSet.valueOf(OPTION_AFTER_FINISH);
         } else {
             return null;
         }

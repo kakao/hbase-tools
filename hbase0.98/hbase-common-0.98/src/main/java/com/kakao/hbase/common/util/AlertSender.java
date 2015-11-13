@@ -31,7 +31,7 @@ public class AlertSender {
 
     public static void send(String alertScript, String message) {
         try {
-            Process alert = Runtime.getRuntime().exec(alertScript + " " + message);
+            Process alert = Runtime.getRuntime().exec(alertScript + " \"" + message + "\"");
             alert.waitFor();
 
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(alert.getInputStream()))) {

@@ -38,6 +38,7 @@ import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestBase extends SecureTestUtil {
     protected static final String TEST_TABLE_CF = "d";
@@ -61,6 +62,7 @@ public class TestBase extends SecureTestUtil {
     private static ArrayList<ServerName> serverNameList = null;
     private static boolean testNamespaceCreated = false;
     public final String tablePrefix;
+    protected static final AtomicInteger runCounter = new AtomicInteger();
     @Rule
     public final TestName testName = new TestName();
 
@@ -83,6 +85,7 @@ public class TestBase extends SecureTestUtil {
                 conf = hbase.getConfiguration();
                 conf.set("zookeeper.session.timeout", "3600000");
                 conf.set("dfs.client.socket-timeout", "3600000");
+                conf.setInt("hbase.master.info.port", 60010 + runCounter.getAndIncrement());
 
                 if (securedCluster) {
                     enableSecurity(conf);

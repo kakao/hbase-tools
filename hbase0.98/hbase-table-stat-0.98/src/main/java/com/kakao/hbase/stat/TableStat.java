@@ -113,7 +113,7 @@ public class TableStat {
                     Thread.sleep(sleepMillis);
                 }
             }
-            Util.sendAlertAfterFinished(args, this.getClass());
+            Util.sendAlertAfterSuccess(args, this.getClass());
         } catch (Throwable e) {
             Util.sendAlertAfterFailed(args, this.getClass(), e.getMessage());
             throw e;
@@ -142,7 +142,7 @@ public class TableStat {
 
     void exit(int exitCode, Throwable e) {
         if (exitCode == 0) {
-            Util.sendAlertAfterFinished(args, this.getClass());
+            Util.sendAlertAfterSuccess(args, this.getClass());
         } else {
             Util.sendAlertAfterFailed(args, this.getClass(), e.getMessage());
         }

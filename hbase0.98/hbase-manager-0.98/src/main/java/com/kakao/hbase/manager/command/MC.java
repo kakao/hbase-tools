@@ -16,6 +16,7 @@
 
 package com.kakao.hbase.manager.command;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.util.Util;
@@ -30,11 +31,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MC implements Command {
     private final HBaseAdmin admin;
     private final Args args;
     private Map<String, NavigableMap<HRegionInfo, ServerName>> regionLocations = new HashMap<>();
+    private final AtomicInteger mcCounter = new AtomicInteger();
 
     public MC(HBaseAdmin admin, Args args) {
         if (args.getOptionSet().nonOptionArguments().size() != 2) {
@@ -43,6 +46,11 @@ public class MC implements Command {
 
         this.admin = admin;
         this.args = args;
+    }
+
+    @VisibleForTesting
+    int getMcCounter() {
+        return mcCounter.get();
     }
 
     @SuppressWarnings("unused")
@@ -126,6 +134,8 @@ public class MC implements Command {
             System.out.println("Major compaction on " + (tableLevel ? "table " : "region ") + tableOrRegion);
             admin.majorCompact(tableOrRegion);
         }
+
+        mcCounter.getAndIncrement();
     }
 
     private void waitUntilFinish(Set<String> tables) throws IOException, InterruptedException {
@@ -223,10 +233,5 @@ public class MC implements Command {
                 targets.add(entry.getKey().getEncodedName());
             }
         }
-    }
-
-    @Override
-    public boolean needTableArg() {
-        return false;
     }
 }

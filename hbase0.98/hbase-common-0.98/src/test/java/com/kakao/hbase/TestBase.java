@@ -81,11 +81,12 @@ public class TestBase extends SecureTestUtil {
 
         if (miniCluster) {
             if (hbase == null) {
-                hbase = new HBaseTestingUtility();
+                conf = HBaseConfiguration.create(new Configuration(true));
+                conf.setInt("hbase.master.info.port", 60010 + runCounter.getAndIncrement());
+                hbase = new HBaseTestingUtility(conf);
                 conf = hbase.getConfiguration();
                 conf.set("zookeeper.session.timeout", "3600000");
                 conf.set("dfs.client.socket-timeout", "3600000");
-                conf.setInt("hbase.master.info.port", 60010 + runCounter.getAndIncrement());
 
                 if (securedCluster) {
                     enableSecurity(conf);

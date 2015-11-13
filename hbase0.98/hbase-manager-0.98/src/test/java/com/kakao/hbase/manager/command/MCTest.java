@@ -100,6 +100,20 @@ public class MCTest extends TestBase {
     }
 
     @Test
+    public void testMC_MultipleTables() throws Exception {
+        createAdditionalTable(tableName + "2");
+
+        // run MC
+        String[] argsParam = {"zookeeper", tableName, "--force-proceed", "--wait", "--test"};
+        Args args = new ManagerArgs(argsParam);
+        MC command = new MC(admin, args);
+        command.run();
+
+        // 1 table should be compacted
+        assertEquals(1, command.getMcCounter());
+    }
+
+    @Test
     public void testMC_CF() throws Exception {
         // add CF
         HColumnDescriptor cd = new HColumnDescriptor(TEST_TABLE_CF2.getBytes());

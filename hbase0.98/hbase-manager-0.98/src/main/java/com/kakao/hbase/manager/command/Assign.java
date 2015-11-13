@@ -57,9 +57,4 @@ public class Assign implements Command {
         AssignAction assignAction = AssignAction.valueOf(actionStr);
         assignAction.run(admin, args);
     }
-
-    @Override
-    public boolean needTableArg() {
-        return false;
-    }
 }

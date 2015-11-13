@@ -18,7 +18,4 @@ package com.kakao.hbase.manager.command;
 
 public interface Command {
     void run() throws Exception;
-
-    // fixme remove this
-    boolean needTableArg();
 }

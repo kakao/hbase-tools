@@ -856,6 +856,19 @@ public class TableStatTest extends StatTestBase {
     }
 
     @Test
+    public void testTableName() throws Exception {
+        createAdditionalTable(tableName + "2");
+        createAdditionalTable(tableName + "22");
+
+        String[] args = {"zookeeper", tableName, "--interval=0"};
+        TableStat command = new TableStat(admin, new StatArgs(args));
+
+        command.run();
+        Assert.assertEquals("RegionServer", command.getLoad().getLevelClass().getLevelTypeString());
+        Assert.assertEquals(1, command.getLoad().getLoadMap().size());
+    }
+
+    @Test
     public void testRegexTableNameWithRS() throws Exception {
         String tableNameRegex = tableName + ".*";
         String[] args = {"zookeeper", tableNameRegex, "--interval=0", "--rs"};

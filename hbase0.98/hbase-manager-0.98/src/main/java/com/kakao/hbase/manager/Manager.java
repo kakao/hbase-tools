@@ -168,9 +168,6 @@ public class Manager {
     public void run() throws Exception {
         try (HBaseAdmin admin = HBaseClient.getAdmin(args)) {
             Command command = createCommand(commandName, admin, args);
-            if (command.needTableArg()) {
-                Util.validateTable(admin, args.getTableName());
-            }
             command.run();
             Util.sendAlertAfterSuccess(args, this.getClass());
         } catch (Throwable e) {

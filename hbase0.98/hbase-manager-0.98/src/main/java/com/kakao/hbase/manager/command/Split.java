@@ -113,11 +113,6 @@ public class Split implements Command {
         }
     }
 
-    @Override
-    public boolean needTableArg() {
-        return false;
-    }
-
     private void split(HTable table, byte[] splitPoint) throws IOException, InterruptedException, DecoderException {
         int regionCountPrev = table.getRegionLocations().size();
         admin.split(table.getTableName(), splitPoint);

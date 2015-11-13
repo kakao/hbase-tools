@@ -94,11 +94,6 @@ public class ExportKeys implements Command {
         }
     }
 
-    @Override
-    public boolean needTableArg() {
-        return false;
-    }
-
     private int parseExportThreshold() {
         String optionValue = (String) args.getOptionSet().valueOf(Args.OPTION_OPTIMIZE);
         if (optionValue.toUpperCase().endsWith("G")) {

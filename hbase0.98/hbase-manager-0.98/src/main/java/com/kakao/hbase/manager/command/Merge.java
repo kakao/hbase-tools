@@ -318,9 +318,4 @@ public class Merge implements Command {
         }
         return emptyRegion;
     }
-
-    @Override
-    public boolean needTableArg() {
-        return false;
-    }
 }

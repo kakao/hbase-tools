@@ -202,10 +202,5 @@ public class Balance implements Command {
             Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
     }
 
-    @Override
-    public boolean needTableArg() {
-        return false;
-    }
-
     enum Phase {BALANCE, PREVIEW}
 }

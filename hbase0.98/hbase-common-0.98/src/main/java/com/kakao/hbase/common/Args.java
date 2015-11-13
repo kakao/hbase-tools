@@ -132,7 +132,13 @@ public abstract class Args {
                 return tables;
             } else {
                 for (HTableDescriptor hTableDescriptor : hTableDescriptors) {
-                    tables.add(hTableDescriptor.getNameAsString());
+                    // fixme
+                    // If hbase 1.0 client is connected to hbase 0.98,
+                    // admin.listTables(tableName) always returns all tables.
+                    // This is a workaround.
+                    String nameAsString = hTableDescriptor.getNameAsString();
+                    if (nameAsString.matches(tableName))
+                        tables.add(nameAsString);
                 }
             }
 

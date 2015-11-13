@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -36,8 +37,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MC implements Command {
     private final HBaseAdmin admin;
     private final Args args;
-    private Map<String, NavigableMap<HRegionInfo, ServerName>> regionLocations = new HashMap<>();
     private final AtomicInteger mcCounter = new AtomicInteger();
+    private final Map<String, String> regionTableMap = new HashMap<>();
+    private final Map<String, Integer> regionSizeMap = new HashMap<>();
+    private final Map<String, Float> regionLocalityMap = new HashMap<>();
+    private final Map<String, String> regionRSMap = new HashMap<>();
+    private Map<String, NavigableMap<HRegionInfo, ServerName>> regionLocations = new HashMap<>();
+
 
     public MC(HBaseAdmin admin, Args args) {
         if (args.getOptionSet().nonOptionArguments().size() != 2) {
@@ -46,11 +52,6 @@ public class MC implements Command {
 
         this.admin = admin;
         this.args = args;
-    }
-
-    @VisibleForTesting
-    int getMcCounter() {
-        return mcCounter.get();
     }
 
     @SuppressWarnings("unused")
@@ -65,6 +66,11 @@ public class MC implements Command {
             + "    --" + Args.OPTION_LOCALITY_THRESHOLD
             + "=<threshold%>: Compact only if the data locality of the region is lower than this threshold.\n"
             + Args.commonUsage();
+    }
+
+    @VisibleForTesting
+    int getMcCounter() {
+        return mcCounter.get();
     }
 
     @Override
@@ -113,7 +119,8 @@ public class MC implements Command {
             mc(tableLevel, target);
         }
 
-        waitUntilFinish(tables);
+        if (mcCounter.get() > 0)
+            waitUntilFinish(tables);
     }
 
     private void mc(boolean tableLevel, String tableOrRegion) throws InterruptedException, IOException {
@@ -121,9 +128,11 @@ public class MC implements Command {
             String cf = (String) args.valueOf(Args.OPTION_CF);
             try {
                 System.out.print("Major compaction on " + cf + " CF of " +
-                    (tableLevel ? "table " : "region ") + tableOrRegion);
+                    (tableLevel ? "table " : "region ") + tableOrRegion +
+                    (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion) + " - "));
                 if (!askProceedInteractively()) return;
                 admin.majorCompact(tableOrRegion, cf);
+                mcCounter.getAndIncrement();
             } catch (IOException e) {
                 String message = "column family " + cf + " does not exist";
                 if (e.getMessage().contains(message)) {
@@ -133,12 +142,19 @@ public class MC implements Command {
                 }
             }
         } else {
-            System.out.print("Major compaction on " + (tableLevel ? "table " : "region ") + tableOrRegion);
+            System.out.print("Major compaction on " + (tableLevel ? "table " : "region ")
+                + tableOrRegion + (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion) + " - "));
             if (!askProceedInteractively()) return;
             admin.majorCompact(tableOrRegion);
+            mcCounter.getAndIncrement();
         }
+    }
 
-        mcCounter.getAndIncrement();
+    private String getRegionInfo(String regionName) {
+        return "Table: " + regionTableMap.get(regionName)
+            + ", RS: " + regionRSMap.get(regionName)
+            + ", Locality: " + StringUtils.formatPercent(regionLocalityMap.get(regionName), 2)
+            + ", SizeMB: " + regionSizeMap.get(regionName);
     }
 
     private boolean askProceedInteractively() {
@@ -188,7 +204,11 @@ public class MC implements Command {
     private void filterWithLocalityOnly(Set<String> targets, String table) throws IOException {
         Map<byte[], HRegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         for (Map.Entry<HRegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
+            String regionName = entry.getKey().getEncodedName();
+            String serverName = entry.getValue().getHostname();
             regionMap.put(entry.getKey().getRegionName(), entry.getKey());
+            regionTableMap.put(regionName, table);
+            regionRSMap.put(regionName, serverName);
         }
 
         filterWithDataLocality(targets, regionMap);
@@ -198,9 +218,13 @@ public class MC implements Command {
         Map<byte[], HRegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         String regex = (String) args.valueOf(Args.OPTION_REGION_SERVER);
         for (Map.Entry<HRegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
-            if (entry.getValue().getServerName().matches(regex)) {
+            String serverName = entry.getValue().getHostname();
+            if (serverName.matches(regex)) {
                 regionMap.put(entry.getKey().getRegionName(), entry.getKey());
-                targets.add(entry.getKey().getEncodedName());
+                String regionName = entry.getKey().getEncodedName();
+                targets.add(regionName);
+                regionTableMap.put(regionName, table);
+                regionRSMap.put(regionName, serverName);
             }
         }
 
@@ -229,9 +253,12 @@ public class MC implements Command {
         for (HRegionInfo regionInfo : regionMap.values()) {
             RegionLoadDelegator regionLoad = regionLoadAdapter.get(regionInfo);
             try {
+                String regionName = regionInfo.getEncodedName();
                 float dataLocality = regionLoad.getDataLocality();
+                regionLocalityMap.put(regionName, dataLocality);
+                regionSizeMap.put(regionName, regionLoad.getStorefileSizeMB());
                 if (dataLocality * 100 < dataLocalityThreshold)
-                    targets.add(regionInfo.getEncodedName());
+                    targets.add(regionName);
             } catch (IllegalStateException e) {
                 if (e.getMessage().contains("not implemented")) {
                     throw new IllegalStateException("Option " + Args.OPTION_LOCALITY_THRESHOLD

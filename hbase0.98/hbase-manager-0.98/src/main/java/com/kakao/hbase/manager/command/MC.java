@@ -115,38 +115,39 @@ public class MC implements Command {
         if (targets.size() == 0) return;
         if (!args.isForceProceed() && !Util.askProceed()) return;
 
-        for (String target : targets) {
-            mc(tableLevel, target);
-        }
+        mc(tableLevel, targets);
 
         if (mcCounter.get() > 0)
             waitUntilFinish(tables);
     }
 
-    private void mc(boolean tableLevel, String tableOrRegion) throws InterruptedException, IOException {
-        if (args.has(Args.OPTION_CF)) {
-            String cf = (String) args.valueOf(Args.OPTION_CF);
-            try {
-                System.out.print("Major compaction on " + cf + " CF of " +
-                    (tableLevel ? "table " : "region ") + tableOrRegion +
-                    (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
-                if (!askProceedInteractively()) return;
-                admin.majorCompact(tableOrRegion, cf);
-                mcCounter.getAndIncrement();
-            } catch (IOException e) {
-                String message = "column family " + cf + " does not exist";
-                if (e.getMessage().contains(message)) {
-                    System.out.println("WARNING - " + message + " on " + tableOrRegion);
-                } else {
-                    throw e;
+    private void mc(boolean tableLevel, Set<String> targets) throws InterruptedException, IOException {
+        int i = 1;
+        for (String tableOrRegion : targets) {
+            if (args.has(Args.OPTION_CF)) {
+                String cf = (String) args.valueOf(Args.OPTION_CF);
+                try {
+                    System.out.print(i++ + "/" + targets.size() + " - Major compaction on " + cf + " CF of " +
+                        (tableLevel ? "table " : "region ") + tableOrRegion +
+                        (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
+                    if (!askProceedInteractively()) return;
+                    admin.majorCompact(tableOrRegion, cf);
+                    mcCounter.getAndIncrement();
+                } catch (IOException e) {
+                    String message = "column family " + cf + " does not exist";
+                    if (e.getMessage().contains(message)) {
+                        System.out.println("WARNING - " + message + " on " + tableOrRegion);
+                    } else {
+                        throw e;
+                    }
                 }
+            } else {
+                System.out.print(i++ + "/" + targets.size() + " - Major compaction on " + (tableLevel ? "table " : "region ")
+                    + tableOrRegion + (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
+                if (!askProceedInteractively()) return;
+                admin.majorCompact(tableOrRegion);
+                mcCounter.getAndIncrement();
             }
-        } else {
-            System.out.print("Major compaction on " + (tableLevel ? "table " : "region ")
-                + tableOrRegion + (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
-            if (!askProceedInteractively()) return;
-            admin.majorCompact(tableOrRegion);
-            mcCounter.getAndIncrement();
         }
     }
 

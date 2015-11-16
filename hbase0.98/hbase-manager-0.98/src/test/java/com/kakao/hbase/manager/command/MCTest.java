@@ -316,9 +316,9 @@ public class MCTest extends TestBase {
     private void assertRegionName(MC command) throws IOException {
         if (command.isTableLevel()) return;
 
-        Set<String> targets = command.getTargets();
-        for (String region : targets) {
-            HRegionInfo.parseRegionName(region.getBytes());
+        Set<byte[]> targets = command.getTargets();
+        for (byte[] region : targets) {
+            HRegionInfo.parseRegionName(region);
         }
     }
 }

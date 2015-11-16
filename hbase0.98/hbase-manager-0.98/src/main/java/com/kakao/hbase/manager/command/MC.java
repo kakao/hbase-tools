@@ -38,13 +38,13 @@ public class MC implements Command {
     private final HBaseAdmin admin;
     private final Args args;
     private final AtomicInteger mcCounter = new AtomicInteger();
-    private final Map<String, String> regionTableMap = new HashMap<>();
-    private final Map<String, Integer> regionSizeMap = new HashMap<>();
-    private final Map<String, Float> regionLocalityMap = new HashMap<>();
-    private final Map<String, String> regionRSMap = new HashMap<>();
+    private final Map<byte[], String> regionTableMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    private final Map<byte[], Integer> regionSizeMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    private final Map<byte[], Float> regionLocalityMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    private final Map<byte[], String> regionRSMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     private Map<String, NavigableMap<HRegionInfo, ServerName>> regionLocations = new HashMap<>();
     // regions or tables
-    private Set<String> targets = null;
+    private Set<byte[]> targets = null;
     private boolean tableLevel = false;
 
     public MC(HBaseAdmin admin, Args args) {
@@ -76,7 +76,7 @@ public class MC implements Command {
     }
 
     @VisibleForTesting
-    Set<String> getTargets() {
+    Set<byte[]> getTargets() {
         return targets;
     }
 
@@ -87,7 +87,7 @@ public class MC implements Command {
 
     @Override
     public void run() throws Exception {
-        targets = new HashSet<>();
+        targets = Collections.newSetFromMap(new TreeMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR));
         tableLevel = false; // or region level
 
         Set<String> tables = Args.tables(admin, args.getTableName());
@@ -108,7 +108,7 @@ public class MC implements Command {
                 // MC at table level
                 tableLevel = true;
 
-                targets.add(table);
+                targets.add(table.getBytes());
             }
         }
 
@@ -128,22 +128,22 @@ public class MC implements Command {
             waitUntilFinish(tables);
     }
 
-    private void mc(boolean tableLevel, Set<String> targets) throws InterruptedException, IOException {
+    private void mc(boolean tableLevel, Set<byte[]> targets) throws InterruptedException, IOException {
         int i = 1;
-        for (String tableOrRegion : targets) {
+        for (byte[] tableOrRegion : targets) {
             if (args.has(Args.OPTION_CF)) {
                 String cf = (String) args.valueOf(Args.OPTION_CF);
                 try {
                     System.out.print(i++ + "/" + targets.size() + " - Major compaction on " + cf + " CF of " +
-                        (tableLevel ? "table " : "region ") + tableOrRegion +
+                        (tableLevel ? "table " : "region ") + Bytes.toStringBinary(tableOrRegion) +
                         (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
                     if (!askProceedInteractively()) continue;
-                    admin.majorCompact(tableOrRegion, cf);
+                    admin.majorCompact(tableOrRegion, cf.getBytes());
                     mcCounter.getAndIncrement();
                 } catch (IOException e) {
                     String message = "column family " + cf + " does not exist";
                     if (e.getMessage().contains(message)) {
-                        System.out.println("WARNING - " + message + " on " + tableOrRegion);
+                        System.out.println("WARNING - " + message + " on " + Bytes.toStringBinary(tableOrRegion));
                     } else {
                         throw e;
                     }
@@ -151,7 +151,7 @@ public class MC implements Command {
             } else {
                 System.out.print(i++ + "/" + targets.size() + " - Major compaction on "
                     + (tableLevel ? "table " : "region ")
-                    + tableOrRegion + (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
+                    + Bytes.toStringBinary(tableOrRegion) + (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
                 if (!askProceedInteractively()) continue;
                 admin.majorCompact(tableOrRegion);
                 mcCounter.getAndIncrement();
@@ -159,7 +159,7 @@ public class MC implements Command {
         }
     }
 
-    private String getRegionInfo(String regionName) {
+    private String getRegionInfo(byte[] regionName) {
         return "Table: " + regionTableMap.get(regionName)
             + ", RS: " + regionRSMap.get(regionName)
             + ", Locality: " + (regionLocalityMap.get(regionName) == null ? "null" :
@@ -211,10 +211,10 @@ public class MC implements Command {
         }
     }
 
-    private void filterWithLocalityOnly(Set<String> targets, String table) throws IOException {
+    private void filterWithLocalityOnly(Set<byte[]> targets, String table) throws IOException {
         Map<byte[], HRegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         for (Map.Entry<HRegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
-            String regionName = entry.getKey().getRegionNameAsString();
+            byte[] regionName = entry.getKey().getRegionName();
             String serverName = entry.getValue().getHostname();
             regionMap.put(entry.getKey().getRegionName(), entry.getKey());
             regionTableMap.put(regionName, table);
@@ -224,14 +224,14 @@ public class MC implements Command {
         filterWithDataLocality(targets, regionMap);
     }
 
-    private void filterWithRsAndLocality(Set<String> targets, String table) throws IOException {
+    private void filterWithRsAndLocality(Set<byte[]> targets, String table) throws IOException {
         Map<byte[], HRegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         String regex = (String) args.valueOf(Args.OPTION_REGION_SERVER);
         for (Map.Entry<HRegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
             String serverName = entry.getValue().getHostname() + "," + entry.getValue().getPort();
             if (serverName.matches(regex)) {
                 regionMap.put(entry.getKey().getRegionName(), entry.getKey());
-                String regionName = entry.getKey().getRegionNameAsString();
+                byte[] regionName = entry.getKey().getRegionName();
                 targets.add(regionName);
                 regionTableMap.put(regionName, table);
                 regionRSMap.put(regionName, serverName);
@@ -253,7 +253,7 @@ public class MC implements Command {
         return result;
     }
 
-    private void filterWithDataLocality(Set<String> targets,
+    private void filterWithDataLocality(Set<byte[]> targets,
         Map<byte[], HRegionInfo> regionMap) throws IOException {
         final Double dataLocalityThreshold;
         if (args.has(Args.OPTION_LOCALITY_THRESHOLD)) {
@@ -269,7 +269,7 @@ public class MC implements Command {
             RegionLoadDelegator regionLoad = regionLoadAdapter.get(regionInfo);
             if (regionLoad == null) continue;
             try {
-                String regionName = regionInfo.getRegionNameAsString();
+                byte[] regionName = regionInfo.getRegionName();
                 regionSizeMap.put(regionName, regionLoad.getStorefileSizeMB());
                 if (dataLocalityThreshold == null) {
                     targets.add(regionName);

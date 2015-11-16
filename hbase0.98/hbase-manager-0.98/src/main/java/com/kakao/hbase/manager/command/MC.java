@@ -43,7 +43,10 @@ public class MC implements Command {
     private final Map<String, Float> regionLocalityMap = new HashMap<>();
     private final Map<String, String> regionRSMap = new HashMap<>();
     private Map<String, NavigableMap<HRegionInfo, ServerName>> regionLocations = new HashMap<>();
-    
+    // regions or tables
+    private Set<String> targets = null;
+    private boolean tableLevel = false;
+
     public MC(HBaseAdmin admin, Args args) {
         if (args.getOptionSet().nonOptionArguments().size() != 2) {
             throw new IllegalArgumentException(Args.INVALID_ARGUMENTS);
@@ -72,11 +75,20 @@ public class MC implements Command {
         return mcCounter.get();
     }
 
+    @VisibleForTesting
+    Set<String> getTargets() {
+        return targets;
+    }
+
+    @VisibleForTesting
+    boolean isTableLevel() {
+        return tableLevel;
+    }
+
     @Override
     public void run() throws Exception {
-        // regions or tables
-        Set<String> targets = new HashSet<>();
-        boolean tableLevel = false; // or region level
+        targets = new HashSet<>();
+        tableLevel = false; // or region level
 
         Set<String> tables = Args.tables(admin, args.getTableName());
         assert tables != null;
@@ -202,7 +214,7 @@ public class MC implements Command {
     private void filterWithLocalityOnly(Set<String> targets, String table) throws IOException {
         Map<byte[], HRegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         for (Map.Entry<HRegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
-            String regionName = entry.getKey().getEncodedName();
+            String regionName = entry.getKey().getRegionNameAsString();
             String serverName = entry.getValue().getHostname();
             regionMap.put(entry.getKey().getRegionName(), entry.getKey());
             regionTableMap.put(regionName, table);
@@ -219,7 +231,7 @@ public class MC implements Command {
             String serverName = entry.getValue().getHostname() + "," + entry.getValue().getPort();
             if (serverName.matches(regex)) {
                 regionMap.put(entry.getKey().getRegionName(), entry.getKey());
-                String regionName = entry.getKey().getEncodedName();
+                String regionName = entry.getKey().getRegionNameAsString();
                 targets.add(regionName);
                 regionTableMap.put(regionName, table);
                 regionRSMap.put(regionName, serverName);
@@ -257,7 +269,7 @@ public class MC implements Command {
             RegionLoadDelegator regionLoad = regionLoadAdapter.get(regionInfo);
             if (regionLoad == null) continue;
             try {
-                String regionName = regionInfo.getEncodedName();
+                String regionName = regionInfo.getRegionNameAsString();
                 regionSizeMap.put(regionName, regionLoad.getStorefileSizeMB());
                 if (dataLocalityThreshold == null) {
                     targets.add(regionName);

@@ -30,6 +30,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -94,6 +95,7 @@ public class MCTest extends TestBase {
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
+        assertRegionName(command);
 
         // should be 1 store file
         assertEquals(1, getRegionLoad(regionInfo, serverName).getStorefiles());
@@ -108,6 +110,7 @@ public class MCTest extends TestBase {
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
+        assertRegionName(command);
 
         // 1 table should be compacted
         assertEquals(1, command.getMcCounter());
@@ -141,6 +144,7 @@ public class MCTest extends TestBase {
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
+        assertRegionName(command);
 
         // should be 2 + 1 store files
         assertEquals(2 + 1, getRegionLoad(regionInfo, serverName).getStorefiles());
@@ -170,6 +174,7 @@ public class MCTest extends TestBase {
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
+        assertRegionName(command);
 
         // should be 1 store file
         assertEquals(2, getRegionLoad(regionInfo, serverName).getStorefiles());
@@ -208,6 +213,7 @@ public class MCTest extends TestBase {
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
+        assertRegionName(command);
 
         // should be 1 store file
         assertEquals(1, getRegionLoad(regionInfo1, serverName1).getStorefiles());
@@ -248,6 +254,7 @@ public class MCTest extends TestBase {
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
+        assertRegionName(command);
 
         // should be 1 store file
         assertEquals(1, getRegionLoad(regionInfo1, serverName1).getStorefiles());
@@ -300,8 +307,18 @@ public class MCTest extends TestBase {
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
+        assertRegionName(command);
 
         // should be 1 store file
         assertEquals(1, getRegionLoad(regionInfo, serverName).getStorefiles());
+    }
+
+    private void assertRegionName(MC command) throws IOException {
+        if (command.isTableLevel()) return;
+
+        Set<String> targets = command.getTargets();
+        for (String region : targets) {
+            HRegionInfo.parseRegionName(region.getBytes());
+        }
     }
 }

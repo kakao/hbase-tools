@@ -43,8 +43,7 @@ public class MC implements Command {
     private final Map<String, Float> regionLocalityMap = new HashMap<>();
     private final Map<String, String> regionRSMap = new HashMap<>();
     private Map<String, NavigableMap<HRegionInfo, ServerName>> regionLocations = new HashMap<>();
-
-
+    
     public MC(HBaseAdmin admin, Args args) {
         if (args.getOptionSet().nonOptionArguments().size() != 2) {
             throw new IllegalArgumentException(Args.INVALID_ARGUMENTS);
@@ -87,11 +86,7 @@ public class MC implements Command {
                 tableLevel = false;
 
                 if (args.has(Args.OPTION_REGION_SERVER)) {
-                    if (args.has(Args.OPTION_LOCALITY_THRESHOLD)) {
-                        filterWithRsAndLocality(targets, table);
-                    } else {
-                        filterWithRsOnly(targets, table);
-                    }
+                    filterWithRsAndLocality(targets, table);
                 } else {
                     if (args.has(Args.OPTION_LOCALITY_THRESHOLD)) {
                         filterWithLocalityOnly(targets, table);
@@ -130,7 +125,7 @@ public class MC implements Command {
                     System.out.print(i++ + "/" + targets.size() + " - Major compaction on " + cf + " CF of " +
                         (tableLevel ? "table " : "region ") + tableOrRegion +
                         (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
-                    if (!askProceedInteractively()) return;
+                    if (!askProceedInteractively()) continue;
                     admin.majorCompact(tableOrRegion, cf);
                     mcCounter.getAndIncrement();
                 } catch (IOException e) {
@@ -142,9 +137,10 @@ public class MC implements Command {
                     }
                 }
             } else {
-                System.out.print(i++ + "/" + targets.size() + " - Major compaction on " + (tableLevel ? "table " : "region ")
+                System.out.print(i++ + "/" + targets.size() + " - Major compaction on "
+                    + (tableLevel ? "table " : "region ")
                     + tableOrRegion + (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
-                if (!askProceedInteractively()) return;
+                if (!askProceedInteractively()) continue;
                 admin.majorCompact(tableOrRegion);
                 mcCounter.getAndIncrement();
             }
@@ -154,7 +150,8 @@ public class MC implements Command {
     private String getRegionInfo(String regionName) {
         return "Table: " + regionTableMap.get(regionName)
             + ", RS: " + regionRSMap.get(regionName)
-            + ", Locality: " + StringUtils.formatPercent(regionLocalityMap.get(regionName), 2)
+            + ", Locality: " + (regionLocalityMap.get(regionName) == null ? "null" :
+            StringUtils.formatPercent(regionLocalityMap.get(regionName), 2))
             + ", SizeMB: " + regionSizeMap.get(regionName);
     }
 
@@ -219,7 +216,7 @@ public class MC implements Command {
         Map<byte[], HRegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         String regex = (String) args.valueOf(Args.OPTION_REGION_SERVER);
         for (Map.Entry<HRegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
-            String serverName = entry.getValue().getHostname();
+            String serverName = entry.getValue().getHostname() + "," + entry.getValue().getPort();
             if (serverName.matches(regex)) {
                 regionMap.put(entry.getKey().getRegionName(), entry.getKey());
                 String regionName = entry.getKey().getEncodedName();
@@ -246,20 +243,29 @@ public class MC implements Command {
 
     private void filterWithDataLocality(Set<String> targets,
         Map<byte[], HRegionInfo> regionMap) throws IOException {
-        Double dataLocalityThreshold = (Double) args.valueOf(Args.OPTION_LOCALITY_THRESHOLD);
-        if (dataLocalityThreshold < 1 || dataLocalityThreshold > 100)
-            throw new IllegalArgumentException("Invalid data locality");
+        final Double dataLocalityThreshold;
+        if (args.has(Args.OPTION_LOCALITY_THRESHOLD)) {
+            dataLocalityThreshold = (Double) args.valueOf(Args.OPTION_LOCALITY_THRESHOLD);
+            if (dataLocalityThreshold < 1 || dataLocalityThreshold > 100)
+                throw new IllegalArgumentException("Invalid data locality");
+        } else {
+            dataLocalityThreshold = null;
+        }
 
         RegionLoadAdapter regionLoadAdapter = new RegionLoadAdapter(admin, regionMap, args);
         for (HRegionInfo regionInfo : regionMap.values()) {
             RegionLoadDelegator regionLoad = regionLoadAdapter.get(regionInfo);
+            if (regionLoad == null) continue;
             try {
                 String regionName = regionInfo.getEncodedName();
-                float dataLocality = regionLoad.getDataLocality();
-                regionLocalityMap.put(regionName, dataLocality);
                 regionSizeMap.put(regionName, regionLoad.getStorefileSizeMB());
-                if (dataLocality * 100 < dataLocalityThreshold)
+                if (dataLocalityThreshold == null) {
                     targets.add(regionName);
+                } else {
+                    float dataLocality = regionLoad.getDataLocality();
+                    regionLocalityMap.put(regionName, dataLocality);
+                    if (dataLocality * 100 < dataLocalityThreshold) targets.add(regionName);
+                }
             } catch (IllegalStateException e) {
                 if (e.getMessage().contains("not implemented")) {
                     throw new IllegalStateException("Option " + Args.OPTION_LOCALITY_THRESHOLD
@@ -267,15 +273,6 @@ public class MC implements Command {
                 } else {
                     throw e;
                 }
-            }
-        }
-    }
-
-    private void filterWithRsOnly(Set<String> targets, String table) throws IOException {
-        String regex = (String) args.valueOf(Args.OPTION_REGION_SERVER);
-        for (Map.Entry<HRegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
-            if (entry.getValue().getServerName().matches(regex)) {
-                targets.add(entry.getKey().getEncodedName());
             }
         }
     }

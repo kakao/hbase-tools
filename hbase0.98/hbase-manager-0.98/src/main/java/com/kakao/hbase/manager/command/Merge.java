@@ -42,6 +42,7 @@ public class Merge implements Command {
     private final Set<String> tableNameSet;
     private boolean proceed = false;
     private boolean test = false;
+    private final HConnection connection;
 
     public Merge(HBaseAdmin admin, Args args) throws IOException {
         if (args.getOptionSet().nonOptionArguments().size() < 2
@@ -52,6 +53,7 @@ public class Merge implements Command {
         this.admin = admin;
         this.args = args;
         actionParam = (String) args.getOptionSet().nonOptionArguments().get(2);
+        this.connection = HConnectionManager.createConnection(admin.getConfiguration());
 
         tableNameSet = Util.parseTableSet(admin, args);
     }
@@ -302,14 +304,15 @@ public class Merge implements Command {
     private boolean isReallyEmptyRegion(TableInfo tableInfo, HRegionInfo regionInfo) throws IOException {
         boolean emptyRegion = false;
         // verify really empty region by scanning records
-        try (HTable table = new HTable(admin.getConfiguration(), tableInfo.getTableName())) {
+        try (HTableInterface table = connection.getTable(tableInfo.getTableName())) {
             Scan scan = new Scan(regionInfo.getStartKey(), regionInfo.getEndKey());
             FilterList filterList = new FilterList();
             filterList.addFilter(new KeyOnlyFilter());
             filterList.addFilter(new FirstKeyOnlyFilter());
             scan.setFilter(filterList);
             scan.setCacheBlocks(false);
-            scan.setBatch(1);
+            scan.setSmall(true);
+            scan.setCaching(1);
 
             try (ResultScanner scanner = table.getScanner(scan)) {
                 if (scanner.next() == null) emptyRegion = true;

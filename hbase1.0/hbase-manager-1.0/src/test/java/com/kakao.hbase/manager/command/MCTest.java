@@ -29,6 +29,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -180,5 +181,55 @@ public class MCTest extends TestBase {
         // should be 1 store file
         assertEquals(2, getRegionLoad(regionInfo1, serverName2).getStorefiles());
         assertEquals(1, getRegionLoad(regionInfo2, serverName1).getStorefiles());
+    }
+
+    @Test
+    public void testMC_RS() throws Exception {
+        // move each RS has one region
+        splitTable("c".getBytes());
+        ArrayList<ServerName> serverNameList = getServerNameList();
+        assertTrue(serverNameList.size() >= 2);
+        ArrayList<HRegionInfo> regionInfoList = getRegionInfoList(tableName);
+        assertEquals(2, regionInfoList.size());
+        HRegionInfo regionInfo1 = regionInfoList.get(0);
+        HRegionInfo regionInfo2 = regionInfoList.get(1);
+        ServerName serverName1 = serverNameList.get(0);
+        ServerName serverName2 = serverNameList.get(1);
+        move(regionInfo1, serverName1);
+        move(regionInfo2, serverName2);
+
+        // make 2 + 2 store files
+        putData(table, "a".getBytes());
+        admin.flush(tableName);
+        putData(table, "b".getBytes());
+        admin.flush(tableName);
+        putData(table, "c".getBytes());
+        admin.flush(tableName);
+        putData(table, "d".getBytes());
+        admin.flush(tableName);
+        Thread.sleep(3000);
+        assertEquals(2, getRegionLoad(regionInfo1, serverName1).getStorefiles());
+        assertEquals(2, getRegionLoad(regionInfo2, serverName2).getStorefiles());
+
+        // run MC
+        String regex = serverName1.getHostname() + "," + serverName1.getPort() + ".*";
+        String[] argsParam = {"zookeeper", tableName, "--rs=" + regex, "--force-proceed", "--wait", "--test"};
+        Args args = new ManagerArgs(argsParam);
+        MC command = new MC(admin, args);
+        command.run();
+        assertRegionName(command);
+
+        // should be 1 store file
+        assertEquals(1, getRegionLoad(regionInfo1, serverName1).getStorefiles());
+        assertEquals(2, getRegionLoad(regionInfo2, serverName2).getStorefiles());
+    }
+
+    private void assertRegionName(MC command) throws IOException {
+        if (command.isTableLevel()) return;
+
+        Set<byte[]> targets = command.getTargets();
+        for (byte[] region : targets) {
+            HRegionInfo.parseRegionName(region);
+        }
     }
 }

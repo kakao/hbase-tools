@@ -24,10 +24,7 @@ import com.kakao.hbase.specific.RegionLoadDelegator;
 import com.kakao.hbase.stat.load.TableInfo;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionException;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
@@ -48,7 +45,7 @@ public class Merge implements Command {
 
     public Merge(HBaseAdmin admin, Args args) throws IOException {
         if (args.getOptionSet().nonOptionArguments().size() < 2
-                || args.getOptionSet().nonOptionArguments().size() > 3) { // todo refactoring
+            || args.getOptionSet().nonOptionArguments().size() > 3) { // todo refactoring
             throw new RuntimeException(Args.INVALID_ARGUMENTS);
         }
 
@@ -59,17 +56,18 @@ public class Merge implements Command {
         tableNameSet = Util.parseTableSet(admin, args);
     }
 
+    @SuppressWarnings("unused")
     public static String usage() {
         return "Merge regions. It may take a long time.\n"
-                + "usage: "
-                + Merge.class.getSimpleName().toLowerCase()
-                + " [options] <zookeeper quorum> <table name(regex)> <action>\n"
-                + "  actions:\n"
-                + "    empty-fast       - Merge adjacent 2 empty regions only.\n"
-                + "    empty            - Merge all empty regions.\n"
-                + "  options:\n"
-                + "    --" + Args.OPTION_MAX_ITERATION + " - Set max iteration.\n"
-                + Args.commonUsage();
+            + "usage: "
+            + Merge.class.getSimpleName().toLowerCase()
+            + " [options] <zookeeper quorum> <table name(regex)> <action>\n"
+            + "  actions:\n"
+            + "    empty-fast       - Merge adjacent 2 empty regions only.\n"
+            + "    empty            - Merge all empty regions.\n"
+            + "  options:\n"
+            + "    --" + Args.OPTION_MAX_ITERATION + " - Set max iteration.\n"
+            + Args.commonUsage();
     }
 
     private int getMaxMaxIteration() {
@@ -134,7 +132,7 @@ public class Merge implements Command {
 
                 if (emptyInternal(tableInfo)) break;
                 System.out.println("Iteration " + i + "/" + getMaxMaxIteration() + " - Wait for "
-                        + getMergeWaitIntervalMs() / 1000 + " seconds\n");
+                    + getMergeWaitIntervalMs() / 1000 + " seconds\n");
                 Thread.sleep(getMergeWaitIntervalMs());
             } catch (IllegalStateException e) {
                 if (e.getMessage().contains(Constant.MESSAGE_NEED_REFRESH)) {
@@ -187,7 +185,8 @@ public class Merge implements Command {
         return mergedRegions.size() <= 1;
     }
 
-    private HRegionInfo getTargetRegion(TableInfo tableInfo, List<HRegionInfo> allTableRegions, int i, Set<HRegionInfo> mergedRegions) {
+    private HRegionInfo getTargetRegion(TableInfo tableInfo, List<HRegionInfo> allTableRegions,
+        int i, Set<HRegionInfo> mergedRegions) {
         HRegionInfo regionPrev = i > 0 ? allTableRegions.get(i - 1) : null;
         if (mergedRegions.contains(regionPrev)) regionPrev = null;
         HRegionInfo regionNext = i == allTableRegions.size() - 1 ? null : allTableRegions.get(i + 1);
@@ -225,7 +224,7 @@ public class Merge implements Command {
                 Util.printVerboseMessage(args, "Merge.emptyFast.adjacentEmptyRegions", timestampPrev);
                 System.out.println();
                 System.out.println("Iteration " + j + "/" + getMaxMaxIteration() + " - "
-                        + adjacentEmptyRegions.size() + " adjacent empty regions are found");
+                    + adjacentEmptyRegions.size() + " adjacent empty regions are found");
                 if (adjacentEmptyRegions.size() == 0) return;
                 emptyRegions = adjacentEmptyRegions;
                 if (!args.isForceProceed()) {
@@ -252,7 +251,7 @@ public class Merge implements Command {
                 }
                 if (!merged)
                     System.out.println("Skip merging - " + regionA.getEncodedName()
-                            + " - There is no adjacent empty region");
+                        + " - There is no adjacent empty region");
             }
 
             if (merged)

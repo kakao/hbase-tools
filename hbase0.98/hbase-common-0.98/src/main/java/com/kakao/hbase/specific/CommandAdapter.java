@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.ClusterLoadState;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -42,7 +41,8 @@ import java.util.*;
  */
 public class CommandAdapter {
 
-    public static List<RegionPlan> makePlan(HBaseAdmin admin, Map<ServerName, List<HRegionInfo>> clusterState, Configuration conf) throws IOException {
+    public static List<RegionPlan> makePlan(HBaseAdmin admin,
+        Map<ServerName, List<HRegionInfo>> clusterState, Configuration conf) throws IOException {
         StochasticLoadBalancer balancer = new StochasticLoadBalancer() {
             @Override
             protected boolean needsBalance(ClusterLoadState cs) {
@@ -115,7 +115,8 @@ public class CommandAdapter {
     }
 
     @SuppressWarnings("UnusedParameters")
-    public static NavigableMap<HRegionInfo, ServerName> regionServerMap(Args args, Configuration conf, HConnection connection, final boolean offlined) throws IOException {
+    public static NavigableMap<HRegionInfo, ServerName> regionServerMap(Args args, Configuration conf,
+        HConnection connection, final boolean offlined) throws IOException {
         long timestamp = System.currentTimeMillis();
 
         final NavigableMap<HRegionInfo, ServerName> regionServerMap = new TreeMap<>();
@@ -138,7 +139,8 @@ public class CommandAdapter {
     }
 
     @SuppressWarnings("UnusedParameters")
-    public static NavigableMap<HRegionInfo, ServerName> regionServerMap(Args args, Configuration conf, HConnection connection, final Set<String> tableNames, final boolean offlined) throws IOException {
+    public static NavigableMap<HRegionInfo, ServerName> regionServerMap(Args args, Configuration conf,
+        HConnection connection, final Set<String> tableNames, final boolean offlined) throws IOException {
         long timestamp = System.currentTimeMillis();
 
         final NavigableMap<HRegionInfo, ServerName> regionServerMap = new TreeMap<>();
@@ -168,7 +170,8 @@ public class CommandAdapter {
         return regionServerMap;
     }
 
-    private static NavigableMap<HRegionInfo, ServerName> regionServerMap(Args args, Configuration conf, HConnection connection, final String tableNameParam, final boolean offlined) throws IOException {
+    private static NavigableMap<HRegionInfo, ServerName> regionServerMap(Args args, Configuration conf,
+        HConnection connection, final String tableNameParam, final boolean offlined) throws IOException {
         long timestamp = System.currentTimeMillis();
 
         final NavigableMap<HRegionInfo, ServerName> regions = new TreeMap<>();
@@ -194,7 +197,8 @@ public class CommandAdapter {
         return hRegionInfo.getTable().getNameAsString();
     }
 
-    public static boolean mergeRegions(Args args, HBaseAdmin admin, HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+    public static boolean mergeRegions(Args args, HBaseAdmin admin,
+        HRegionInfo regionA, HRegionInfo regionB) throws IOException {
         long timestamp = System.currentTimeMillis();
 
         if (HRegionInfo.areAdjacent(regionA, regionB)) {
@@ -221,6 +225,7 @@ public class CommandAdapter {
         return adjacentEmptyRegions;
     }
 
+    @SuppressWarnings("UnusedParameters")
     public static boolean isMajorCompacting(Args args, HBaseAdmin admin, String tableName)
         throws IOException, InterruptedException {
         CompactionState compactionState = admin.getCompactionState(tableName);

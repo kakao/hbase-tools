@@ -25,9 +25,6 @@ import com.kakao.hbase.stat.load.TableInfo;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.filter.FilterList;
-import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
-import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -167,7 +164,7 @@ public class Merge implements Command {
             if (mergedRegions.contains(targetRegion)) continue;
 
             if (regionLoad.getStorefileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
-                if (isReallyEmptyRegion(tableInfo, region)) {
+                if (CommandAdapter.isReallyEmptyRegion(connection, tableInfo.getTableName(), region)) {
                     try {
                         if (targetRegion != null) {
                             printMergeInfo(region, targetRegion);
@@ -294,30 +291,10 @@ public class Merge implements Command {
             if (regionLoad == null) throw new IllegalStateException(Constant.MESSAGE_NEED_REFRESH);
 
             if (regionLoad.getStorefileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
-                if (isReallyEmptyRegion(tableInfo, regionInfo)) emptyRegions.add(regionInfo);
+                if (CommandAdapter.isReallyEmptyRegion(connection, tableInfo.getTableName(), regionInfo)) emptyRegions.add(regionInfo);
             }
         }
 
         return emptyRegions;
-    }
-
-    private boolean isReallyEmptyRegion(TableInfo tableInfo, HRegionInfo regionInfo) throws IOException {
-        boolean emptyRegion = false;
-        // verify really empty region by scanning records
-        try (HTableInterface table = connection.getTable(tableInfo.getTableName())) {
-            Scan scan = new Scan(regionInfo.getStartKey(), regionInfo.getEndKey());
-            FilterList filterList = new FilterList();
-            filterList.addFilter(new KeyOnlyFilter());
-            filterList.addFilter(new FirstKeyOnlyFilter());
-            scan.setFilter(filterList);
-            scan.setCacheBlocks(false);
-            scan.setSmall(true);
-            scan.setCaching(1);
-
-            try (ResultScanner scanner = table.getScanner(scan)) {
-                if (scanner.next() == null) emptyRegion = true;
-            }
-        }
-        return emptyRegion;
     }
 }

@@ -23,6 +23,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
@@ -234,5 +237,26 @@ public class CommandAdapter {
         throws IOException, InterruptedException {
         CompactionState compactionState = admin.getCompactionState(tableName);
         return !(compactionState == CompactionState.NONE || compactionState == CompactionState.MINOR);
+    }
+
+    public static boolean isReallyEmptyRegion(HConnection connection,
+        String tableName, HRegionInfo regionInfo) throws IOException {
+        boolean emptyRegion = false;
+        // verify really empty region by scanning records
+        try (HTableInterface table = connection.getTable(tableName)) {
+            Scan scan = new Scan(regionInfo.getStartKey(), regionInfo.getEndKey());
+            FilterList filterList = new FilterList();
+            filterList.addFilter(new KeyOnlyFilter());
+            filterList.addFilter(new FirstKeyOnlyFilter());
+            scan.setFilter(filterList);
+            scan.setCacheBlocks(false);
+            scan.setSmall(true);
+            scan.setCaching(1);
+
+            try (ResultScanner scanner = table.getScanner(scan)) {
+                if (scanner.next() == null) emptyRegion = true;
+            }
+        }
+        return emptyRegion;
     }
 }

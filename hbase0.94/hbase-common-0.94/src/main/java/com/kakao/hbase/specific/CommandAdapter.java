@@ -24,6 +24,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -238,5 +241,10 @@ public class CommandAdapter {
         throws IOException, InterruptedException {
         CompactionState compactionState = admin.getCompactionState(tableName);
         return !(compactionState == CompactionState.NONE || compactionState == CompactionState.MINOR);
+    }
+
+    public static boolean isReallyEmptyRegion(HConnection connection,
+        String tableName, HRegionInfo regionInfo) throws IOException {
+        throw new IllegalStateException("Not supported in this HBase version.");
     }
 }

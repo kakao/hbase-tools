@@ -7,7 +7,7 @@ Usage
 ===
 1. Download jars from [releases](../../../releases) page
     - Or build it by using [package.sh](../package.sh) on your PC
-1. `java -jar [module-name]-[hbase_version]-[letest_version].jar`
+1. `java -jar [module-name]-[hbase_version]-[latest_version].jar`
 
 Common Options for All Modules
 ===

@@ -13,10 +13,15 @@ Common Options for All Modules
 ===
 ```
   common options:
-    --force-proceed: Do not ask whether proceed or not.
-    --test: Set test mode.
+    --force-proceed: Do not ask whether to proceed.
     --debug: Print debug log.
     --verbose: Print some more messages.
+    --after-failure=<script> : The script to run when this running is failed.
+                               The first argument of the script should be a message string.
+    --after-success=<script> : The script to run when this running is successfully finished.
+                               The first argument of the script should be a message string.
+    --after-finish=<script> : The script to run when this running is successfully finished or failed.
+                               The first argument of the script should be a message string.
     --keytab=<keytab file>: Kerberos keytab file. Use absolute path.
     --principal=<principal>: Kerberos principal.
     --realm=<realm>: Kerberos realm to use. Set this arg if it is not the default realm.

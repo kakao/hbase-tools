@@ -21,6 +21,7 @@ import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
+import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -363,8 +364,11 @@ enum AssignAction {
                     onlineRegions.add(hRegionInfo.getEncodedName());
                 }
             }
+
+            Map<String, Boolean> tableEnabledMap = createTableEnabledMap(args, admin, assignmentList);
+
             for (Triple<String, String, String> triple : assignmentList) {
-                if (Common.isTableEnabled(args, admin, triple.getLeft())) {
+                if (tableEnabledMap.get(triple.getLeft())) {
                     if (onlineRegions.contains(triple.getRight())) {
                         if (!onlineRegions.contains(triple.getRight()))
                             assignmentListRemaining.add(triple);
@@ -372,6 +376,20 @@ enum AssignAction {
                 }
             }
             return assignmentListRemaining;
+        }
+
+        // for better performance
+        private Map<String, Boolean> createTableEnabledMap(Args args, HBaseAdmin admin,
+            List<Triple<String, String, String>> assignmentList) throws InterruptedException, IOException {
+            Set<String> tables = new HashSet<>();
+            for (Triple<String, String, String> triple : assignmentList) {
+                tables.add(triple.getLeft());
+            }
+            Map<String, Boolean> tableEnabledMap = new HashMap<>();
+            for (String table : tables) {
+                tableEnabledMap.put(table, Common.isTableEnabled(args, admin, table));
+            }
+            return tableEnabledMap;
         }
 
         private void move(HBaseAdmin admin, Args args, List<Triple<String, String, String>> assignmentList)

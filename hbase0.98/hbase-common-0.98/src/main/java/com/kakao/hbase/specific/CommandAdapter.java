@@ -86,8 +86,13 @@ public class CommandAdapter {
         return regionMap;
     }
 
-    public static List<HRegionInfo> getOnlineRegions(HBaseAdmin admin, ServerName serverName) throws IOException {
-        return admin.getOnlineRegions(serverName);
+    public static List<HRegionInfo> getOnlineRegions(Args args, HBaseAdmin admin, ServerName serverName)
+        throws IOException {
+        long startTimestamp = System.currentTimeMillis();
+        Util.printVerboseMessage(args, "getOnlineRegions - start");
+        List<HRegionInfo> onlineRegions = admin.getOnlineRegions(serverName);
+        Util.printVerboseMessage(args, "getOnlineRegions - end", startTimestamp);
+        return onlineRegions;
     }
 
     public static boolean isMetaTable(String tableName) {

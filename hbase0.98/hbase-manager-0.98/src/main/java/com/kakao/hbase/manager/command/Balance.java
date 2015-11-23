@@ -127,7 +127,7 @@ public class Balance implements Command {
 
                 boolean asynchronous = args.has(Args.OPTION_MOVE_ASYNC);
                 if (preview(regionPlanList, asynchronous))
-                    balance(regionPlanList, Phase.BALANCE, asynchronous);
+                    balance(args, regionPlanList, Phase.BALANCE, asynchronous);
             }
         } finally {
             if (balancerRunning) {
@@ -144,7 +144,7 @@ public class Balance implements Command {
         if (args.isForceProceed()) {
             proceed = true;
         } else {
-            balance(regionPlanList, Phase.PREVIEW, asynchronous);
+            balance(args, regionPlanList, Phase.PREVIEW, asynchronous);
             if (regionPlanList.size() > 0) {
                 System.out.println(regionPlanList.size() + " of " + createRegionAssignmentMap(admin, tableNameSet).size() + " region(s) will be moved.");
                 warnBalanceAgain(regionPlanList);
@@ -179,7 +179,7 @@ public class Balance implements Command {
     }
 
     @SuppressWarnings("deprecation")
-    private void balance(List<RegionPlan> regionPlanList, Phase phase, boolean asynchronous) throws IOException, InterruptedException {
+    private void balance(Args args, List<RegionPlan> regionPlanList, Phase phase, boolean asynchronous) throws IOException, InterruptedException {
         int progress = 1;
         for (RegionPlan regionPlan : regionPlanList) {
             String tableName = Bytes.toString(regionPlan.getRegionInfo().getTableName());
@@ -194,7 +194,7 @@ public class Balance implements Command {
             }
 
             if (phase == Phase.BALANCE) {
-                Common.moveWithPrintingResult(admin, tableName, encodedRegionName, serverNameDest, asynchronous);
+                Common.moveWithPrintingResult(args, admin, tableName, encodedRegionName, serverNameDest, asynchronous);
             }
         }
 

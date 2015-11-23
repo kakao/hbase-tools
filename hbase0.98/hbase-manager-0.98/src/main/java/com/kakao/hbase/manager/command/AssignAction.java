@@ -16,11 +16,11 @@
 
 package com.kakao.hbase.manager.command;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -69,23 +69,21 @@ enum AssignAction {
                 }
 
                 if (expFileName != null) {
-                    export(admin, expFileName, sourceRsRegex);
+                    export(args, admin, expFileName, sourceRsRegex);
                 }
 
                 for (ServerName sourceServerName : sourceServerNames) {
-                    List<Triple<String, String, String>> plan = plan(admin, targetList, sourceServerName);
+                    List<Triple<String, String, String>> plan = plan(args, admin, targetList, sourceServerName);
 
                     if (!args.isForceProceed()) {
-                        emptyInternal(admin, targetList, sourceServerName, plan, true,
-                            args.has(Args.OPTION_MOVE_ASYNC));
+                        emptyInternal(admin, targetList, sourceServerName, plan, true, args);
                         System.out.println(plan.size() + " regions will be moved.");
 
                         if (!Util.askProceed()) {
                             return;
                         }
                     }
-                    emptyInternal(admin, targetList, sourceServerName, plan, false,
-                        args.has(Args.OPTION_MOVE_ASYNC));
+                    emptyInternal(admin, targetList, sourceServerName, plan, false, args);
                 }
             } else {
                 System.out.println("No region server is emptied.");
@@ -102,32 +100,46 @@ enum AssignAction {
         }
 
         private void emptyInternal(HBaseAdmin admin, List<ServerName> targetList, ServerName sourceServerName
-                , List<Triple<String, String, String>> plan, boolean printPlanOnly, boolean asynchronous)
+            , List<Triple<String, String, String>> plan, boolean printPlanOnly, Args args)
             throws IOException, InterruptedException {
+            long startTimeStamp = System.currentTimeMillis();
+            boolean asynchronous = args.has(Args.OPTION_MOVE_ASYNC);
             if (plan.size() > 0) {
-                move(admin, sourceServerName, plan, printPlanOnly, asynchronous);
+                move(args, admin, sourceServerName, plan, printPlanOnly, asynchronous);
+                Util.printVerboseMessage(args, "emptyInternal.move - end", startTimeStamp);
 
                 // move remained regions cause of splitting or asynchronous move
                 if (!printPlanOnly) {
                     int i;
                     for (i = 0; i < Constant.TRY_MAX; i++) {
-                        List<Triple<String, String, String>> planRemained = plan(admin, targetList, sourceServerName);
+                        Util.printVerboseMessage(args, "emptyInternal.move.retry - iteration - "
+                            + i + " - plan - start");
+                        List<Triple<String, String, String>> planRemained =
+                            plan(args, admin, targetList, sourceServerName);
+                        Util.printVerboseMessage(args, "emptyInternal.move.retry - iteration - "
+                            + i + " - plan - end", startTimeStamp);
                         if (planRemained.size() == 0) break;
 
                         System.out.println("There are some regions not moved. Move again.");
-                        move(admin, sourceServerName, planRemained, printPlanOnly, asynchronous);
+                        move(args, admin, sourceServerName, planRemained, printPlanOnly, asynchronous);
+                        Util.printVerboseMessage(args, "emptyInternal.move.retry - iteration - "
+                            + i + " - move - end", startTimeStamp);
 
-                        Thread.sleep(Constant.WAIT_INTERVAL_MS);
+                        Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
 
                         if (asynchronous && i > 1) {
                             // assign region again
                             for (Triple<String, String, String> triple : planRemained) {
                                 try {
+                                    Util.printVerboseMessage(args, "emptyInternal.move.retry - iteration - "
+                                        + i + " - assign - start");
                                     admin.assign(triple.getRight().getBytes());
+                                    Util.printVerboseMessage(args, "emptyInternal.move.retry - iteration - "
+                                        + i + " - assign - end", startTimeStamp);
                                 } catch (UnknownRegionException ignore) {
                                 }
                             }
-                            Thread.sleep(Constant.WAIT_INTERVAL_MS);
+                            Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
                         }
                     }
 
@@ -137,8 +149,9 @@ enum AssignAction {
             }
         }
 
-        private void move(HBaseAdmin admin, ServerName sourceServerName, List<Triple<String, String, String>> plan
-                , boolean printPlanOnly, boolean asynchronous) throws IOException, InterruptedException {
+        private void move(Args args, HBaseAdmin admin, ServerName sourceServerName,
+            List<Triple<String, String, String>> plan,
+            boolean printPlanOnly, boolean asynchronous) throws IOException, InterruptedException {
             int progress = 1;
             for (Triple<String, String, String> planEntry : plan) {
                 String targetTableName = planEntry.getLeft();
@@ -151,18 +164,21 @@ enum AssignAction {
                 if (printPlanOnly) {
                     System.out.println();
                 } else {
-                    Common.moveWithPrintingResult(admin, targetTableName, encodedRegionName, targetServerName,
+                    Common.moveWithPrintingResult(args, admin, targetTableName, encodedRegionName, targetServerName,
                         asynchronous);
                 }
             }
         }
 
-        private List<Triple<String, String, String>> plan(HBaseAdmin admin, List<ServerName> targetList,
-                                                          ServerName sourceServerName)
+        private List<Triple<String, String, String>> plan(Args args, HBaseAdmin admin, List<ServerName> targetList,
+            ServerName sourceServerName)
             throws IOException, InterruptedException {
+            long startTimestamp = System.currentTimeMillis();
             List<Triple<String, String, String>> plan = new ArrayList<>();
 
-            List<HRegionInfo> onlineRegions = CommandAdapter.getOnlineRegions(admin, sourceServerName);
+            Util.printVerboseMessage(args, "plan.getOnlineRegions - start");
+            List<HRegionInfo> onlineRegions = CommandAdapter.getOnlineRegions(args, admin, sourceServerName);
+            Util.printVerboseMessage(args, "plan.getOnlineRegions - end", startTimestamp);
             List<ServerName> targetListToMove = new ArrayList<>();
             if (onlineRegions.size() > 0) {
                 for (HRegionInfo hRegionInfo : onlineRegions) {
@@ -176,6 +192,7 @@ enum AssignAction {
                         targetServerName.getServerName(), encodedRegionName));
                 }
             }
+            Util.printVerboseMessage(args, "plan.targetListToMove - end", startTimestamp);
 
             return plan;
         }
@@ -236,7 +253,7 @@ enum AssignAction {
                     throw new IllegalArgumentException(Args.INVALID_ARGUMENTS);
                 }
 
-                export(admin, fileName, regionServerRegex);
+                export(args, admin, fileName, regionServerRegex);
             } finally {
                 if (balancerRunning) setBalancerRunning(admin, true);
             }
@@ -295,7 +312,7 @@ enum AssignAction {
             }
 
             move(admin, args, assignmentList);
-            Thread.sleep(Constant.WAIT_INTERVAL_MS);
+            Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
 
             retryImport(admin, args, importingServers, assignmentList);
         }
@@ -303,24 +320,29 @@ enum AssignAction {
         private void retryImport(HBaseAdmin admin, Args args, Set<String> importingServers
                 , List<Triple<String, String, String>> assignmentList) throws IOException, InterruptedException {
             if (!args.has(Args.OPTION_MOVE_ASYNC)) return;
+            long startTimestamp = System.currentTimeMillis();
 
             int i;
             List<Triple<String, String, String>> assignmentListRemaining = null;
             for (i = 0; i < Constant.TRY_MAX; i++) {
-                assignmentListRemaining = regionsNotImportedYet(admin, importingServers, assignmentList);
+                assignmentListRemaining = regionsNotImportedYet(args, admin, importingServers, assignmentList);
                 if (assignmentListRemaining.size() == 0)
                     break;
 
                 System.out.println("Retry importing");
                 move(admin, args, assignmentListRemaining);
 
-                Thread.sleep(Constant.WAIT_INTERVAL_MS);
+                Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
                 if (i > 1) {
                     for (Triple<String, String, String> triple : assignmentListRemaining) {
+                        Util.printVerboseMessage(args, "retryImport - iteration - " +
+                            i + " - assign - start");
                         admin.assign(triple.getRight().getBytes());
+                        Util.printVerboseMessage(args, "retryImport - iteration - " +
+                            i + " - assign - end", startTimestamp);
                     }
                 }
-                Thread.sleep(Constant.WAIT_INTERVAL_MS);
+                Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
             }
             if (i >= Constant.TRY_MAX) {
                 String message = Constant.MESSAGE_CANNOT_MOVE;
@@ -332,17 +354,17 @@ enum AssignAction {
 
         @SuppressWarnings("deprecation")
         private List<Triple<String, String, String>> regionsNotImportedYet(
-                HBaseAdmin admin, Set<String> importingServers
-                , List<Triple<String, String, String>> assignmentList) throws IOException, InterruptedException {
+            Args args, HBaseAdmin admin, Set<String> importingServers,
+            List<Triple<String, String, String>> assignmentList) throws IOException, InterruptedException {
             List<Triple<String, String, String>> assignmentListRemaining = new ArrayList<>();
             Set<String> onlineRegions = new HashSet<>();
             for (String server : importingServers) {
-                for (HRegionInfo hRegionInfo : CommandAdapter.getOnlineRegions(admin, new ServerName(server))) {
+                for (HRegionInfo hRegionInfo : CommandAdapter.getOnlineRegions(args, admin, new ServerName(server))) {
                     onlineRegions.add(hRegionInfo.getEncodedName());
                 }
             }
             for (Triple<String, String, String> triple : assignmentList) {
-                if (Common.isTableEnabled(admin, triple.getLeft())) {
+                if (Common.isTableEnabled(args, admin, triple.getLeft())) {
                     if (onlineRegions.contains(triple.getRight())) {
                         if (!onlineRegions.contains(triple.getRight()))
                             assignmentListRemaining.add(triple);
@@ -362,7 +384,7 @@ enum AssignAction {
 
                 System.out.print(progress++ + "/" + assignmentList.size() + " - move " + encodedRegionName
                         + " of " + tableName + " to " + serverName);
-                Common.moveWithPrintingResult(admin, tableName, encodedRegionName, serverName
+                Common.moveWithPrintingResult(args, admin, tableName, encodedRegionName, serverName
                         , args.has(Args.OPTION_MOVE_ASYNC));
             }
         }
@@ -420,14 +442,14 @@ enum AssignAction {
         return balancerRunning;
     }
 
-    private static void export(HBaseAdmin admin, String fileName, String regionServerRegex) throws IOException {
+    private static void export(Args args, HBaseAdmin admin, String fileName, String regionServerRegex) throws IOException {
         exportCount = 0;
 
         try (PrintWriter writer = new PrintWriter(fileName, Constant.CHARSET.name())) {
             List<ServerName> serverNameList = new ArrayList<>(admin.getClusterStatus().getServers());
             for (ServerName serverName : serverNameList) {
                 if (regionServerRegex == null || serverName.getServerName().matches(regionServerRegex)) {
-                    for (HRegionInfo hRegionInfo : CommandAdapter.getOnlineRegions(admin, serverName)) {
+                    for (HRegionInfo hRegionInfo : CommandAdapter.getOnlineRegions(args, admin, serverName)) {
                         String assignment = serverName.getServerName() + DELIMITER + hRegionInfo.getEncodedName()
                                 + DELIMITER + CommandAdapter.getTableName(hRegionInfo);
                         System.out.println(assignment);

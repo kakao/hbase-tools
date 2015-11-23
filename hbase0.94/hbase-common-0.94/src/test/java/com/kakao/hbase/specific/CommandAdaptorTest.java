@@ -39,7 +39,7 @@ public class CommandAdaptorTest extends TestBase {
         ArrayList<ServerName> serverNameList = getServerNameList();
         assertEquals(TestBase.RS_COUNT, serverNameList.size());
 
-        List<HRegionInfo> onlineRegions = CommandAdapter.getOnlineRegions(admin, serverNameList.get(0));
+        List<HRegionInfo> onlineRegions = CommandAdapter.getOnlineRegions(null, admin, serverNameList.get(0));
         assertEquals(3, onlineRegions.size());
     }
 }

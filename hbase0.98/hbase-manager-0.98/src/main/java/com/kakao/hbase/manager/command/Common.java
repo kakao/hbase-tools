@@ -16,10 +16,11 @@
 
 package com.kakao.hbase.manager.command;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
@@ -32,8 +33,9 @@ class Common {
     }
 
     @VisibleForTesting
-    static void move(HBaseAdmin admin, String tableName, String targetServerName, String encodedRegionName, boolean asynchronous)
-            throws IOException, InterruptedException {
+    static void move(Args args, HBaseAdmin admin, String tableName, String targetServerName, String encodedRegionName,
+        boolean asynchronous)
+        throws IOException, InterruptedException {
         int i;
         for (i = 0; i < Constant.TRY_MAX; i++) {
             try {
@@ -47,7 +49,7 @@ class Common {
             if (CommandAdapter.isMetaTable(tableName))
                 return;
 
-            if (!isTableEnabled(admin, tableName))
+            if (!isTableEnabled(args, admin, tableName))
                 throw new IllegalStateException(Constant.MESSAGE_DISABLED_OR_NOT_FOUND_TABLE);
 
             if (Util.isMoved(admin, tableName, encodedRegionName, targetServerName)) {
@@ -61,16 +63,21 @@ class Common {
                 admin.assign(encodedRegionName.getBytes());
         }
         if (i >= Constant.TRY_MAX)
-            throw new IllegalStateException(Constant.MESSAGE_CANNOT_MOVE + " - " + encodedRegionName + " to " + targetServerName);
+            throw new IllegalStateException(Constant.MESSAGE_CANNOT_MOVE + " - "
+                + encodedRegionName + " to " + targetServerName);
     }
 
-    static boolean isTableEnabled(HBaseAdmin admin, String tableName) throws InterruptedException, IOException {
+    static boolean isTableEnabled(Args args, HBaseAdmin admin, String tableName)
+        throws InterruptedException, IOException {
+        long startTimestamp = System.currentTimeMillis();
         int i;
 
         boolean tableEnabled = false;
         for (i = 0; i < Constant.TRY_MAX; i++) {
             try {
+                Util.printVerboseMessage(args, "isTableEnabled - iteration - " + i + " - start");
                 tableEnabled = admin.isTableEnabled(tableName);
+                Util.printVerboseMessage(args, "isTableEnabled - iteration - " + i + " - end", startTimestamp);
                 break;
             } catch (TableNotFoundException e) {
                 break;
@@ -84,9 +91,10 @@ class Common {
         return tableEnabled;
     }
 
-    static void moveWithPrintingResult(HBaseAdmin admin, String tableName, String encodedRegionName, String serverNameDest, boolean asynchronous) throws IOException, InterruptedException {
+    static void moveWithPrintingResult(Args args, HBaseAdmin admin, String tableName, String encodedRegionName,
+        String serverNameDest, boolean asynchronous) throws IOException, InterruptedException {
         try {
-            move(admin, tableName, serverNameDest, encodedRegionName, asynchronous);
+            move(args, admin, tableName, serverNameDest, encodedRegionName, asynchronous);
             System.out.println(" - OK" + (asynchronous ? " - ASYNC" : ""));
         } catch (IllegalStateException e) {
             if (e.getMessage().contains(Constant.MESSAGE_DISABLED_OR_NOT_FOUND_TABLE)) {

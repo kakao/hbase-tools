@@ -364,7 +364,7 @@ public class AssignTest extends TestBase {
 
         // split and move
         splitTable("a".getBytes());
-        Common.move(admin, tableName, serverNameList.get(1).getServerName(),
+        Common.move(null, admin, tableName, serverNameList.get(1).getServerName(),
             regionInfoList.get(0).getEncodedName(), false);
     }
 }

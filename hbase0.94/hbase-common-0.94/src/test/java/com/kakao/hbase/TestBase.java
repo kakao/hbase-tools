@@ -135,7 +135,7 @@ public class TestBase extends SecureTestUtil {
 
     protected static List<HRegionInfo> getRegionInfoList(ServerName serverName, String tableName) throws IOException {
         List<HRegionInfo> onlineRegions = new ArrayList<>();
-        for (HRegionInfo onlineRegion : CommandAdapter.getOnlineRegions(admin, serverName)) {
+        for (HRegionInfo onlineRegion : CommandAdapter.getOnlineRegions(null, admin, serverName)) {
             if (onlineRegion.getTableNameAsString().equals(tableName)) {
                 onlineRegions.add(onlineRegion);
             }

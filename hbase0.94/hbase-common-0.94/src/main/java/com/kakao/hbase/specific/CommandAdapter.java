@@ -60,7 +60,10 @@ public class CommandAdapter {
         return new ArrayList<>();
     }
 
-    public static List<HRegionInfo> getOnlineRegions(HBaseAdmin admin, ServerName serverName) throws IOException {
+    public static List<HRegionInfo> getOnlineRegions(Args args, HBaseAdmin admin, ServerName serverName) throws IOException {
+        long startTimestamp = System.currentTimeMillis();
+        Util.printVerboseMessage(args, "getOnlineRegions - start");
+
         List<HRegionInfo> hRegionInfoList = new ArrayList<>();
 
         // do not use admin.getTableNames(). It is not supported in 0.94.6.
@@ -72,6 +75,8 @@ public class CommandAdapter {
             if (entry.getValue().equals(serverName))
                 hRegionInfoList.add(entry.getKey());
         }
+
+        Util.printVerboseMessage(args, "getOnlineRegions - end", startTimestamp);
 
         return hRegionInfoList;
     }

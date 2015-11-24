@@ -535,8 +535,8 @@ public enum LoadEntry {
     }
 
     private static int compareRatioNumber(Number one, Number two) {
-        RatioNumber valueOne = (RatioNumber) (one == null ? RatioNumber.ZERO : one);
-        RatioNumber valueTwo = (RatioNumber) (two == null ? RatioNumber.ZERO : two);
+        Double valueOne = one == null ? 0 : one.doubleValue();
+        Double valueTwo = two == null ? 0 : two.doubleValue();
         return valueOne.compareTo(valueTwo);
     }
 

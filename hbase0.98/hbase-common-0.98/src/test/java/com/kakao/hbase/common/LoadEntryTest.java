@@ -35,4 +35,33 @@ public class LoadEntryTest {
         Assert.assertEquals("2.50%/s", LoadEntry.DataLocality.toRateString(0.05, 2000));
         Assert.assertEquals("0.03%/s", LoadEntry.DataLocality.toRateString(0.0005, 2000));
     }
+
+    @Test
+    public void testCompareAndCompareTo() throws Exception {
+        RatioNumber number1 = new RatioNumber(100, 0.1);
+        RatioNumber number2 = new RatioNumber(100, 0.2);
+        RatioNumber number3 = new RatioNumber(100, 0.1);
+        Double number4 = 1.0;
+
+        Assert.assertEquals(-1, LoadEntry.DataLocality.compare(number1, number2));
+        Assert.assertEquals(1, LoadEntry.DataLocality.compare(number2, number1));
+        Assert.assertEquals(0, LoadEntry.DataLocality.compare(number1, number3));
+        Assert.assertEquals(-1, LoadEntry.DataLocality.compare(number1, number4));
+        Assert.assertEquals(1, LoadEntry.DataLocality.compare(number4, number1));
+
+        Assert.assertEquals(-1, number1.compareTo(number2));
+        Assert.assertEquals(1, number2.compareTo(number1));
+        Assert.assertEquals(0, number1.compareTo(number3));
+    }
+
+    @Test
+    public void testCompareTo() throws Exception {
+        RatioNumber number1 = new RatioNumber(100, 0.1);
+        RatioNumber number2 = new RatioNumber(100, 0.2);
+        RatioNumber number3 = new RatioNumber(100, 0.1);
+
+        Assert.assertEquals(-1, number1.compareTo(number2));
+        Assert.assertEquals(1, number2.compareTo(number1));
+        Assert.assertEquals(0, number1.compareTo(number3));
+    }
 }

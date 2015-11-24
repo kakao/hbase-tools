@@ -61,6 +61,7 @@
     });
 
     $(document).keypress(function (e) {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
         rollDiv();
         $.post("keyInput", {key: String.fromCharCode(e.keyCode || e.which)}, function (data) {
                     var key = String.fromCharCode(e.keyCode || e.which);

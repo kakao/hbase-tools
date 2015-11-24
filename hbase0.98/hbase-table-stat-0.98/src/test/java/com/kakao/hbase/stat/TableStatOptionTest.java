@@ -19,9 +19,9 @@ package com.kakao.hbase.stat;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.util.AlertSender;
 import com.kakao.hbase.common.util.AlertSenderTest;
+import com.kakao.hbase.stat.load.Level;
 import com.kakao.hbase.stat.load.SortKey;
-import com.kakao.hbase.stat.print.Color;
-import com.kakao.hbase.stat.print.Formatter;
+import com.kakao.hbase.stat.load.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.junit.Assert;
@@ -29,8 +29,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class TableStatOptionTest extends StatTestBase {
     public TableStatOptionTest() {
@@ -39,8 +38,6 @@ public class TableStatOptionTest extends StatTestBase {
 
     @Test
     public void testResetDiffStartPoint() throws Exception {
-        String expected;
-
         splitTable("a".getBytes());
         splitTable("b".getBytes());
 
@@ -61,10 +58,7 @@ public class TableStatOptionTest extends StatTestBase {
         waitForWriting(tableName, serverNameList.get(1), 3);
         command.run();
 
-        expected = "Table                                                   Reads    Writes   Regions  Files    FileSize  FileSizeUncomp  MemstoreSize  CompactedKVs  \n" +
-            " UNIT_TEST_TableStatOptionTest_testResetDiffStartPoint  0 | N/A  3 | N/A  3 | N/A  0 | N/A  0m | N/A  0m | N/A        0m | N/A      0 | N/A       \n" +
-            " Total: 1                                               0 | N/A  3 | N/A  3 | N/A  0 | N/A  0m | N/A  0m | N/A        0m | N/A      0 | N/A       \n";
-        Assert.assertEquals(expected, Color.clearColor(command.getFormatter().buildString(false, Formatter.Type.ANSI), Formatter.Type.ANSI));
+        assertNull(command.getLoad().getLoadMapPrev().get(new Level(new TableName(tableName))));
 
         // resetDiffStartPoint
         command.getLoad().resetDiffStartPoint();
@@ -79,10 +73,7 @@ public class TableStatOptionTest extends StatTestBase {
         waitForWriting(tableName, serverNameList.get(0), 3);
         command.run();
 
-        expected = "Table                                                   Reads    Writes   Regions  Files    FileSize  FileSizeUncomp  MemstoreSize  CompactedKVs  \n" +
-            " UNIT_TEST_TableStatOptionTest_testResetDiffStartPoint  0 | N/A  3 | N/A  3 | N/A  3 | N/A  0m | N/A  0m | N/A        0m | N/A      0 | N/A       \n" +
-            " Total: 1                                               0 | N/A  3 | N/A  3 | N/A  3 | N/A  0m | N/A  0m | N/A        0m | N/A      0 | N/A       \n";
-        assertEquals(expected, Color.clearColor(command.getFormatter().buildString(false, Formatter.Type.ANSI), Formatter.Type.ANSI));
+        assertNull(command.getLoad().getLoadMapPrev().get(new Level(new TableName(tableName))));
     }
 
     @Test

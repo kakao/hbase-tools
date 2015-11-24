@@ -121,6 +121,32 @@ public class TableStatTest extends StatTestBase {
     }
 
     @Test
+    public void testTableRegex() throws Exception {
+        createAdditionalTable(tableName + "2");
+
+        String[] args = {"zookeeper", ".*", "--interval=0", "--test"};
+        TableStat command = new TableStat(admin, new StatArgs(args));
+
+        // iteration 1
+        command.run();
+        Assert.assertEquals(2, command.getLoad().getLoadMap().size());
+        Assert.assertEquals(0, command.getLoad().getLoadMapPrev().size());
+        Assert.assertEquals(loadEntryLength, command.getLoad().getSummary().size());
+        Assert.assertEquals(0, command.getLoad().getSummaryPrev().size());
+
+        // disable table
+        admin.disableTable(tableName);
+        waitForDisabled(tableName);
+
+        // iteration 2
+        command.run();
+        Assert.assertEquals(1, command.getLoad().getLoadMap().size());
+        Assert.assertEquals(2, command.getLoad().getLoadMapPrev().size());
+        Assert.assertEquals(loadEntryLength, command.getLoad().getSummary().size());
+        Assert.assertEquals(loadEntryLength, command.getLoad().getSummaryPrev().size());
+    }
+
+    @Test
     public void testTables() throws Exception {
         String tableName2 = createAdditionalTable(tableName + "2");
         String tableName3 = createAdditionalTable(tableName + "22");

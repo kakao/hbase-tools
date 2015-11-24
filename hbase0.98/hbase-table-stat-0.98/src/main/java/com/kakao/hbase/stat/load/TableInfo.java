@@ -63,6 +63,7 @@ public class TableInfo {
             return tableName.equals(Args.ALL_TABLES) || !admin.tableExists(tableName);
         } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("Illegal character code")
+                || e.getMessage().contains("Illegal first character")
                 || e.getMessage().contains("Namespaces can only start with alphanumeric characters"))
                 return true;
             throw e;

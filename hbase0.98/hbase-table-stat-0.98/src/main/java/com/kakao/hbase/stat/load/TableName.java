@@ -16,7 +16,7 @@
 
 package com.kakao.hbase.stat.load;
 
-class TableName implements Comparable<TableName> {
+public class TableName implements Comparable<TableName> {
     private final String tableName;
 
     public TableName(String tableName) {

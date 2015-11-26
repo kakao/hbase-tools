@@ -194,6 +194,7 @@ public class HBaseClient {
 
         if (admin == null) {
             Configuration conf = createNonSecureConfiguration(zookeeperQuorum);
+            conf.set("hbase.meta.scanner.caching", "1000");
 
             if (isSecuredCluster(args)) {
                 login(args, conf);

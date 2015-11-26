@@ -257,10 +257,8 @@ public class MC implements Command {
         Util.printVerboseMessage(args, Util.getMethodName() + " - start");
 
         NavigableMap<HRegionInfo, ServerName> result = regionLocations.get(table);
-        Configuration conf = admin.getConfiguration();
-        conf.set("hbase.meta.scanner.caching", "1000");
         if (result == null) {
-            try (HTable htable = new HTable(conf, table)) {
+            try (HTable htable = new HTable(admin.getConfiguration(), table)) {
                 result = htable.getRegionLocations();
                 regionLocations.put(table, result);
             }

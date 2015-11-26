@@ -23,6 +23,7 @@ import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -256,8 +257,10 @@ public class MC implements Command {
         Util.printVerboseMessage(args, Util.getMethodName() + " - start");
 
         NavigableMap<HRegionInfo, ServerName> result = regionLocations.get(table);
+        Configuration conf = admin.getConfiguration();
+        conf.set("hbase.meta.scanner.caching", "1000");
         if (result == null) {
-            try (HTable htable = new HTable(admin.getConfiguration(), table)) {
+            try (HTable htable = new HTable(conf, table)) {
                 result = htable.getRegionLocations();
                 regionLocations.put(table, result);
             }

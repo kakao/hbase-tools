@@ -229,4 +229,9 @@ public class Util {
                     + (message == null || message.equals("") ? "" : " - " + message)
                     + " - " + args.toString());
     }
+
+    public static String getMethodName() {
+        StackTraceElement current = Thread.currentThread().getStackTrace()[2];
+        return current.getClassName() + "." + current.getMethodName();
+    }
 }

@@ -109,7 +109,7 @@ public class TableInfo {
             initializeServerNameSet();
         }
 
-        Set<String> tables = Args.tables(admin, tableName);
+        Set<String> tables = Args.tables(args, admin);
         if (tables == null) {
             regionServerMap = CommandAdapter.regionServerMap(args, admin.getConfiguration()
                 , admin.getConnection(), false);

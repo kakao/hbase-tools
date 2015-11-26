@@ -90,7 +90,7 @@ public class MC implements Command {
         targets = Collections.newSetFromMap(new TreeMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR));
         tableLevel = false; // or region level
 
-        Set<String> tables = Args.tables(admin, args.getTableName());
+        Set<String> tables = Args.tables(args, admin);
         assert tables != null;
         for (String table : tables) {
             if (args.has(Args.OPTION_REGION_SERVER) || args.has(Args.OPTION_LOCALITY_THRESHOLD)) {
@@ -212,6 +212,9 @@ public class MC implements Command {
     }
 
     private void filterWithLocalityOnly(Set<byte[]> targets, String table) throws IOException {
+        long startTimestamp = System.currentTimeMillis();
+        Util.printVerboseMessage(args, Util.getMethodName() + " - start");
+
         Map<byte[], HRegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         for (Map.Entry<HRegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
             byte[] regionName = entry.getKey().getRegionName();
@@ -222,9 +225,14 @@ public class MC implements Command {
         }
 
         filterWithDataLocality(targets, regionMap);
+
+        Util.printVerboseMessage(args, Util.getMethodName() + " - end", startTimestamp);
     }
 
     private void filterWithRsAndLocality(Set<byte[]> targets, String table) throws IOException {
+        long startTimestamp = System.currentTimeMillis();
+        Util.printVerboseMessage(args, Util.getMethodName() + " - start");
+
         Map<byte[], HRegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         String regex = (String) args.valueOf(Args.OPTION_REGION_SERVER);
         for (Map.Entry<HRegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
@@ -239,9 +247,14 @@ public class MC implements Command {
         }
 
         filterWithDataLocality(targets, regionMap);
+
+        Util.printVerboseMessage(args, Util.getMethodName() + " - end", startTimestamp);
     }
 
     private NavigableMap<HRegionInfo, ServerName> getRegionLocations(String table) throws IOException {
+        long startTimestamp = System.currentTimeMillis();
+        Util.printVerboseMessage(args, Util.getMethodName() + " - start");
+
         NavigableMap<HRegionInfo, ServerName> result = regionLocations.get(table);
         if (result == null) {
             try (HTable htable = new HTable(admin.getConfiguration(), table)) {
@@ -250,11 +263,16 @@ public class MC implements Command {
             }
         }
 
+        Util.printVerboseMessage(args, Util.getMethodName() +  " - end", startTimestamp);
+
         return result;
     }
 
     private void filterWithDataLocality(Set<byte[]> targets,
         Map<byte[], HRegionInfo> regionMap) throws IOException {
+        long startTimestamp = System.currentTimeMillis();
+        Util.printVerboseMessage(args, Util.getMethodName() + " - start");
+
         final Double dataLocalityThreshold;
         if (args.has(Args.OPTION_LOCALITY_THRESHOLD)) {
             dataLocalityThreshold = (Double) args.valueOf(Args.OPTION_LOCALITY_THRESHOLD);
@@ -287,5 +305,7 @@ public class MC implements Command {
                 }
             }
         }
+
+        Util.printVerboseMessage(args, Util.getMethodName() + " - end", startTimestamp);
     }
 }

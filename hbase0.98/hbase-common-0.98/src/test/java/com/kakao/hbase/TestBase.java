@@ -269,10 +269,6 @@ public class TestBase extends SecureTestUtil {
         return new ArrayList<>(hRegionInfoSet);
     }
 
-    private String getMethodName() {
-        return Thread.currentThread().getStackTrace()[2].getMethodName();
-    }
-
     protected void waitForMoving(HRegionInfo hRegionInfo, ServerName serverName) throws Exception {
         Map<byte[], RegionLoad> regionsLoad = null;
         for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
@@ -290,7 +286,7 @@ public class TestBase extends SecureTestUtil {
             System.out.println("regionsLoad = " + Bytes.toString(entry.getKey()) + " - " + entry.getValue());
         }
 
-        Assert.fail(getMethodName() + " failed");
+        Assert.fail(Util.getMethodName() + " failed");
     }
 
     protected void waitForSplitting(int regionCount) throws IOException, InterruptedException {
@@ -374,7 +370,7 @@ public class TestBase extends SecureTestUtil {
             }
             Thread.sleep(WAIT_INTERVAL);
         }
-        Assert.assertEquals(getMethodName() + " failed - ", writeRequestCount, writeRequestCountActual);
+        Assert.assertEquals(Util.getMethodName() + " failed - ", writeRequestCount, writeRequestCountActual);
     }
 
     private long getWriteRequestCountActual(String tableName) throws IOException {
@@ -402,7 +398,7 @@ public class TestBase extends SecureTestUtil {
             }
             Thread.sleep(WAIT_INTERVAL);
         }
-        Assert.assertEquals(getMethodName() + " failed - ", writeRequestCount, writeRequestCountActual);
+        Assert.assertEquals(Util.getMethodName() + " failed - ", writeRequestCount, writeRequestCountActual);
     }
 
     protected void waitForDisabled(String tableName) throws Exception {
@@ -412,7 +408,7 @@ public class TestBase extends SecureTestUtil {
             }
             Thread.sleep(WAIT_INTERVAL);
         }
-        Assert.fail(getMethodName() + " failed");
+        Assert.fail(Util.getMethodName() + " failed");
     }
 
     protected void waitForEnabled(String tableName) throws Exception {
@@ -422,7 +418,7 @@ public class TestBase extends SecureTestUtil {
             }
             Thread.sleep(WAIT_INTERVAL);
         }
-        Assert.fail(getMethodName() + " failed");
+        Assert.fail(Util.getMethodName() + " failed");
     }
 
     protected void waitForDelete(String tableName) throws Exception {
@@ -432,7 +428,7 @@ public class TestBase extends SecureTestUtil {
             }
             Thread.sleep(WAIT_INTERVAL);
         }
-        Assert.fail(getMethodName() + " failed");
+        Assert.fail(Util.getMethodName() + " failed");
     }
 
     protected List<HBaseProtos.SnapshotDescription> listSnapshots(String tableName) throws IOException {

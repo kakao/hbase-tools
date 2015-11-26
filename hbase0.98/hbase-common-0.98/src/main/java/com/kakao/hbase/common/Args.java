@@ -123,8 +123,12 @@ public abstract class Args {
         return string.split("[ \n]");
     }
 
-    public static Set<String> tables(HBaseAdmin admin, String tableName) throws IOException {
+    public static Set<String> tables(Args args, HBaseAdmin admin) throws IOException {
+        long startTimestamp = System.currentTimeMillis();
+        Util.printVerboseMessage(args, Util.getMethodName() + " - start");
+        String tableName = args.getTableName();
         if (tableName.equals(ALL_TABLES)) {
+            Util.printVerboseMessage(args, Util.getMethodName() + " - end", startTimestamp);
             return null;
         } else {
             Set<String> tables = new TreeSet<>();
@@ -143,6 +147,7 @@ public abstract class Args {
                 }
             }
 
+            Util.printVerboseMessage(args, Util.getMethodName() + " - end", startTimestamp);
             return tables;
         }
     }

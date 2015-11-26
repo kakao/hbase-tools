@@ -154,10 +154,14 @@ public class TableStatTest extends StatTestBase {
         String tableNameRegex;
         Set<String> tableSet;
         String[] tables;
+        String[] argsParam;
+        StatArgs args;
 
         // test
         tableNameRegex = tableName + "2.*";
-        tableSet = Args.tables(admin, tableNameRegex);
+        argsParam = new String[]{"zookeeper", tableNameRegex, "--interval=0", "--test"};
+        args = new StatArgs(argsParam);
+        tableSet = Args.tables(args, admin);
         assertNotNull(tableSet);
         assertEquals(2, tableSet.size());
         tables = tableSet.toArray(new String[tableSet.size()]);
@@ -166,7 +170,9 @@ public class TableStatTest extends StatTestBase {
 
         // test
         tableNameRegex = tableName + ".*";
-        tableSet = Args.tables(admin, tableNameRegex);
+        argsParam = new String[]{"zookeeper", tableNameRegex, "--interval=0", "--test"};
+        args = new StatArgs(argsParam);
+        tableSet = Args.tables(args, admin);
         assertNotNull(tableSet);
         assertEquals(3, tableSet.size());
         tables = tableSet.toArray(new String[tableSet.size()]);
@@ -176,7 +182,9 @@ public class TableStatTest extends StatTestBase {
 
         // test
         tableNameRegex = tableName + "3.*";
-        tableSet = Args.tables(admin, tableNameRegex);
+        argsParam = new String[]{"zookeeper", tableNameRegex, "--interval=0", "--test"};
+        args = new StatArgs(argsParam);
+        tableSet = Args.tables(args, admin);
         assertNotNull(tableSet);
         assertEquals(0, tableSet.size());
     }

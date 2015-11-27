@@ -91,7 +91,7 @@ public class SnapshotArgs extends Args {
         if (tableKeepMap.get(tableName) == null) {
             if (optionSet.has(SnapshotArgs.OPTION_KEEP)) {
                 int keepCount = Integer.valueOf((String) optionSet.valueOf(SnapshotArgs.OPTION_KEEP));
-                if (keepCount < 0)
+                if (keepCount < 1)
                     throw new IllegalArgumentException("keep count should be a positive number.");
                 return keepCount;
             } else {

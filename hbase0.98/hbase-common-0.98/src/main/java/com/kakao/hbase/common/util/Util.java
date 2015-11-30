@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.PropertyConfigurator;
 
 import java.io.*;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -233,5 +234,30 @@ public class Util {
     public static String getMethodName() {
         StackTraceElement current = Thread.currentThread().getStackTrace()[2];
         return current.getClassName() + "." + current.getMethodName();
+    }
+
+    public static long parseTimestamp(String timestampString) {
+        try {
+            Date date = Constant.DATE_FORMAT_ARGS.parse(timestampString);
+            if (date.compareTo(new Date(System.currentTimeMillis())) > 0)
+                throw new IllegalArgumentException(Constant.MESSAGE_INVALID_DATE_FORMAT);
+            return date.getTime();
+        } catch (ParseException e) {
+            throw new IllegalArgumentException(Constant.MESSAGE_INVALID_DATE_FORMAT);
+        }
+    }
+
+    public static boolean askProceedInteractively(Args args, boolean printNewLine) {
+        if (args.has(Args.OPTION_INTERACTIVE)) {
+            if (args.has(Args.OPTION_FORCE_PROCEED)) {
+                if (printNewLine) System.out.println();
+            } else {
+                System.out.print(" - ");
+                if (!askProceed()) return false;
+            }
+        } else {
+            if (printNewLine) System.out.println();
+        }
+        return true;
     }
 }

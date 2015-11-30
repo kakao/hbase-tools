@@ -19,6 +19,7 @@ package com.kakao.hbase.specific;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.util.Util;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.ClusterLoadState;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import javax.security.auth.Subject;
@@ -97,6 +99,10 @@ public class CommandAdapter {
 
     public static boolean isMetaTable(String tableName) {
         return tableName.equals(TableName.META_TABLE_NAME.getNameAsString());
+    }
+
+    public static String metaTableName() {
+        return TableName.META_TABLE_NAME.getNameAsString();
     }
 
     public static boolean isBalancerRunning(HBaseAdmin admin) throws IOException {
@@ -256,5 +262,37 @@ public class CommandAdapter {
             }
         }
         return emptyRegion;
+    }
+
+    @SuppressWarnings("deprecation")
+    public static Map<String, Map<String, String>> versionedRegionMap(HBaseAdmin admin, long timestamp)
+        throws IOException {
+        Map<String, Map<String, String>> regionLocationMap = new HashMap<>();
+        try (HTable metaTable = new HTable(admin.getConfiguration(), metaTableName())) {
+            Scan scan = new Scan();
+            scan.setSmall(true);
+            scan.setCaching(1000);
+            scan.setMaxVersions();
+            ResultScanner scanner = metaTable.getScanner(scan);
+            for (Result result : scanner) {
+                List<Cell> columnCells = result.getColumnCells("info".getBytes(), "server".getBytes());
+                for (Cell cell : columnCells) {
+                    if (cell.getTimestamp() <= timestamp) {
+                        String tableName = Bytes.toString(HRegionInfo.getTableName(cell.getRow()));
+                        String encodeRegionName = HRegionInfo.encodeRegionName(cell.getRow());
+                        String regionServer = Bytes.toString(cell.getValue()).replaceAll(":", ",");
+
+                        Map<String, String> innerMap = regionLocationMap.get(tableName);
+                        if (innerMap == null) {
+                            innerMap = new HashMap<>();
+                            regionLocationMap.put(tableName, innerMap);
+                        }
+                        if (innerMap.get(encodeRegionName) == null)
+                            innerMap.put(encodeRegionName, regionServer);
+                    }
+                }
+            }
+        }
+        return regionLocationMap;
     }
 }

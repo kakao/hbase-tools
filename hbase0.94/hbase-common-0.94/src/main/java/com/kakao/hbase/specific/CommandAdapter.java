@@ -19,10 +19,7 @@ package com.kakao.hbase.specific;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.util.Util;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
@@ -82,7 +79,11 @@ public class CommandAdapter {
     }
 
     public static boolean isMetaTable(String tableName) {
-        return tableName.equals("hbase:meta");
+        return tableName.equals(".META.");
+    }
+
+    public static String metaTableName() {
+        return ".META.";
     }
 
     public static boolean isBalancerRunning(HBaseAdmin admin) throws IOException {
@@ -251,5 +252,35 @@ public class CommandAdapter {
     public static boolean isReallyEmptyRegion(HConnection connection,
         String tableName, HRegionInfo regionInfo) throws IOException {
         throw new IllegalStateException("Not supported in this HBase version.");
+    }
+
+    public static Map<String, Map<String, String>> versionedRegionMap(HBaseAdmin admin, long timestamp)
+        throws IOException {
+        Map<String, Map<String, String>> regionLocationMap = new HashMap<>();
+        try (HTable metaTable = new HTable(admin.getConfiguration(), metaTableName())) {
+            Scan scan = new Scan();
+            scan.setCaching(1000);
+            scan.setMaxVersions();
+            ResultScanner scanner = metaTable.getScanner(scan);
+            for (Result result : scanner) {
+                List<KeyValue> columnKVs = result.getColumn("info".getBytes(), "server".getBytes());
+                for (KeyValue kv : columnKVs) {
+                    if (kv.getTimestamp() <= timestamp) {
+                        String tableName = Bytes.toString(HRegionInfo.getTableName(kv.getRow()));
+                        String encodeRegionName = HRegionInfo.encodeRegionName(kv.getRow());
+                        String regionServer = Bytes.toString(kv.getValue()).replaceAll(":", ",");
+
+                        Map<String, String> innerMap = regionLocationMap.get(tableName);
+                        if (innerMap == null) {
+                            innerMap = new HashMap<>();
+                            regionLocationMap.put(tableName, innerMap);
+                        }
+                        if (innerMap.get(encodeRegionName) == null)
+                            innerMap.put(encodeRegionName, regionServer);
+                    }
+                }
+            }
+        }
+        return regionLocationMap;
     }
 }

@@ -124,9 +124,12 @@ public abstract class Args {
     }
 
     public static Set<String> tables(Args args, HBaseAdmin admin) throws IOException {
+        return tables(args, admin, args.getTableName());
+    }
+
+    public static Set<String> tables(Args args, HBaseAdmin admin, String tableName) throws IOException {
         long startTimestamp = System.currentTimeMillis();
         Util.printVerboseMessage(args, Util.getMethodName() + " - start");
-        String tableName = args.getTableName();
         if (tableName.equals(ALL_TABLES)) {
             Util.printVerboseMessage(args, Util.getMethodName() + " - end", startTimestamp);
             return null;

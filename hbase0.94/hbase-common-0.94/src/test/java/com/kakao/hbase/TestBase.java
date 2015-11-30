@@ -28,10 +28,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.*;
 import org.junit.rules.TestName;
 
@@ -41,15 +44,17 @@ import java.util.*;
 @SuppressWarnings("unused")
 public class TestBase extends SecureTestUtil {
     protected static final String TEST_TABLE_CF = "d";
+    protected static final String TEST_TABLE_CF2 = "e";
     protected static final String TEST_NAMESPACE = "unit_test";
     protected static final int MAX_WAIT_ITERATION = 200;
     protected static final long WAIT_INTERVAL = 100;
     private static final List<String> additionalTables = new ArrayList<>();
     private static final Log LOG = LogFactory.getLog(TestBase.class);
-    protected static int RS_COUNT = 1;
+    protected static int RS_COUNT = 2;
     protected static HBaseAdmin admin = null;
     protected static Configuration conf = null;
     protected static String tableName;
+    protected static HConnection hConnection;
     protected static boolean miniCluster = false;
     protected static boolean securedCluster = false;
     protected static User USER_RW = null;
@@ -106,6 +111,7 @@ public class TestBase extends SecureTestUtil {
             }
         }
         previousBalancerRunning = admin.setBalancerRunning(false, true);
+        hConnection = HConnectionManager.createConnection(conf);
 
         USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
     }
@@ -192,12 +198,20 @@ public class TestBase extends SecureTestUtil {
     }
 
     protected void splitTable(byte[] splitPoint) throws Exception {
+        splitTable(tableName, splitPoint);
+    }
+
+    protected void splitTable(String tableName, byte[] splitPoint) throws Exception {
         int regionCount = getRegionCount(tableName);
         admin.split(tableName.getBytes(), splitPoint);
-        waitForSplitting(regionCount + 1);
+        waitForSplitting(tableName, regionCount + 1);
     }
 
     protected void waitForSplitting(int regionCount) throws IOException, InterruptedException {
+        waitForSplitting(tableName, regionCount);
+    }
+
+    protected void waitForSplitting(String tableName, int regionCount) throws IOException, InterruptedException {
         int regionCountActual = 0;
         for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
             try (HTable table = new HTable(conf, tableName)) {
@@ -298,5 +312,53 @@ public class TestBase extends SecureTestUtil {
         protected OptionParser createOptionParser() {
             return createCommonOptionParser();
         }
+    }
+
+    protected void mergeRegion(HRegionInfo regionA, HRegionInfo regionB) throws IOException, InterruptedException {
+        mergeRegion(tableName, regionA, regionB);
+    }
+
+    protected void mergeRegion(String tableName, HRegionInfo regionA, HRegionInfo regionB) throws IOException, InterruptedException {
+        throw new IllegalStateException("Not supported in this version");
+    }
+
+    protected void move(HRegionInfo regionInfo, ServerName serverName) throws Exception {
+        admin.move(regionInfo.getEncodedName().getBytes(), serverName.getServerName().getBytes());
+        waitForMoving(regionInfo, serverName);
+    }
+
+    protected void waitForMoving(HRegionInfo hRegionInfo, ServerName serverName) throws Exception {
+        Map<byte[], HServerLoad.RegionLoad> regionsLoad = null;
+        for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
+            HServerLoad load = admin.getClusterStatus().getLoad(serverName);
+            regionsLoad = load.getRegionsLoad();
+            for (byte[] regionName : regionsLoad.keySet()) {
+                if (Arrays.equals(regionName, hRegionInfo.getRegionName())) return;
+            }
+            admin.move(hRegionInfo.getEncodedNameAsBytes(), serverName.getServerName().getBytes());
+            Thread.sleep(WAIT_INTERVAL);
+        }
+
+        System.out.println("hRegionInfo = " + Bytes.toString(hRegionInfo.getRegionName()));
+        for (Map.Entry<byte[], HServerLoad.RegionLoad> entry : regionsLoad.entrySet()) {
+            System.out.println("regionsLoad = " + Bytes.toString(entry.getKey()) + " - " + entry.getValue());
+        }
+
+        Assert.fail(Util.getMethodName() + " failed");
+    }
+
+    protected HServerLoad.RegionLoad getRegionLoad(HRegionInfo regionInfo, ServerName serverName) throws IOException {
+        HServerLoad serverLoad = admin.getClusterStatus().getLoad(serverName);
+        Map<byte[], HServerLoad.RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
+        for (Map.Entry<byte[], HServerLoad.RegionLoad> entry : regionsLoad.entrySet()) {
+            if (Arrays.equals(entry.getKey(), regionInfo.getRegionName())) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    protected HTable getTable(String tableName) throws IOException {
+        return new HTable(conf, tableName);
     }
 }

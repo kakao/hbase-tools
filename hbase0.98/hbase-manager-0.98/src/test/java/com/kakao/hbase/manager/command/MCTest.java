@@ -57,7 +57,7 @@ public class MCTest extends TestBase {
     @Before
     public void setUp() throws Exception {
         super.setUp();
-        table = hConnection.getTable(tableName);
+        table = getTable(tableName);
     }
 
     @After

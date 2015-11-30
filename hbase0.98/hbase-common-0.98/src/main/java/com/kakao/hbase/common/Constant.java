@@ -18,6 +18,7 @@ package com.kakao.hbase.common;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 
 public class Constant {
     public static final Charset CHARSET = StandardCharsets.UTF_8;
@@ -30,6 +31,9 @@ public class Constant {
     public static final String MESSAGE_DISABLED_OR_NOT_FOUND_TABLE = "Disabled or not found table";
     public static final String MESSAGE_NEED_REFRESH = "need refresh";
     public static final String UNIT_TEST_TABLE_PREFIX = "UNIT_TEST_";
+    public static final String MESSAGE_INVALID_DATE_FORMAT = "Invalid date format";
+    public static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    public static final SimpleDateFormat DATE_FORMAT_ARGS = new SimpleDateFormat("yyyyMMddHHmmss");
 
     private Constant() {
     }

@@ -466,4 +466,8 @@ public class TestBase extends SecureTestUtil {
             return createCommonOptionParser();
         }
     }
+
+    protected HTable getTable(String tableName) throws IOException {
+        return (HTable) hConnection.getTable(tableName);
+    }
 }

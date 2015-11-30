@@ -71,7 +71,7 @@ public class AssignImportTest extends TestBase {
             command.run();
 
             assignmentList = AssignTest.readExportFile(expFileName);
-            assertEquals(AssignAction.getExportCount(), assignmentList.size());
+            assertEquals(AssignAction.getProcessedCount(), assignmentList.size());
 
             // remember region count of rs1
             int regionCountRS1 = getRegionInfoList(rs1, tableName).size();

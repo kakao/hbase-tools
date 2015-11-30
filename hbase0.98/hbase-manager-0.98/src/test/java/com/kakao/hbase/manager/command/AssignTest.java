@@ -20,7 +20,6 @@ import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
-import com.kakao.hbase.specific.CommandAdapter;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.junit.Test;
@@ -147,7 +146,7 @@ public class AssignTest extends TestBase {
             command.run();
 
             assignmentList = readExportFile(expFileName);
-            assertEquals(AssignAction.getExportCount(), assignmentList.size());
+            assertEquals(AssignAction.getProcessedCount(), assignmentList.size());
 
             // modify exported file
             try (PrintWriter writer = new PrintWriter(expFileName, Constant.CHARSET.name())) {
@@ -180,7 +179,7 @@ public class AssignTest extends TestBase {
                 }
             }
             assignmentList = readExportFile(expFileName);
-            assertEquals(AssignAction.getExportCount() + 2, assignmentList.size());
+            assertEquals(AssignAction.getProcessedCount() + 2, assignmentList.size());
 
             // remember region count of rs1
             int regionCountRS1 = getRegionInfoList(rs1, tableName).size();
@@ -249,7 +248,7 @@ public class AssignTest extends TestBase {
             command.run();
 
             assignmentList = readExportFile(expFileName);
-            assertEquals(AssignAction.getExportCount(), assignmentList.size());
+            assertEquals(AssignAction.getProcessedCount(), assignmentList.size());
             for (String assignment : assignmentList) {
                 assertFalse(firstRegion.getEncodedName() + " must not be exported.",
                     assignment.contains(firstRegion.getEncodedName()));
@@ -263,7 +262,7 @@ public class AssignTest extends TestBase {
             command.run();
 
             assignmentList = readExportFile(expFileName);
-            assertEquals(AssignAction.getExportCount(), assignmentList.size());
+            assertEquals(AssignAction.getProcessedCount(), assignmentList.size());
             int actual = 0;
             for (String assignment : assignmentList) {
                 if (assignment.contains(firstRegion.getEncodedName()))

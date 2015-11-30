@@ -47,7 +47,7 @@ public class MergeTestBase extends TestBase {
         assertEquals(4, regionInfoList.size());
 
         // put data to the first region
-        try (HTableInterface table = hConnection.getTable(tableName)) {
+        try (HTableInterface table = getTable(tableName)) {
             Put put = new Put("1".getBytes());
             put.add(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
             table.put(put);
@@ -63,7 +63,7 @@ public class MergeTestBase extends TestBase {
         assertEquals(4, regionInfoList.size());
 
         // put data to the second region
-        try (HTableInterface table = hConnection.getTable(tableName)) {
+        try (HTableInterface table = getTable(tableName)) {
             Put put = new Put("b".getBytes());
             put.add(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
             table.put(put);
@@ -79,7 +79,7 @@ public class MergeTestBase extends TestBase {
         assertEquals(4, regionInfoList.size());
 
         // put data to the last region
-        try (HTableInterface table = hConnection.getTable(tableName)) {
+        try (HTableInterface table = getTable(tableName)) {
             Put put = new Put("c".getBytes());
             put.add(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
             table.put(put);
@@ -96,7 +96,7 @@ public class MergeTestBase extends TestBase {
         assertEquals(5, regionInfoList.size());
 
         // put data to the second and forth region
-        try (HTableInterface table = hConnection.getTable(tableName)) {
+        try (HTableInterface table = getTable(tableName)) {
             Put put;
             put = new Put("a".getBytes());
             put.add(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());

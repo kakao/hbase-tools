@@ -23,7 +23,6 @@ import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -138,7 +137,7 @@ public class MC implements Command {
                     System.out.print(i++ + "/" + targets.size() + " - Major compaction on " + cf + " CF of " +
                         (tableLevel ? "table " : "region ") + Bytes.toStringBinary(tableOrRegion) +
                         (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
-                    if (!askProceedInteractively()) continue;
+                    if (!Util.askProceedInteractively(args, true)) continue;
                     admin.majorCompact(tableOrRegion, cf.getBytes());
                     mcCounter.getAndIncrement();
                 } catch (IOException e) {
@@ -153,7 +152,7 @@ public class MC implements Command {
                 System.out.print(i++ + "/" + targets.size() + " - Major compaction on "
                     + (tableLevel ? "table " : "region ")
                     + Bytes.toStringBinary(tableOrRegion) + (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
-                if (!askProceedInteractively()) continue;
+                if (!Util.askProceedInteractively(args, true)) continue;
                 admin.majorCompact(tableOrRegion);
                 mcCounter.getAndIncrement();
             }
@@ -166,20 +165,6 @@ public class MC implements Command {
             + ", Locality: " + (regionLocalityMap.get(regionName) == null ? "null" :
             StringUtils.formatPercent(regionLocalityMap.get(regionName), 2))
             + ", SizeMB: " + regionSizeMap.get(regionName);
-    }
-
-    private boolean askProceedInteractively() {
-        if (args.has(Args.OPTION_INTERACTIVE)) {
-            if (args.has(Args.OPTION_FORCE_PROCEED)) {
-                System.out.println();
-            } else {
-                System.out.print(" - ");
-                if (!Util.askProceed()) return false;
-            }
-        } else {
-            System.out.println();
-        }
-        return true;
     }
 
     private void waitUntilFinish(Set<String> tables) throws IOException, InterruptedException {

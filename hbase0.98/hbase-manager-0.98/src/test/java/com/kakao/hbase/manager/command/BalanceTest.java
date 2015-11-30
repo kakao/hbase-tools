@@ -44,7 +44,7 @@ public class BalanceTest extends TestBase {
         NavigableMap<HRegionInfo, ServerName> regionLocations;
         List<Map.Entry<HRegionInfo, ServerName>> hRegionInfoList;
 
-        try (HTable table = (HTable) hConnection.getTable(tableName)) {
+        try (HTable table = getTable(tableName)) {
             regionLocations = table.getRegionLocations();
             hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
             Assert.assertEquals(2, regionLocations.size());
@@ -142,7 +142,7 @@ public class BalanceTest extends TestBase {
         NavigableMap<HRegionInfo, ServerName> regionLocations;
         List<Map.Entry<HRegionInfo, ServerName>> hRegionInfoList;
 
-        try (HTable table = (HTable) hConnection.getTable(tableName)) {
+        try (HTable table = getTable(tableName)) {
             // set regions unbalanced
             regionLocations = table.getRegionLocations();
             hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
@@ -189,7 +189,7 @@ public class BalanceTest extends TestBase {
         NavigableMap<HRegionInfo, ServerName> regionLocations;
         List<Map.Entry<HRegionInfo, ServerName>> hRegionInfoList;
 
-        try (HTable table = (HTable) hConnection.getTable(tableName)) {
+        try (HTable table = getTable(tableName)) {
             regionLocations = table.getRegionLocations();
             hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
             Assert.assertEquals(4, regionLocations.size());

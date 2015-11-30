@@ -22,11 +22,16 @@ import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 class Common {
     private Common() {
@@ -105,5 +110,35 @@ class Common {
         } catch (UnknownRegionException e) {
             System.out.println(" - SKIPPED - " + e.getClass().getCanonicalName());
         }
+    }
+
+    /**
+     *
+     * @param admin
+     * @return key: serverName exclude timestamp
+     * @throws IOException
+     */
+    public static Map<String, ServerName> serverNameMap(HBaseAdmin admin) throws IOException {
+        Map<String, ServerName> serverNameMap = new HashMap<>();
+        for (ServerName serverName : admin.getClusterStatus().getServers()) {
+            serverNameMap.put(getServerNameKey(serverName.getServerName()), serverName);
+        }
+        return serverNameMap;
+    }
+
+    public static String getServerNameKey(String serverNameOrg) {
+        return serverNameOrg.split(",")[0] + "," + serverNameOrg.split(",")[1];
+    }
+
+    public static List<ServerName> regionServers(HBaseAdmin admin) throws IOException {
+        return new ArrayList<>(admin.getClusterStatus().getServers());
+    }
+
+    public static List<ServerName> regionServers(HBaseAdmin admin, String regex) throws IOException {
+        List<ServerName> result = new ArrayList<>();
+        for (ServerName serverName : regionServers(admin)) {
+            if (serverName.getServerName().matches(regex)) result.add(serverName);
+        }
+        return result;
     }
 }

@@ -45,7 +45,7 @@ public class Assign implements Command {
             + "    import <input file>: Import assignment of regions from a file.\n"
             + "      --" + Args.OPTION_REGION_SERVER + "=<region server regex>: Import these region servers only.\n"
             + "    restore <table | rs> <regex> <timestamp>: Restore region assignments by using the versioned records of meta table.\n"
-            + "      <timestamp> : In yyyyMMddHHmmss format"
+            + "      <timestamp> : In yyyyMMddHHmmss format\n"
             + "      --" + Args.OPTION_INTERACTIVE + ": Ask whether to proceed for each region.\n"
             + "  options:\n"
             + "    --" + Args.OPTION_TURN_BALANCER_OFF

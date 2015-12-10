@@ -24,6 +24,7 @@ import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -153,7 +154,10 @@ public class MC implements Command {
                     + (tableLevel ? "table " : "region ")
                     + Bytes.toStringBinary(tableOrRegion) + (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
                 if (!Util.askProceedInteractively(args, true)) continue;
-                admin.majorCompact(tableOrRegion);
+                try {
+                    admin.majorCompact(tableOrRegion);
+                } catch (NotServingRegionException ignore) {
+                }
                 mcCounter.getAndIncrement();
             }
         }

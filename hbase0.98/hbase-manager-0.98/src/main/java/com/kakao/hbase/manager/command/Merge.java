@@ -282,6 +282,7 @@ public class Merge implements Command {
     }
 
     private List<HRegionInfo> findEmptyRegionsInternal(TableInfo tableInfo) throws Exception {
+        long timestamp = System.currentTimeMillis();
         List<HRegionInfo> emptyRegions = new ArrayList<>();
 
         tableInfo.refresh();
@@ -291,10 +292,12 @@ public class Merge implements Command {
             if (regionLoad == null) throw new IllegalStateException(Constant.MESSAGE_NEED_REFRESH);
 
             if (regionLoad.getStorefileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
-                if (CommandAdapter.isReallyEmptyRegion(connection, tableInfo.getTableName(), regionInfo)) emptyRegions.add(regionInfo);
+                if (CommandAdapter.isReallyEmptyRegion(connection, tableInfo.getTableName(), regionInfo))
+                    emptyRegions.add(regionInfo);
             }
         }
 
+        Util.printVerboseMessage(args, Util.getMethodName(), timestamp);
         return emptyRegions;
     }
 }

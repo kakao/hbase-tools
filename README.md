@@ -20,6 +20,7 @@ Collection of command-line tools for HBase.
     - Or build it by using [package.sh](package.sh) on your PC
         - JDK7 and Maven 3.2 are required
 2. Run downloaded jar with JRE
+
    ```
    java -jar <module>-<version of HBase>-<version of release>.jar [options] <args...>
    ```

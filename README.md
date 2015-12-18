@@ -1,10 +1,27 @@
 # hbase-tools
-Collection of command-line tools for HBase. This is developed and tested with CDH.
+Collection of command-line tools for HBase. 
+
+# Modules
+1. hbase-common
+   - Shared Library
+   - Adaptor for API Compatibility
+2. hbase-manager
+   - Toolkit for
+     - Region Assignment Management
+     - Major Compaction
+     - Merging and Splitting Regions
+3. hbase-table-stat
+   - Cluster Performance Monitor
+4. hbase-snapshot
+   - Table Snapshot Manager
 
 # Usage
 1. Download jars from [releases](../../releases) page
     - Or build it by using [package.sh](package.sh) on your PC
         - JDK7 and Maven 3.2 are required
+
+# Resources
+  - [Introduction and Use Cases(Korean)](../../releases/download/v1.1.1/hbase-tools-korean.pdf)
 
 # License
 This software is licensed under the [Apache 2 license](LICENSE.txt), quoted below.

@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.ipc.RemoteException;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -139,6 +140,9 @@ enum AssignAction {
                                     Util.printVerboseMessage(args, "emptyInternal.move.retry - iteration - "
                                         + i + " - assign - end", startTimeStamp);
                                 } catch (UnknownRegionException ignore) {
+                                } catch (RemoteException e) {
+                                    if (!e.getMessage().contains("UnknownRegionException"))
+                                        throw e;
                                 }
                             }
                             Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);

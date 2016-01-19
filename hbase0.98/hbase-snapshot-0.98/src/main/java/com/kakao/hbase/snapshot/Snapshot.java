@@ -30,6 +30,7 @@ import org.apache.zookeeper.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -135,8 +136,10 @@ public class Snapshot implements Watcher {
             }
             Util.sendAlertAfterSuccess(args, this.getClass());
         } catch (Throwable e) {
-            System.out.println("\n" + timestamp(TimestampFormat.log) + " - " + errorMessage(e));
-            Util.sendAlertAfterFailed(args, this.getClass(), errorMessage(e));
+            String message = "ConnectionString= " + connectString + ", CurrentHost= "
+                    + InetAddress.getLocalHost().getHostName() + ", Message= " + errorMessage(e);
+            System.out.println("\n" + timestamp(TimestampFormat.log) + " - " + message);
+            Util.sendAlertAfterFailed(args, this.getClass(), message);
             throw e;
         } finally {
             if (zooKeeper != null && zooKeeper.getState().isConnected()) {

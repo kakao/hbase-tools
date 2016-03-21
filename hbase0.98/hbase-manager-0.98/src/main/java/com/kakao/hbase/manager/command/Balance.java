@@ -185,7 +185,12 @@ public class Balance implements Command {
             String tableName = Bytes.toString(regionPlan.getRegionInfo().getTableName());
             String encodedRegionName = regionPlan.getRegionInfo().getEncodedName();
             String serverNameDest = regionPlan.getDestination().getServerName();
-            String serverNameSource = regionPlan.getSource().getServerName();
+            String serverNameSource;
+            if (regionPlan.getSource() == null) {
+                serverNameSource = "N/A";
+            } else {
+                serverNameSource = regionPlan.getSource().getServerName();
+            }
             String planStr = progress++ + "/" + regionPlanList.size() + " - move " + encodedRegionName + " of " + tableName + " from " + serverNameSource + " to " + serverNameDest;
             if (phase == Phase.BALANCE) {
                 System.out.print(planStr);

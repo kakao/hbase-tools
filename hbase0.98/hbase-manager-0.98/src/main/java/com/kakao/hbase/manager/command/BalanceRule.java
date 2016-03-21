@@ -40,7 +40,7 @@ enum BalanceRule {
                 for (HRegionInfo hRegionInfo : admin.getTableRegions(tableName.getBytes())) {
                     ServerName source = regionLocations.get(hRegionInfo);
                     ServerName dest = serverNames.get((i++) % serverNames.size());
-                    if (!source.equals(dest))
+                    if (source == null || !source.equals(dest))
                         regionPlanList.add(new RegionPlan(hRegionInfo, source, dest));
                 }
             }

@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
@@ -84,10 +86,9 @@ public class TestBase extends SecureTestUtil {
             if (hbase == null) {
                 conf = HBaseConfiguration.create(new Configuration(true));
                 conf.setInt("hbase.master.info.port", -1);
-                hbase = new HBaseTestingUtility(conf);
-                conf = hbase.getConfiguration();
                 conf.set("zookeeper.session.timeout", "3600000");
                 conf.set("dfs.client.socket-timeout", "3600000");
+                hbase = new HBaseTestingUtility(conf);
 
                 if (securedCluster) {
                     enableSecurity(conf);

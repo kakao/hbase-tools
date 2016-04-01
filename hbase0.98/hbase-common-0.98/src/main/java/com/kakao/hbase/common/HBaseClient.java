@@ -67,7 +67,12 @@ public class HBaseClient {
     }
 
     private static String kerberosConfigFile(Args args) throws IOException {
-        String fileNameArg = (String) args.valueOf(Args.OPTION_KERBEROS_CONFIG);
+        final String fileNameArg;
+        if (args.has(Args.OPTION_KERBEROS_CONFIG)) {
+            fileNameArg = (String) args.valueOf(Args.OPTION_KERBEROS_CONFIG);
+        } else {
+            fileNameArg = "/etc/krb5.conf";
+        }
         System.out.println("Loading kerberos config from " + fileNameArg);
         return fileNameArg;
     }
@@ -131,7 +136,7 @@ public class HBaseClient {
     }
 
     private static boolean isSecuredCluster(Args args) {
-        return args.has(Args.OPTION_KERBEROS_CONFIG);
+        return args.has(Args.OPTION_KERBEROS_CONFIG) || args.has(Args.OPTION_PRINCIPAL);
     }
 
     private static Configuration createNonSecureConfiguration(String zookeeperQuorum) {

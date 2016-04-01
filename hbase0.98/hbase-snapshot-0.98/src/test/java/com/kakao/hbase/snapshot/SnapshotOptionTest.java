@@ -247,7 +247,21 @@ public class SnapshotOptionTest extends TestBase {
         // drop one table
         dropTable(tableName2);
 
+        // create snapshot for only one table and snapshot for dropped table should not be deleted yet
+        argsParam = new String[]{"localhost", ".*", "--keep=1", "--test"};
+        args = new SnapshotArgs(argsParam);
+        app = new Snapshot(admin, args);
+        Thread.sleep(1000);
+        app.run();
+        snapshotDescriptions = listSnapshots(tableName + ".*");
+        assertEquals(2, snapshotDescriptions.size());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
+        assertEquals(tableName, snapshotDescriptions.get(1).getTable());
+
         // create snapshot for only one table and delete snapshot for dropped table
+        argsParam = new String[]{"localhost", ".*", "--keep=1", "--test", "--delete-snapshot-for-not-existing-table"};
+        args = new SnapshotArgs(argsParam);
+        app = new Snapshot(admin, args);
         Thread.sleep(1000);
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");

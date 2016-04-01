@@ -77,6 +77,8 @@ public class Snapshot implements Watcher {
                 + "    --" + SnapshotArgs.OPTION_CLEAR_WATCH_LEAK_ONLY
                 + " : Clear watch leaks only. It does not create any snapshot. Workaround for HBASE-13885."
                 + " This is not necessary as of HBase 0.98.14.\n"
+                + "    --" + SnapshotArgs.OPTION_DELETE_SNAPSHOT_FOR_NOT_EXISTING_TABLE
+                + " : Delete the snapshots for not existing tables.\n"
                 + Args.commonUsage()
                 + "  tables expression:\n"
                 + "    regexp or comma separated list\n"
@@ -133,6 +135,10 @@ public class Snapshot implements Watcher {
                     // delete old snapshots after creating new one
                     deleteOldSnapshots(admin, tableName);
                 }
+
+                if (args.has(Args.OPTION_DELETE_SNAPSHOT_FOR_NOT_EXISTING_TABLE)) {
+                    deleteSnapshotsForNotExistingTables();
+                }
             }
             Util.sendAlertAfterSuccess(args, this.getClass());
         } catch (Throwable e) {
@@ -144,6 +150,21 @@ public class Snapshot implements Watcher {
         } finally {
             if (zooKeeper != null && zooKeeper.getState().isConnected()) {
                 zooKeeper.close();
+            }
+        }
+    }
+
+    private void deleteSnapshotsForNotExistingTables() throws IOException {
+        List<SnapshotDescription> snapshots = admin.listSnapshots();
+        for (SnapshotDescription snapshot : snapshots) {
+            String tableName = snapshot.getTable();
+            String snapshotName = snapshot.getName();
+
+            if (!admin.tableExists(tableName)) {
+                System.out.print(timestamp(TimestampFormat.log) + " - Table \"" + tableName
+                        + "\" - Delete snapshot - Not existing table - \"" + snapshotName + "\"");
+                admin.deleteSnapshot(snapshotName);
+                System.out.println(" - OK");
             }
         }
     }

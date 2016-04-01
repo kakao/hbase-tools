@@ -213,4 +213,45 @@ public class SnapshotOptionTest extends TestBase {
         assertEquals(tableName, snapshotDescriptions.get(2).getTable());
         assertEquals(HBaseProtos.SnapshotDescription.Type.SKIPFLUSH, snapshotDescriptions.get(2).getType());
     }
+
+    @Test
+    public void testDeleteSnapshotsForNotExistingTables() throws Exception {
+        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        String[] argsParam;
+        SnapshotArgs args;
+        Snapshot app;
+
+        // create table
+        String tableName2 = createAdditionalTable(tableName + "2");
+
+        // create snapshot for 2 tables and keep 1
+        argsParam = new String[]{"localhost", ".*", "--keep=1", "--test", "--delete-snapshot-for-not-existing-table"};
+        args = new SnapshotArgs(argsParam);
+        app = new Snapshot(admin, args);
+
+        // create snapshot first
+        app.run();
+        snapshotDescriptions = listSnapshots(tableName + ".*");
+        assertEquals(2, snapshotDescriptions.size());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
+        assertEquals(tableName, snapshotDescriptions.get(1).getTable());
+
+        // create snapshot once more
+        Thread.sleep(1000);
+        app.run();
+        snapshotDescriptions = listSnapshots(tableName + ".*");
+        assertEquals(2, snapshotDescriptions.size());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
+        assertEquals(tableName, snapshotDescriptions.get(1).getTable());
+
+        // drop one table
+        dropTable(tableName2);
+
+        // create snapshot for only one table and delete snapshot for dropped table
+        Thread.sleep(1000);
+        app.run();
+        snapshotDescriptions = listSnapshots(tableName + ".*");
+        assertEquals(1, snapshotDescriptions.size());
+        assertEquals(tableName, snapshotDescriptions.get(0).getTable());
+    }
 }

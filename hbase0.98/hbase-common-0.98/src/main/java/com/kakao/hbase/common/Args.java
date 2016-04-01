@@ -40,6 +40,7 @@ public abstract class Args {
     public static final String OPTION_REALM = "realm";
     public static final String OPTION_FORCE_PROCEED = "force-proceed";
     public static final String OPTION_KEEP = "keep";
+    public static final String OPTION_DELETE_SNAPSHOT_FOR_NOT_EXISTING_TABLE = "delete-snapshot-for-not-existing-table";
     public static final String OPTION_SKIP_FLUSH = "skip-flush";
     public static final String OPTION_EXCLUDE = "exclude";
     public static final String OPTION_OVERRIDE = "override";

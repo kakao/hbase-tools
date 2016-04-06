@@ -244,6 +244,10 @@ public class SnapshotOptionTest extends TestBase {
         assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
         assertEquals(tableName, snapshotDescriptions.get(1).getTable());
 
+        // create snapshot does not follow hbase-snapshot naming rule
+        String shouldNotBeDeleted = tableName2 + "-snapshot-test";
+        admin.snapshot(shouldNotBeDeleted, tableName2);
+
         // drop one table
         dropTable(tableName2);
 
@@ -254,9 +258,10 @@ public class SnapshotOptionTest extends TestBase {
         Thread.sleep(1000);
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
-        assertEquals(2, snapshotDescriptions.size());
+        assertEquals(3, snapshotDescriptions.size());
         assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
-        assertEquals(tableName, snapshotDescriptions.get(1).getTable());
+        assertEquals(tableName2, snapshotDescriptions.get(1).getTable());
+        assertEquals(tableName, snapshotDescriptions.get(2).getTable());
 
         // create snapshot for only one table and delete snapshot for dropped table
         argsParam = new String[]{"localhost", ".*", "--keep=1", "--test", "--delete-snapshot-for-not-existing-table"};
@@ -265,7 +270,9 @@ public class SnapshotOptionTest extends TestBase {
         Thread.sleep(1000);
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
-        assertEquals(1, snapshotDescriptions.size());
-        assertEquals(tableName, snapshotDescriptions.get(0).getTable());
+        assertEquals(2, snapshotDescriptions.size());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
+        assertEquals(shouldNotBeDeleted, snapshotDescriptions.get(0).getName());
+        assertEquals(tableName, snapshotDescriptions.get(1).getTable());
     }
 }

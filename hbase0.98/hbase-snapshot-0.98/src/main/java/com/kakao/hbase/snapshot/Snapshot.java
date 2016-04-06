@@ -159,12 +159,16 @@ public class Snapshot implements Watcher {
         for (SnapshotDescription snapshot : snapshots) {
             String tableName = snapshot.getTable();
             String snapshotName = snapshot.getName();
-
-            if (!admin.tableExists(tableName)) {
-                System.out.print(timestamp(TimestampFormat.log) + " - Table \"" + tableName
-                        + "\" - Delete snapshot - Not existing table - \"" + snapshotName + "\"");
-                admin.deleteSnapshot(snapshotName);
-                System.out.println(" - OK");
+            if (snapshotName.startsWith(getPrefix(tableName))) {
+                if (!admin.tableExists(tableName)) {
+                    System.out.print(timestamp(TimestampFormat.log) + " - Table \"" + tableName
+                            + "\" - Delete snapshot - Not existing table - \"" + snapshotName + "\"");
+                    admin.deleteSnapshot(snapshotName);
+                    System.out.println(" - OK");
+                }
+            } else {
+                System.out.println(timestamp(TimestampFormat.log) + " - Table \"" + tableName
+                        + "\" - Delete snapshot - \"" + snapshotName + "\" - SKIPPED");
             }
         }
     }

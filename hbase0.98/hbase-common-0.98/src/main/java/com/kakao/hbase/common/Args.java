@@ -35,8 +35,10 @@ public abstract class Args {
     public static final String OPTION_DEBUG = "debug";
     public static final String OPTION_KERBEROS_CONFIG = "krbconf";
     public static final String OPTION_KEY_TAB = "keytab";
+    public static final String OPTION_KEY_TAB_SHORT = "k";
     public static final String OPTION_REGION_SERVER = "rs";
     public static final String OPTION_PRINCIPAL = "principal";
+    public static final String OPTION_PRINCIPAL_SHORT = "p";
     public static final String OPTION_REALM = "realm";
     public static final String OPTION_FORCE_PROCEED = "force-proceed";
     public static final String OPTION_KEEP = "keep";
@@ -88,26 +90,31 @@ public abstract class Args {
 
     public static String commonUsage() {
         return "  args file:\n"
-            + "    Plain text file that contains args and options.\n"
-            + "  common options:\n"
-            + "    --" + Args.OPTION_FORCE_PROCEED + ": Do not ask whether to proceed.\n"
-            + "    --" + Args.OPTION_DEBUG + ": Print debug log.\n"
-            + "    --" + Args.OPTION_VERBOSE + ": Print some more messages.\n"
-            + "    --" + Args.OPTION_AFTER_FAILURE
-            + "=<script> : The script to run when this running is failed.\n"
-            + "                               The first argument of the script should be a message string.\n"
-            + "    --" + Args.OPTION_AFTER_SUCCESS
-            + "=<script> : The script to run when this running is successfully finished.\n"
-            + "                               The first argument of the script should be a message string.\n"
-            + "    --" + Args.OPTION_AFTER_FINISH
-            + "=<script> : The script to run when this running is successfully finished or failed.\n"
-            + "                               The first argument of the script should be a message string.\n"
-            + "    --" + Args.OPTION_KEY_TAB + "=<keytab file>: Kerberos keytab file. Use absolute path.\n"
-            + "    --" + Args.OPTION_PRINCIPAL + "=<principal>: Kerberos principal.\n"
-            + "    --" + Args.OPTION_REALM + "=<realm>: Kerberos realm to use."
-            + " Set this arg if it is not the default realm.\n"
-            + "    --" + Args.OPTION_KERBEROS_CONFIG + "=<kerberos config file>: Kerberos config file." +
-            " Use absolute path.\n";
+                + "    Plain text file that contains args and options.\n"
+                + "  common options:\n"
+                + "    --" + Args.OPTION_FORCE_PROCEED + "\n"
+                + "        Do not ask whether to proceed.\n"
+                + "    --" + Args.OPTION_DEBUG + "\n"
+                + "        Print debug log.\n"
+                + "    --" + Args.OPTION_VERBOSE + "\n"
+                + "        Print some more messages.\n"
+                + "    --" + Args.OPTION_AFTER_FAILURE + "=<script>\n"
+                + "        The script to run when this running is failed.\n"
+                + "        The first argument of the script should be a message string.\n"
+                + "    --" + Args.OPTION_AFTER_SUCCESS + "=<script>\n"
+                + "        The script to run when this running is successfully finished.\n"
+                + "        The first argument of the script should be a message string.\n"
+                + "    --" + Args.OPTION_AFTER_FINISH + "=<script>\n"
+                + "        The script to run when this running is successfully finished or failed.\n"
+                + "        The first argument of the script should be a message string.\n"
+                + "    -" + Args.OPTION_KEY_TAB_SHORT + "<keytab file>, --" + Args.OPTION_KEY_TAB + "=<keytab file>\n"
+                + "        Kerberos keytab file. Use absolute path.\n"
+                + "    -" + Args.OPTION_PRINCIPAL_SHORT + "<principal>, --" + Args.OPTION_PRINCIPAL + "=<principal>\n"
+                + "        Kerberos principal.\n"
+                + "    --" + Args.OPTION_REALM + "=<realm>\n"
+                + "        Kerberos realm to use. Set this arg if it is not the default realm.\n"
+                + "    --" + Args.OPTION_KERBEROS_CONFIG + "=<kerberos config file>\n"
+                + "        Kerberos config file. Use absolute path.\n";
     }
 
     public static String[] parseArgsFile(String fileName) throws IOException {
@@ -207,7 +214,9 @@ public abstract class Args {
         optionParser.accepts(OPTION_DEBUG);
         optionParser.accepts(OPTION_VERBOSE);
         optionParser.accepts(OPTION_KEY_TAB).withRequiredArg().ofType(String.class);
+        optionParser.accepts(OPTION_KEY_TAB_SHORT).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_PRINCIPAL).withRequiredArg().ofType(String.class);
+        optionParser.accepts(OPTION_PRINCIPAL_SHORT).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_REALM).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_KERBEROS_CONFIG).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_AFTER_FAILURE).withRequiredArg().ofType(String.class);

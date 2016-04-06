@@ -110,6 +110,8 @@ public class HBaseClient {
         if (principal == null) {
             if (args.has(Args.OPTION_PRINCIPAL)) {
                 principal = (String) args.valueOf(Args.OPTION_PRINCIPAL);
+            } else if (args.has(Args.OPTION_PRINCIPAL_SHORT) ) {
+                principal = (String) args.valueOf(Args.OPTION_PRINCIPAL_SHORT);
             } else {
                 System.out.print("Principal: ");
                 Scanner scanner = new Scanner(System.in);
@@ -136,7 +138,8 @@ public class HBaseClient {
     }
 
     private static boolean isSecuredCluster(Args args) {
-        return args.has(Args.OPTION_KERBEROS_CONFIG) || args.has(Args.OPTION_PRINCIPAL);
+        return args.has(Args.OPTION_KERBEROS_CONFIG) || args.has(Args.OPTION_PRINCIPAL)
+                || args.has(Args.OPTION_PRINCIPAL_SHORT);
     }
 
     private static Configuration createNonSecureConfiguration(String zookeeperQuorum) {
@@ -182,6 +185,9 @@ public class HBaseClient {
         if (args.has(Args.OPTION_KEY_TAB)) {
             UserGroupInformation.setConfiguration(conf);
             UserGroupInformation.loginUserFromKeytab(principal(args), (String) args.valueOf(Args.OPTION_KEY_TAB));
+        } else if (args.has(Args.OPTION_KEY_TAB_SHORT)) {
+            UserGroupInformation.setConfiguration(conf);
+            UserGroupInformation.loginUserFromKeytab(principal(args), (String) args.valueOf(Args.OPTION_KEY_TAB_SHORT));
         } else {
             loginWithPassword(args, conf);
         }

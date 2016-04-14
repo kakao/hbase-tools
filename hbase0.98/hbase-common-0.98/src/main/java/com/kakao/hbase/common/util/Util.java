@@ -125,6 +125,10 @@ public class Util {
             System.out.println(now() + " - " + message);
     }
 
+    public static void printMessage(String message) {
+        System.out.println(now() + " - " + message);
+    }
+
     private static String now() {
         return DATE_FORMAT.format(System.currentTimeMillis());
     }
@@ -196,17 +200,17 @@ public class Util {
     @SuppressWarnings("deprecation")
     public static String getRegionInfoString(HRegionInfo regionA) {
         return "{TABLE => " + Bytes.toString(regionA.getTableName())
-            + ", ENCODED => " + regionA.getEncodedName()
-            + ", STARTKEY => '" + Bytes.toStringBinary(regionA.getStartKey())
-            + "', ENDKEY => '" + Bytes.toStringBinary(regionA.getEndKey()) + "'";
+                + ", ENCODED => " + regionA.getEncodedName()
+                + ", STARTKEY => '" + Bytes.toStringBinary(regionA.getStartKey())
+                + "', ENDKEY => '" + Bytes.toStringBinary(regionA.getEndKey()) + "'";
     }
 
     public static void sendAlertAfterFailed(Args args, Class clazz, String message) {
         if (args != null && args.getAfterFailureScript() != null)
             AlertSender.send(args.getAfterFailureScript(),
-                "FAIL - " + clazz.getSimpleName()
-                    + " - " + message
-                    + " - " + args.toString());
+                    "FAIL - " + clazz.getSimpleName()
+                            + " - " + message
+                            + " - " + args.toString());
         sendAlertAfterFinish(args, clazz, message, false);
     }
 
@@ -217,18 +221,18 @@ public class Util {
     public static void sendAlertAfterSuccess(Args args, Class clazz, String message) {
         if (args != null && args.getAfterSuccessScript() != null)
             AlertSender.send(args.getAfterSuccessScript(),
-                "SUCCESS - " + clazz.getSimpleName()
-                    + (message == null || message.equals("") ? "" : " - " + message)
-                    + " - " + args.toString());
+                    "SUCCESS - " + clazz.getSimpleName()
+                            + (message == null || message.equals("") ? "" : " - " + message)
+                            + " - " + args.toString());
         sendAlertAfterFinish(args, clazz, message, true);
     }
 
     public static void sendAlertAfterFinish(Args args, Class clazz, String message, boolean success) {
         if (args != null && args.getAfterFinishScript() != null)
             AlertSender.send(args.getAfterFinishScript(),
-                (success ? "SUCCESS - " : "FAIL - ") + clazz.getSimpleName()
-                    + (message == null || message.equals("") ? "" : " - " + message)
-                    + " - " + args.toString());
+                    (success ? "SUCCESS - " : "FAIL - ") + clazz.getSimpleName()
+                            + (message == null || message.equals("") ? "" : " - " + message)
+                            + " - " + args.toString());
     }
 
     public static String getMethodName() {

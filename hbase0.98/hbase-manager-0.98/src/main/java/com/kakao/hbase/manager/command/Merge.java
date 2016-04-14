@@ -18,32 +18,33 @@ package com.kakao.hbase.manager.command;
 
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
+import com.kakao.hbase.common.EmptyRegionChecker;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
 import com.kakao.hbase.stat.load.TableInfo;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionException;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.*;
 
 public class Merge implements Command {
     private final HBaseAdmin admin;
     private final Args args;
     private final String actionParam;
     private final Set<String> tableNameSet;
+    private final HConnection connection;
     private boolean proceed = false;
     private boolean test = false;
-    private final HConnection connection;
 
     public Merge(HBaseAdmin admin, Args args) throws IOException {
         if (args.getOptionSet().nonOptionArguments().size() < 2
-            || args.getOptionSet().nonOptionArguments().size() > 3) { // todo refactoring
+                || args.getOptionSet().nonOptionArguments().size() > 3) { // todo refactoring
             throw new RuntimeException(Args.INVALID_ARGUMENTS);
         }
 
@@ -58,15 +59,15 @@ public class Merge implements Command {
     @SuppressWarnings("unused")
     public static String usage() {
         return "Merge regions. It may take a long time.\n"
-            + "usage: "
-            + Merge.class.getSimpleName().toLowerCase()
-            + " [options] <zookeeper quorum> <table name(regex)> <action>\n"
-            + "  actions:\n"
-            + "    empty-fast       - Merge adjacent 2 empty regions only.\n"
-            + "    empty            - Merge all empty regions.\n"
-            + "  options:\n"
-            + "    --" + Args.OPTION_MAX_ITERATION + " - Set max iteration.\n"
-            + Args.commonUsage();
+                + "usage: "
+                + Merge.class.getSimpleName().toLowerCase()
+                + " [options] <zookeeper quorum> <table name(regex)> <action>\n"
+                + "  actions:\n"
+                + "    empty-fast       - Merge adjacent 2 empty regions only.\n"
+                + "    empty            - Merge all empty regions.\n"
+                + "  options:\n"
+                + "    --" + Args.OPTION_MAX_ITERATION + " - Set max iteration.\n"
+                + Args.commonUsage();
     }
 
     private int getMaxMaxIteration() {
@@ -96,13 +97,13 @@ public class Merge implements Command {
             for (String tableName : tableNameSet) {
                 TableInfo tableInfo = new TableInfo(admin, tableName, args);
 
-                System.out.println("Table - " + tableName + " - empty-fast - Start");
+                Util.printMessage("Table - " + tableName + " - empty-fast - Start");
                 emptyFast(tableInfo);
-                System.out.println("Table - " + tableName + " - empty-fast - End\n");
+                Util.printMessage("Table - " + tableName + " - empty-fast - End\n");
 
-                System.out.println("Table - " + tableName + " - empty - Start");
+                Util.printMessage("Table - " + tableName + " - empty - Start");
                 empty(tableInfo);
-                System.out.println("Table - " + tableName + " - empty - End");
+                Util.printMessage("Table - " + tableName + " - empty - End");
             }
         } else if (actionParam.toLowerCase().equals("size")) {
             throw new IllegalStateException("Not implemented yet"); //todo
@@ -130,8 +131,8 @@ public class Merge implements Command {
                 }
 
                 if (emptyInternal(tableInfo)) break;
-                System.out.println("Iteration " + i + "/" + getMaxMaxIteration() + " - Wait for "
-                    + getMergeWaitIntervalMs() / 1000 + " seconds\n");
+                Util.printMessage("Iteration " + i + "/" + getMaxMaxIteration() + " - Wait for "
+                        + getMergeWaitIntervalMs() / 1000 + " seconds\n");
                 Thread.sleep(getMergeWaitIntervalMs());
             } catch (IllegalStateException e) {
                 if (e.getMessage().contains(Constant.MESSAGE_NEED_REFRESH)) {
@@ -185,7 +186,7 @@ public class Merge implements Command {
     }
 
     private HRegionInfo getTargetRegion(TableInfo tableInfo, List<HRegionInfo> allTableRegions,
-        int i, Set<HRegionInfo> mergedRegions) {
+                                        int i, Set<HRegionInfo> mergedRegions) {
         HRegionInfo regionPrev = i > 0 ? allTableRegions.get(i - 1) : null;
         if (mergedRegions.contains(regionPrev)) regionPrev = null;
         HRegionInfo regionNext = i == allTableRegions.size() - 1 ? null : allTableRegions.get(i + 1);
@@ -222,8 +223,8 @@ public class Merge implements Command {
                 List<HRegionInfo> adjacentEmptyRegions = CommandAdapter.adjacentEmptyRegions(emptyRegions);
                 Util.printVerboseMessage(args, "Merge.emptyFast.adjacentEmptyRegions", timestampPrev);
                 System.out.println();
-                System.out.println("Iteration " + j + "/" + getMaxMaxIteration() + " - "
-                    + adjacentEmptyRegions.size() + " adjacent empty regions are found");
+                Util.printMessage("Iteration " + j + "/" + getMaxMaxIteration() + " - "
+                        + adjacentEmptyRegions.size() + " adjacent empty regions are found");
                 if (adjacentEmptyRegions.size() == 0) return;
                 emptyRegions = adjacentEmptyRegions;
                 if (!args.isForceProceed()) {
@@ -249,8 +250,8 @@ public class Merge implements Command {
                     }
                 }
                 if (!merged)
-                    System.out.println("Skip merging - " + regionA.getEncodedName()
-                        + " - There is no adjacent empty region");
+                    Util.printMessage("Skip merging - " + regionA.getEncodedName()
+                            + " - There is no adjacent empty region");
             }
 
             if (merged)
@@ -261,8 +262,9 @@ public class Merge implements Command {
     }
 
     private void printMergeInfo(HRegionInfo regionA, HRegionInfo regionB) {
-        System.out.println("Merge regions - " + Util.getRegionInfoString(regionA));
-        System.out.println("              L " + Util.getRegionInfoString(regionB));
+        Util.printMessage("Merge regions");
+        System.out.println("  - " + Util.getRegionInfoString(regionA));
+        System.out.println("  L " + Util.getRegionInfoString(regionB));
     }
 
     private List<HRegionInfo> findEmptyRegions(TableInfo tableInfo) throws Exception {
@@ -283,21 +285,30 @@ public class Merge implements Command {
 
     private List<HRegionInfo> findEmptyRegionsInternal(TableInfo tableInfo) throws Exception {
         long timestamp = System.currentTimeMillis();
-        List<HRegionInfo> emptyRegions = new ArrayList<>();
+
+        Set<HRegionInfo> emptyRegions =
+                Collections.synchronizedSet(Collections.newSetFromMap(new TreeMap<HRegionInfo, Boolean>()));
 
         tableInfo.refresh();
+
+        ExecutorService executorService = Executors.newFixedThreadPool(EmptyRegionChecker.THREAD_POOL_SIZE);
+        EmptyRegionChecker.resetCounter();
+
         Set<HRegionInfo> allTableRegions = tableInfo.getRegionInfoSet();
         for (HRegionInfo regionInfo : allTableRegions) {
             RegionLoadDelegator regionLoad = tableInfo.getRegionLoad(regionInfo);
             if (regionLoad == null) throw new IllegalStateException(Constant.MESSAGE_NEED_REFRESH);
 
             if (regionLoad.getStorefileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
-                if (CommandAdapter.isReallyEmptyRegion(connection, tableInfo.getTableName(), regionInfo))
-                    emptyRegions.add(regionInfo);
+                executorService.execute(
+                        new EmptyRegionChecker(connection, tableInfo.getTableName(), regionInfo, emptyRegions));
             }
         }
+        executorService.shutdown();
+        executorService.awaitTermination(30, TimeUnit.MINUTES);
+        Util.printMessage(emptyRegions.size() + " empty regions are found.");
 
         Util.printVerboseMessage(args, Util.getMethodName(), timestamp);
-        return emptyRegions;
+        return new ArrayList<>(emptyRegions);
     }
 }

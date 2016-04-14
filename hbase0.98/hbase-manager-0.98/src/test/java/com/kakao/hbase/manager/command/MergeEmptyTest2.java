@@ -39,7 +39,7 @@ public class MergeEmptyTest2 extends MergeTestBase {
         List<HRegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "empty", "--force-proceed"};
+        String[] argsParam = {"zookeeper", tableName, "empty", "--force-proceed", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.setTest(true);
@@ -59,7 +59,7 @@ public class MergeEmptyTest2 extends MergeTestBase {
         List<HRegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "emptY", "--force-proceed"};
+        String[] argsParam = {"zookeeper", tableName, "emptY", "--force-proceed", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.setTest(true);
@@ -80,7 +80,7 @@ public class MergeEmptyTest2 extends MergeTestBase {
         List<HRegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "empty", "--force-proceed", "--max-iteration=4"};
+        String[] argsParam = {"zookeeper", tableName, "empty", "--force-proceed", "--max-iteration=4", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.run();

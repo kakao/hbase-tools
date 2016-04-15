@@ -118,6 +118,8 @@ public class Snapshot implements Watcher {
         String connectString = admin.getConfiguration().get("hbase.zookeeper.quorum");
         ZooKeeper zooKeeper = null;
         try {
+            Map<String, String> failedSnapshotMap = new TreeMap<>();
+
             zooKeeper = new ZooKeeper(connectString, SESSION_TIMEOUT, this);
             if (args.has(Args.OPTION_CLEAR_WATCH_LEAK_ONLY)) {
                 clearWatchLeak(args, zooKeeper);
@@ -130,10 +132,25 @@ public class Snapshot implements Watcher {
                     }
 
                     String snapshotName = getPrefix(tableName) + timestamp;
-                    snapshot(zooKeeper, tableName, snapshotName);
+                    try {
+                        snapshot(zooKeeper, tableName, snapshotName);
+                    } catch (Throwable e) {
+                        failedSnapshotMap.put(snapshotName, tableName);
+                    }
 
                     // delete old snapshots after creating new one
                     deleteOldSnapshots(admin, tableName);
+                }
+
+                // retry failed snapshots
+                if (!failedSnapshotMap.isEmpty()) {
+                    System.out.println();
+                    Util.printMessage("--------------------- Retrying failed snapshots -----------------------------");
+                    for (Map.Entry<String, String> entry : failedSnapshotMap.entrySet()) {
+                        String snapshotName = entry.getKey();
+                        String tableName = entry.getValue();
+                        snapshot(zooKeeper, tableName, snapshotName);
+                    }
                 }
 
                 if (args.has(Args.OPTION_DELETE_SNAPSHOT_FOR_NOT_EXISTING_TABLE)) {

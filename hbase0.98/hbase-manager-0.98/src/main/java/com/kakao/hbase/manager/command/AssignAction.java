@@ -362,7 +362,8 @@ enum AssignAction {
             List<Triple<String, String, String>> assignmentListRemaining = new ArrayList<>();
             Set<String> onlineRegions = new HashSet<>();
             for (String server : importingServers) {
-                for (HRegionInfo hRegionInfo : CommandAdapter.getOnlineRegions(args, admin, new ServerName(server))) {
+                for (HRegionInfo hRegionInfo :
+                    CommandAdapter.getOnlineRegions(args, admin, CommandAdapter.create(server))) {
                     onlineRegions.add(hRegionInfo.getEncodedName());
                 }
             }

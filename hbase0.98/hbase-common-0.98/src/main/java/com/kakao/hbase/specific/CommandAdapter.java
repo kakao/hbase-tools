@@ -295,4 +295,8 @@ public class CommandAdapter {
         }
         return regionLocationMap;
     }
+
+    public static ServerName create(String serverNameStr) {
+        return ServerName.valueOf(serverNameStr);
+    }
 }

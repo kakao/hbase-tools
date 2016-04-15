@@ -1,0 +1,1 @@
+../../hbase1.0/hbase-manager-1.0/README.md

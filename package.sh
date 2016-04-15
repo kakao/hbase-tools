@@ -34,6 +34,6 @@ build() {
 cd $(dirname ${BASH_SOURCE[0]})
 mkdir -p release
 rm -f release/*.jar
-for v in 0.94 0.96 0.98 1.0; do
+for v in 0.94 0.96 0.98 1.0 1.2; do
   build $v
 done

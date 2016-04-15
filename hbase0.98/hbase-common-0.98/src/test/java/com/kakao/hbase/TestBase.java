@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
@@ -310,6 +308,7 @@ public class TestBase extends SecureTestUtil {
                 if (regionCountActual == regionCount) {
                     return;
                 }
+            } catch (Throwable ignore) {
             }
             Thread.sleep(WAIT_INTERVAL);
         }
@@ -457,6 +456,10 @@ public class TestBase extends SecureTestUtil {
         return null;
     }
 
+    protected HTable getTable(String tableName) throws IOException {
+        return (HTable) hConnection.getTable(tableName);
+    }
+
     public static class TestArgs extends Args {
         public TestArgs(String[] args) throws IOException {
             super(args);
@@ -466,9 +469,5 @@ public class TestBase extends SecureTestUtil {
         protected OptionParser createOptionParser() {
             return createCommonOptionParser();
         }
-    }
-
-    protected HTable getTable(String tableName) throws IOException {
-        return (HTable) hConnection.getTable(tableName);
     }
 }

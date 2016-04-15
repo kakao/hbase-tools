@@ -47,6 +47,7 @@ public class MergeEmptyTest2 extends MergeTestBase {
         Thread.sleep(Constant.WAIT_INTERVAL_MS);
 
         // check
+        Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
         assertArrayEquals("".getBytes(), regionInfoList.get(0).getStartKey());
@@ -67,6 +68,7 @@ public class MergeEmptyTest2 extends MergeTestBase {
         Thread.sleep(Constant.WAIT_INTERVAL_MS);
 
         // check
+        Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(2, regionInfoList.size());
         assertArrayEquals("".getBytes(), regionInfoList.get(0).getStartKey());
@@ -87,6 +89,7 @@ public class MergeEmptyTest2 extends MergeTestBase {
         Thread.sleep(Constant.WAIT_INTERVAL_MS);
 
         // check
+        Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
     }

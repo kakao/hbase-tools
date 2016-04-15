@@ -23,6 +23,7 @@ import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
 import com.kakao.hbase.stat.load.TableInfo;
+import com.sun.xml.bind.v2.runtime.reflect.opt.Const;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -50,6 +51,7 @@ public class Merge implements Command {
 
         this.admin = admin;
         this.args = args;
+        if (args.has(Args.OPTION_TEST)) this.test = true;
         actionParam = (String) args.getOptionSet().nonOptionArguments().get(2);
         this.connection = HConnectionManager.createConnection(admin.getConfiguration());
 
@@ -243,7 +245,17 @@ public class Merge implements Command {
                 if (i != emptyRegions.size() - 1) {
                     HRegionInfo regionB = emptyRegions.get(i + 1);
 
-                    if (CommandAdapter.mergeRegions(args, admin, regionA, regionB)) {
+                    boolean mergeRegions = false;
+                    for (int k = 0; k < Constant.TRY_MAX_SMALL; k++) {
+                        try {
+                            mergeRegions = CommandAdapter.mergeRegions(args, admin, regionA, regionB);
+                            break;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Thread.sleep(Constant.WAIT_INTERVAL_MS);
+                        }
+                    }
+                    if (mergeRegions) {
                         i++;
                         printMergeInfo(regionA, regionB);
                         merged = true;
@@ -255,7 +267,7 @@ public class Merge implements Command {
             }
 
             if (merged)
-                Thread.sleep(Constant.WAIT_INTERVAL_MS);
+                Thread.sleep(getMergeWaitIntervalMs());
             else
                 break;
         }

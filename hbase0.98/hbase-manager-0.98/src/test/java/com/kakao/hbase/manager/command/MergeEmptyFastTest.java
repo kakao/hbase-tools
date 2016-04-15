@@ -19,6 +19,7 @@ package com.kakao.hbase.manager.command;
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
+import com.kakao.hbase.common.Constant;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
@@ -41,12 +42,13 @@ public class MergeEmptyFastTest extends MergeTestBase {
         List<HRegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "empty-FAST", "--force-proceed"};
+        String[] argsParam = {"zookeeper", tableName, "empty-FAST", "--force-proceed", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.run();
 
         // check
+        Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
     }
@@ -58,12 +60,13 @@ public class MergeEmptyFastTest extends MergeTestBase {
         List<HRegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "empty-FAST", "--force-proceed"};
+        String[] argsParam = {"zookeeper", tableName, "empty-FAST", "--force-proceed", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.run();
 
         // check
+        Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(2, regionInfoList.size());
         assertArrayEquals("".getBytes(), regionInfoList.get(0).getStartKey());
@@ -77,12 +80,13 @@ public class MergeEmptyFastTest extends MergeTestBase {
         List<HRegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "empty-FAST", "--force-proceed"};
+        String[] argsParam = {"zookeeper", tableName, "empty-FAST", "--force-proceed", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.run();
 
         // check
+        Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(3, regionInfoList.size());
         assertArrayEquals("".getBytes(), regionInfoList.get(0).getStartKey());

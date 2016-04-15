@@ -26,12 +26,12 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class EmptyRegionChecker implements Runnable {
+    private static final AtomicLong counter = new AtomicLong();
     public static int THREAD_POOL_SIZE = 10;
     private final HConnection connection;
     private final String tableName;
     private final HRegionInfo regionInfo;
     private final Set<HRegionInfo> emptyRegions;
-    private static final AtomicLong counter = new AtomicLong();
 
     public EmptyRegionChecker(HConnection connection, String tableName,
                               HRegionInfo regionInfo, Set<HRegionInfo> emptyRegions) {
@@ -39,6 +39,10 @@ public class EmptyRegionChecker implements Runnable {
         this.tableName = tableName;
         this.regionInfo = regionInfo;
         this.emptyRegions = emptyRegions;
+    }
+
+    public static void resetCounter() {
+        counter.set(0);
     }
 
     @Override
@@ -54,9 +58,5 @@ public class EmptyRegionChecker implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public static void resetCounter() {
-        counter.set(0);
     }
 }

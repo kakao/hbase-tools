@@ -18,6 +18,7 @@ package com.kakao.hbase.manager.command;
 
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.common.Args;
+import com.kakao.hbase.common.Constant;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.junit.Test;
 
@@ -44,6 +45,7 @@ public class MergeEmptyFastTest2 extends MergeTestBase {
         command.run();
 
         // check
+        Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(2, regionInfoList.size());
         assertArrayEquals("".getBytes(), regionInfoList.get(0).getStartKey());
@@ -63,6 +65,7 @@ public class MergeEmptyFastTest2 extends MergeTestBase {
         command.run();
 
         // check
+        Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(5, regionInfoList.size());
     }
@@ -74,12 +77,14 @@ public class MergeEmptyFastTest2 extends MergeTestBase {
         List<HRegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "empty-FAST", "--force-proceed", "--max-iteration=4", "--test"};
+        String[] argsParam = {"zookeeper", tableName, "empty-FAST", "--force-proceed", "--test"
+                , "--verbose", "--debug"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.run();
 
         // check
+        Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
     }

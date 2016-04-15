@@ -26,6 +26,7 @@ public class Constant {
     public static final long LARGE_WAIT_INTERVAL_MS = 60000;
     public static final long SMALL_WAIT_INTERVAL_MS = 3000;
     public static final int TRY_MAX = 20;
+    public static final int TRY_MAX_SMALL = 3;
     public static final String TABLE_DELIMITER = ",";
     public static final String MESSAGE_CANNOT_MOVE = "Can not move region";
     public static final String MESSAGE_DISABLED_OR_NOT_FOUND_TABLE = "Disabled or not found table";

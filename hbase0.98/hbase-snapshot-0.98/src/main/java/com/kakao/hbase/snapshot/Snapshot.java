@@ -225,14 +225,16 @@ public class Snapshot implements Watcher {
         System.out.print(timestamp(TimestampFormat.log) + " - Table \"" + tableName
                 + "\" - Create Snapshot - \"" + snapshotName + "\" - ");
         if (!exists(admin, snapshotName)) {
-            int i;
-            for (i = 1; i <= MAX_RETRY; i++) {
+            for (int i = 1; i <= MAX_RETRY; i++) {
                 try {
                     if (!exists(admin, snapshotName)) {
                         admin.snapshot(snapshotName, tableName, args.flushType(tableName));
                     }
                     break;
                 } catch (IOException e) {
+                    if (i == MAX_RETRY) {
+                        throw new IllegalStateException("Snapshot failed.");
+                    }
                     if (e.getMessage().contains("org.apache.zookeeper.KeeperException$NoNodeException")) {
                         // delete dubious snapshot
                         if (exists(admin, snapshotName)) {
@@ -248,9 +250,6 @@ public class Snapshot implements Watcher {
                         throw e;
                     }
                 }
-            }
-            if (i == MAX_RETRY) {
-                throw new IllegalStateException("Snapshot failed.");
             }
 
             if (args.has(Args.OPTION_CLEAR_WATCH_LEAK))

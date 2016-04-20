@@ -23,7 +23,6 @@ import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
 import com.kakao.hbase.stat.load.TableInfo;
-import com.sun.xml.bind.v2.runtime.reflect.opt.Const;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -32,7 +31,9 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Merge implements Command {
     private final HBaseAdmin admin;
@@ -266,10 +267,13 @@ public class Merge implements Command {
                             + " - There is no adjacent empty region");
             }
 
-            if (merged)
+            if (merged) {
+                System.out.println("Sleeping for "
+                        + (getMergeWaitIntervalMs() / 1000) + " seconds.");
                 Thread.sleep(getMergeWaitIntervalMs());
-            else
+            } else {
                 break;
+            }
         }
     }
 

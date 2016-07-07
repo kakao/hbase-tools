@@ -18,10 +18,18 @@ package com.kakao.hbase.snapshot;
 
 import com.kakao.hbase.SnapshotArgs;
 import com.kakao.hbase.TestBase;
+import com.kakao.hbase.common.Args;
+import com.kakao.hbase.common.util.AlertSender;
+import com.kakao.hbase.common.util.AlertSenderTest;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import static org.junit.Assert.assertEquals;
 
@@ -88,6 +96,32 @@ public class SnapshotTest extends TestBase {
         app.snapshot(null, tableName, snapshotName);
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(1, snapshotDescriptions.size());
+    }
+
+    @Test
+    public void testNotExistingTable() throws Exception {
+        class SnapshotArgsTest extends SnapshotArgs {
+            public SnapshotArgsTest(String[] args) throws IOException {
+                super(args);
+            }
+
+            @Override
+            public Set<String> tableSet(HBaseAdmin admin) throws IOException {
+                Set<String> set = new TreeSet<>();
+                set.add("INVALID_TABLE");
+                return set;
+            }
+        }
+
+        String[] argsParam;
+        SnapshotArgs args;
+        Snapshot app;
+
+        argsParam = new String[]{"localhost", ".*",
+                "--" + Args.OPTION_AFTER_FAILURE + "=" + AlertSenderTest.ALERT_SCRIPT};
+        args = new SnapshotArgsTest(argsParam);
+        app = new Snapshot(admin, args);
+        app.run();
     }
 
     @Test

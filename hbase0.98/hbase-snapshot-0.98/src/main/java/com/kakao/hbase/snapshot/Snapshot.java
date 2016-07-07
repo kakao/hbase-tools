@@ -42,6 +42,8 @@ public class Snapshot implements Watcher {
     private static final String TIMESTAMP_PREFIX = "_S";
     private static final int MAX_RETRY = 10;
     private static final long RETRY_INTERVAL = 2000;
+    @VisibleForTesting
+    static boolean skipCheckTableExistence = false;
     private final SnapshotArgs args;
     private final HBaseAdmin admin;
 
@@ -141,21 +143,9 @@ public class Snapshot implements Watcher {
                     // delete old snapshots after creating new one
                     deleteOldSnapshots(admin, tableName);
                 }
+                deleteSnapshotsForNotExistingTables();
 
-                // retry failed snapshots
-                if (!failedSnapshotMap.isEmpty()) {
-                    System.out.println();
-                    Util.printMessage("--------------------- Retrying failed snapshots -----------------------------");
-                    for (Map.Entry<String, String> entry : failedSnapshotMap.entrySet()) {
-                        String snapshotName = entry.getKey();
-                        String tableName = entry.getValue();
-                        snapshot(zooKeeper, tableName, snapshotName);
-                    }
-                }
-
-                if (args.has(Args.OPTION_DELETE_SNAPSHOT_FOR_NOT_EXISTING_TABLE)) {
-                    deleteSnapshotsForNotExistingTables();
-                }
+                retrySnapshot(zooKeeper, failedSnapshotMap);
             }
             Util.sendAlertAfterSuccess(args, this.getClass());
         } catch (Throwable e) {
@@ -171,21 +161,48 @@ public class Snapshot implements Watcher {
         }
     }
 
-    private void deleteSnapshotsForNotExistingTables() throws IOException {
-        List<SnapshotDescription> snapshots = admin.listSnapshots();
-        for (SnapshotDescription snapshot : snapshots) {
-            String tableName = snapshot.getTable();
-            String snapshotName = snapshot.getName();
-            if (snapshotName.startsWith(getPrefix(tableName))) {
-                if (!admin.tableExists(tableName)) {
-                    System.out.print(timestamp(TimestampFormat.log) + " - Table \"" + tableName
-                            + "\" - Delete snapshot - Not existing table - \"" + snapshotName + "\"");
-                    admin.deleteSnapshot(snapshotName);
-                    System.out.println(" - OK");
+    /**
+     * Retry failed snapshots
+     */
+    private void retrySnapshot(ZooKeeper zooKeeper, Map<String, String> failedSnapshotMap)
+            throws IOException, KeeperException, InterruptedException {
+        if (!failedSnapshotMap.isEmpty()) {
+            System.out.println();
+            Util.printMessage("--------------------- Retrying failed snapshots -----------------------------");
+            for (Map.Entry<String, String> entry : failedSnapshotMap.entrySet()) {
+                Util.printMessage("Table: " + entry.getValue() + ", Snapshot: " + entry.getKey());
+            }
+
+            for (Map.Entry<String, String> entry : failedSnapshotMap.entrySet()) {
+                String snapshotName = entry.getKey();
+                String tableName = entry.getValue();
+                if (exists(admin, tableName) || skipCheckTableExistence) {
+                    snapshot(zooKeeper, tableName, snapshotName);
+                } else {
+                    Util.printMessage("Table does not exist - " + tableName + " - SKIPPED");
                 }
-            } else {
-                System.out.println(timestamp(TimestampFormat.log) + " - Table \"" + tableName
-                        + "\" - Delete snapshot - \"" + snapshotName + "\" - SKIPPED");
+            }
+            deleteSnapshotsForNotExistingTables();
+        }
+    }
+
+    private void deleteSnapshotsForNotExistingTables() throws IOException {
+        if (args.has(Args.OPTION_DELETE_SNAPSHOT_FOR_NOT_EXISTING_TABLE)) {
+            List<SnapshotDescription> snapshots = admin.listSnapshots();
+            for (SnapshotDescription snapshot : snapshots) {
+                String tableName = snapshot.getTable();
+                String snapshotName = snapshot.getName();
+                if (snapshotName.startsWith(getPrefix(tableName))) {
+                    if (!admin.tableExists(tableName)) {
+                        System.out.print(timestamp(TimestampFormat.log) + " - Table \"" + tableName
+                                + "\" - Delete snapshot - Not existing table - \"" + snapshotName + "\"");
+                        admin.deleteSnapshot(snapshotName);
+                        System.out.println(" - OK");
+                    }
+                } else {
+                    System.out.println(timestamp(TimestampFormat.log) + " - Table \"" + tableName
+                            + "\" - Delete snapshot - \"" + snapshotName + "\" - SKIPPED");
+                }
             }
         }
     }
@@ -237,44 +254,49 @@ public class Snapshot implements Watcher {
     @VisibleForTesting
     void snapshot(ZooKeeper zooKeeper, String tableName, String snapshotName)
             throws IOException, KeeperException, InterruptedException {
-        if (args.has(Args.OPTION_TEST) && !tableName.startsWith("UNIT_TEST_")) return;
+        try {
+            if (args.has(Args.OPTION_TEST) && !tableName.startsWith("UNIT_TEST_")) return;
 
-        System.out.print(timestamp(TimestampFormat.log) + " - Table \"" + tableName
-                + "\" - Create Snapshot - \"" + snapshotName + "\" - ");
-        if (!exists(admin, snapshotName)) {
-            for (int i = 1; i <= MAX_RETRY; i++) {
-                try {
-                    if (!exists(admin, snapshotName)) {
-                        admin.snapshot(snapshotName, tableName, args.flushType(tableName));
-                    }
-                    break;
-                } catch (IOException e) {
-                    if (i == MAX_RETRY) {
-                        throw new IllegalStateException("Snapshot failed.");
-                    }
-                    if (e.getMessage().contains("org.apache.zookeeper.KeeperException$NoNodeException")) {
-                        // delete dubious snapshot
-                        if (exists(admin, snapshotName)) {
-                            admin.deleteSnapshot(snapshotName);
-                            System.out.println(timestamp(TimestampFormat.log)
-                                    + " - Delete dubious snapshot " + snapshotName);
+            System.out.print(timestamp(TimestampFormat.log) + " - Table \"" + tableName
+                    + "\" - Create Snapshot - \"" + snapshotName + "\" - ");
+            if (!exists(admin, snapshotName)) {
+                for (int i = 1; i <= MAX_RETRY; i++) {
+                    try {
+                        if (!exists(admin, snapshotName)) {
+                            admin.snapshot(snapshotName, tableName, args.flushType(tableName));
                         }
+                        break;
+                    } catch (IOException e) {
+                        if (i == MAX_RETRY) {
+                            throw new IllegalStateException("Snapshot failed.");
+                        }
+                        if (e.getMessage().contains("org.apache.zookeeper.KeeperException$NoNodeException")) {
+                            // delete dubious snapshot
+                            if (exists(admin, snapshotName)) {
+                                admin.deleteSnapshot(snapshotName);
+                                System.out.println(timestamp(TimestampFormat.log)
+                                        + " - Delete dubious snapshot " + snapshotName);
+                            }
 
-                        System.out.println(timestamp(TimestampFormat.log)
-                                + " - RETRY(" + i + "/" + MAX_RETRY + ") - " + e.getMessage());
-                        Thread.sleep(RETRY_INTERVAL);
-                    } else {
-                        throw e;
+                            System.out.println(timestamp(TimestampFormat.log)
+                                    + " - RETRY(" + i + "/" + MAX_RETRY + ") - " + e.getMessage());
+                            Thread.sleep(RETRY_INTERVAL);
+                        } else {
+                            throw e;
+                        }
                     }
                 }
+
+                if (args.has(Args.OPTION_CLEAR_WATCH_LEAK))
+                    clearAbortWatchLeak(zooKeeper, snapshotName);
+
+                System.out.println("OK");
+            } else {
+                System.out.println("SKIPPED");
             }
-
-            if (args.has(Args.OPTION_CLEAR_WATCH_LEAK))
-                clearAbortWatchLeak(zooKeeper, snapshotName);
-
-            System.out.println("OK");
-        } else {
-            System.out.println("SKIPPED");
+        } catch (Throwable e) {
+            System.out.println("FAILED");
+            throw e;
         }
     }
 

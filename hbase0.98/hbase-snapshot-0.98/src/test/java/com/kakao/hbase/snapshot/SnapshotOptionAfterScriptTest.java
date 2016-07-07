@@ -40,37 +40,44 @@ public class SnapshotOptionAfterScriptTest extends TestBase {
 
     @Test
     public void testAfterFailure() throws Exception {
-        class SnapshotArgsTest extends SnapshotArgs {
-            public SnapshotArgsTest(String[] args) throws IOException {
-                super(args);
-            }
-
-            @Override
-            public Set<String> tableSet(HBaseAdmin admin) throws IOException {
-                Set<String> set = new TreeSet<>();
-                set.add("INVALID_TABLE");
-                return set;
-            }
-        }
-
-        String[] argsParam;
-        SnapshotArgs args;
-        Snapshot app;
-
-        argsParam = new String[]{"localhost", ".*",
-            "--" + Args.OPTION_AFTER_FAILURE + "=" + AlertSenderTest.ALERT_SCRIPT};
-        args = new SnapshotArgsTest(argsParam);
-        app = new Snapshot(admin, args);
-
-        int sendCountBefore = AlertSender.getSendCount();
         try {
-            app.run();
-            Assert.fail();
-        } catch (Throwable e) {
-            if (!e.getMessage().contains("Table 'INVALID_TABLE' doesn't exist, can't take snapshot"))
-                throw e;
+            Snapshot.skipCheckTableExistence = true;
+
+            class SnapshotArgsTest extends SnapshotArgs {
+                public SnapshotArgsTest(String[] args) throws IOException {
+                    super(args);
+                }
+
+                @Override
+                public Set<String> tableSet(HBaseAdmin admin) throws IOException {
+                    Set<String> set = new TreeSet<>();
+                    set.add("INVALID_TABLE");
+                    return set;
+                }
+            }
+
+            String[] argsParam;
+            SnapshotArgs args;
+            Snapshot app;
+
+            argsParam = new String[]{"localhost", ".*",
+                    "--" + Args.OPTION_AFTER_FAILURE + "=" + AlertSenderTest.ALERT_SCRIPT};
+            args = new SnapshotArgsTest(argsParam);
+            app = new Snapshot(admin, args);
+
+            int sendCountBefore = AlertSender.getSendCount();
+            try {
+                app.run();
+                Assert.fail();
+            } catch (Throwable e) {
+                if (e.getMessage() != null
+                        && !e.getMessage().contains("Table 'INVALID_TABLE' doesn't exist, can't take snapshot"))
+                    throw e;
+            }
+            Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
+        } finally {
+            Snapshot.skipCheckTableExistence = false;
         }
-        Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
     }
 
     @Test

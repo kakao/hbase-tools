@@ -64,7 +64,7 @@ public class Merge implements Command {
         return "Merge regions. It may take a long time.\n"
                 + "usage: "
                 + Merge.class.getSimpleName().toLowerCase()
-                + " [options] <zookeeper quorum> <table name(regex)> <action>\n"
+                + " <zookeeper quorum> <table name(regex)> <action> [options]\n"
                 + "  actions:\n"
                 + "    empty-fast       - Merge adjacent 2 empty regions only.\n"
                 + "    empty            - Merge all empty regions.\n"

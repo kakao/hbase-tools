@@ -62,8 +62,8 @@ public class Balance implements Command {
 
     public static String usage() {
         return "Balance regions evenly by one of the rules below. Move regions one by one except for default.\n"
-                + "usage: " + Balance.class.getSimpleName().toLowerCase() + " [options] <zookeeper quorum>" +
-                " <table name(regex)> <rule>\n"
+                + "usage: " + Balance.class.getSimpleName().toLowerCase() + " <zookeeper quorum>" +
+                " <table name(regex)> <rule> [options]\n"
                 + "  rule:\n"
                 + "    default  - hbase default balancer. asynchronous\n"
                 + "    rr       - round robin\n"

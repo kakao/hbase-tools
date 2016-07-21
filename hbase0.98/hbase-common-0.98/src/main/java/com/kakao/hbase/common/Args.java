@@ -63,6 +63,8 @@ public abstract class Args {
     public static final String OPTION_CF = "cf";
     public static final String OPTION_WAIT_UNTIL_FINISH = "wait";
     public static final String OPTION_INTERACTIVE = "interactive";
+    public static final String OPTION_CONF = "conf";
+    public static final String OPTION_CONF_SHORT = "c";
 
     public static final String INVALID_ARGUMENTS = "Invalid arguments";
     public static final String ALL_TABLES = "";
@@ -98,6 +100,8 @@ public abstract class Args {
                 + "        Print debug log.\n"
                 + "    --" + Args.OPTION_VERBOSE + "\n"
                 + "        Print some more messages.\n"
+                + "    -" + Args.OPTION_CONF_SHORT + "<key=value>, --" + Args.OPTION_CONF + "=<key=value>\n"
+                + "        Set a configuration for HBase. Can be used many times for several configurations.\n"
                 + "    --" + Args.OPTION_AFTER_FAILURE + "=<script>\n"
                 + "        The script to run when this running is failed.\n"
                 + "        The first argument of the script should be a message string.\n"
@@ -213,6 +217,8 @@ public abstract class Args {
         optionParser.accepts(OPTION_TEST);
         optionParser.accepts(OPTION_DEBUG);
         optionParser.accepts(OPTION_VERBOSE);
+        optionParser.accepts(OPTION_CONF).withRequiredArg().ofType(String.class);
+        optionParser.accepts(OPTION_CONF_SHORT).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_KEY_TAB).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_KEY_TAB_SHORT).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_PRINCIPAL).withRequiredArg().ofType(String.class);
@@ -223,6 +229,30 @@ public abstract class Args {
         optionParser.accepts(OPTION_AFTER_SUCCESS).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_AFTER_FINISH).withRequiredArg().ofType(String.class);
         return optionParser;
+    }
+
+    public Map<String, String> getConfigurations() {
+        Map<String, String> result = new HashMap<>();
+        if (optionSet.has(OPTION_CONF)) {
+            result.putAll(parseConf(OPTION_CONF));
+        }
+        if (optionSet.has(OPTION_CONF_SHORT)) {
+            result.putAll(parseConf(OPTION_CONF_SHORT));
+        }
+        return result;
+    }
+
+    private Map<String, String> parseConf(String option) {
+        Map<String, String> result = new HashMap<>();
+        List<?> objects = optionSet.valuesOf(option);
+        for (Object confArg : objects) {
+            String confStr = ((String) confArg);
+            int splitPoint = confStr.indexOf("=");
+            String key = confStr.substring(0, splitPoint);
+            String value = confStr.substring(splitPoint + 1);
+            result.put(key, value);
+        }
+        return result;
     }
 
     public String getAfterFailureScript() {

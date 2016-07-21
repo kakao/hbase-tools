@@ -17,19 +17,36 @@
 package com.kakao.hbase;
 
 import com.kakao.hbase.common.Args;
-import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
 
 public class ArgsTest {
     @Test
     public void testParseSingleLintArgsFile() throws Exception {
         String[] args = Args.parseArgsFile("testSingleLine.args", true);
-        Assert.assertEquals(4, args.length);
+        assertEquals(4, args.length);
     }
 
     @Test
     public void testParseMultiLintArgsFile() throws Exception {
         String[] args = Args.parseArgsFile("testMultiLine.args", true);
-        Assert.assertEquals(4, args.length);
+        assertEquals(4, args.length);
+    }
+
+    @Test
+    public void testParseConf() throws Exception {
+        String[] argsParam;
+        Args args;
+        Map<String, String> configurations;
+
+        argsParam = new String[]{"zookeeper", "--conf=a=a1", "--conf=a=a2", "-cb=b1"};
+        args = new TestBase.TestArgs(argsParam);
+        configurations = args.getConfigurations();
+        assertEquals(2, configurations.size());
+        assertEquals("a2", configurations.get("a"));
+        assertEquals("b1", configurations.get("b"));
     }
 }

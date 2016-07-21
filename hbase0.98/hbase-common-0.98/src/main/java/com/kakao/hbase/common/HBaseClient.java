@@ -32,6 +32,7 @@ import javax.security.auth.callback.*;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import java.io.*;
+import java.util.Map;
 import java.util.Scanner;
 
 public class HBaseClient {
@@ -142,12 +143,18 @@ public class HBaseClient {
                 || args.has(Args.OPTION_PRINCIPAL_SHORT);
     }
 
-    private static Configuration createNonSecureConfiguration(String zookeeperQuorum) {
+    private static Configuration createBaseConfiguration(Args args) {
         Configuration confDefault = new Configuration(true);
         Configuration conf = HBaseConfiguration.create(confDefault);
-        conf.set("hbase.zookeeper.quorum", zookeeperQuorum);
+
+        conf.set("hbase.zookeeper.quorum", args.getZookeeperQuorum());
         conf.set("zookeeper.recovery.retry", "1");
         conf.set("hbase.client.retries.number", "2");
+        conf.set("hbase.meta.scanner.caching", "1000");
+        for (Map.Entry<String, String> config : args.getConfigurations().entrySet()) {
+            conf.set(config.getKey(), config.getValue());
+        }
+
         return conf;
     }
 
@@ -201,11 +208,8 @@ public class HBaseClient {
 
         if (args.has(Args.OPTION_DEBUG)) Util.setLoggingThreshold("WARN");
 
-        String zookeeperQuorum = args.getZookeeperQuorum();
-
         if (admin == null) {
-            Configuration conf = createNonSecureConfiguration(zookeeperQuorum);
-            conf.set("hbase.meta.scanner.caching", "1000");
+            Configuration conf = createBaseConfiguration(args);
 
             if (isSecuredCluster(args)) {
                 login(args, conf);

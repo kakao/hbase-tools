@@ -26,6 +26,7 @@ Collection of command-line tools for HBase.
    ```
    
 # Resources
+  - [Introduction(Korean)](http://tech.kakao.com/2016/03/24/opensource-4-hbase-tools/)
   - [Introduction and Use Cases(Korean)](../../releases/download/v1.1.1/hbase-tools-korean.pdf)
 
 # License

@@ -308,23 +308,26 @@ public class Merge implements Command {
         tableInfo.refresh();
 
         ExecutorService executorService = Executors.newFixedThreadPool(EmptyRegionChecker.THREAD_POOL_SIZE);
-        EmptyRegionChecker.resetCounter();
+        try {
+            EmptyRegionChecker.resetCounter();
 
-        Set<HRegionInfo> allTableRegions = tableInfo.getRegionInfoSet();
-        for (HRegionInfo regionInfo : allTableRegions) {
-            RegionLoadDelegator regionLoad = tableInfo.getRegionLoad(regionInfo);
-            if (regionLoad == null) {
-                Util.printMessage("RegionLoad is empty - " + regionInfo);
-                throw new IllegalStateException(Constant.MESSAGE_NEED_REFRESH);
-            }
+            Set<HRegionInfo> allTableRegions = tableInfo.getRegionInfoSet();
+            for (HRegionInfo regionInfo : allTableRegions) {
+                RegionLoadDelegator regionLoad = tableInfo.getRegionLoad(regionInfo);
+                if (regionLoad == null) {
+                    Util.printMessage("RegionLoad is empty - " + regionInfo);
+                    throw new IllegalStateException(Constant.MESSAGE_NEED_REFRESH);
+                }
 
-            if (regionLoad.getStorefileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
-                executorService.execute(
-                        new EmptyRegionChecker(connection, tableInfo.getTableName(), regionInfo, emptyRegions));
+                if (regionLoad.getStorefileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
+                    executorService.execute(
+                            new EmptyRegionChecker(connection, tableInfo.getTableName(), regionInfo, emptyRegions));
+                }
             }
+        } finally {
+            executorService.shutdown();
+            executorService.awaitTermination(30, TimeUnit.MINUTES);
         }
-        executorService.shutdown();
-        executorService.awaitTermination(30, TimeUnit.MINUTES);
         Util.printMessage(emptyRegions.size() + " empty regions are found.");
 
         Util.printVerboseMessage(args, Util.getMethodName(), timestamp);

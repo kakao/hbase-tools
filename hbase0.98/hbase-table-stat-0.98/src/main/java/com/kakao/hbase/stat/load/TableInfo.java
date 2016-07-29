@@ -128,10 +128,14 @@ public class TableInfo {
         Set<String> tableNameSet = tableNameSet(regionServerMap);
 
         ExecutorService executorService = Executors.newFixedThreadPool(RegionLocationCleaner.THREAD_POOL_SIZE);
-        for (String tableName : tableNameSet)
-            executorService.execute(new RegionLocationCleaner(tableName, admin.getConfiguration(), regionServerMap));
-        executorService.shutdown();
-        executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+        try {
+            for (String tableName : tableNameSet)
+                executorService.execute(
+                        new RegionLocationCleaner(tableName, admin.getConfiguration(), regionServerMap));
+        } finally {
+            executorService.shutdown();
+            executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+        }
 
         Util.printVerboseMessage(args, "TableInfo.clean", timestamp);
     }

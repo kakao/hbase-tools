@@ -313,7 +313,10 @@ public class Merge implements Command {
         Set<HRegionInfo> allTableRegions = tableInfo.getRegionInfoSet();
         for (HRegionInfo regionInfo : allTableRegions) {
             RegionLoadDelegator regionLoad = tableInfo.getRegionLoad(regionInfo);
-            if (regionLoad == null) throw new IllegalStateException(Constant.MESSAGE_NEED_REFRESH);
+            if (regionLoad == null) {
+                Util.printMessage("RegionLoad is empty - " + regionInfo);
+                throw new IllegalStateException(Constant.MESSAGE_NEED_REFRESH);
+            }
 
             if (regionLoad.getStorefileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
                 executorService.execute(

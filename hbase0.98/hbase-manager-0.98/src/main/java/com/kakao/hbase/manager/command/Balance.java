@@ -21,7 +21,6 @@ import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -30,14 +29,12 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @SuppressWarnings("unused")
 public class Balance implements Command {
     private static Map<HRegionInfo, ServerName> regionLocations = null;
+    private static Set<String> cachedTableNames = new HashSet<>();
     private final HBaseAdmin admin;
     private final Args args;
     private final String ruleParam;
@@ -65,10 +62,13 @@ public class Balance implements Command {
                 + "usage: " + Balance.class.getSimpleName().toLowerCase() + " <zookeeper quorum>" +
                 " <table name(regex)> <rule> [options]\n"
                 + "  rule:\n"
-                + "    default  - hbase default balancer. asynchronous\n"
-                + "    rr       - round robin\n"
-                + "    rd       - random\n"
-                + "    st       - stochastic load balancer\n"
+                + "    default  - HBase default balancer. Asynchronous\n"
+                + "    rr       - Round robin\n"
+                + "    rd       - Random\n"
+                + "    st       - Stochastic load balancer for all tables. "
+                + "The regions of a single table may not be distributed well across the region servers.\n"
+                + "    st2      - Stochastic load balancer for every single table. "
+                + "The regions of a single table may be distributed well across the region servers.\n"
                 + "  options:\n"
                 + "    --" + ManagerArgs.OPTION_TURN_BALANCER_OFF + ": During balancing turn balancer off.\n"
                 + "    --" + ManagerArgs.OPTION_BALANCE_FACTOR + "=<factor>:" +
@@ -80,29 +80,44 @@ public class Balance implements Command {
     }
 
     // does not contain catalog tables
-    public static Map<HRegionInfo, ServerName> createRegionAssignmentMap(HBaseAdmin admin, Set<String> tableNameSet) throws IOException {
+    private static Map<HRegionInfo, ServerName> createRegionAssignmentMap(HBaseAdmin admin, Set<String> tableNameSet)
+            throws IOException
+    {
         if (regionLocations == null) {
             regionLocations = new HashMap<>();
             for (String tableName : tableNameSet) {
-                try (HTable table = new HTable(admin.getConfiguration(), tableName)) {
-                    regionLocations.putAll(table.getRegionLocations());
+                getRegionLocations(admin, tableName);
+            }
+        } else {
+            for (String tableName : tableNameSet) {
+                if (!cachedTableNames.contains(tableName)) {
+                    getRegionLocations(admin, tableName);
                 }
             }
         }
         return regionLocations;
     }
 
-    public static List<RegionPlan> makePlan(HBaseAdmin admin, Set<String> tableNameSet, BalanceFactor balanceFactor) throws IOException {
-        Map<ServerName, List<HRegionInfo>> clusterState = CommandAdapter.initializeRegionMap(admin);
+    private static void getRegionLocations(HBaseAdmin admin, String tableName) throws IOException {
+        try (HTable table = new HTable(admin.getConfiguration(), tableName)) {
+            regionLocations.putAll(table.getRegionLocations());
+            cachedTableNames.add(tableName);
+        }
+    }
 
-        for (Map.Entry<HRegionInfo, ServerName> entry : createRegionAssignmentMap(admin, tableNameSet).entrySet())
-            clusterState.get(entry.getValue()).add(entry.getKey());
+    @SuppressWarnings("deprecation")
+    public static Map<HRegionInfo, ServerName> getRegionAssignmentMap(HBaseAdmin admin, Set<String> tableNameSet)
+            throws IOException
+    {
+        Map<HRegionInfo, ServerName> regionAssignmentMap = createRegionAssignmentMap(admin, tableNameSet);
+        Map<HRegionInfo, ServerName> result = new HashMap<>();
+        for (Map.Entry<HRegionInfo, ServerName> entry : regionAssignmentMap.entrySet()) {
+            if (tableNameSet.contains(Bytes.toString(entry.getKey().getTableName()))) {
+                result.put(entry.getKey(), entry.getValue());
+            }
+        }
 
-        Configuration conf = admin.getConfiguration();
-        conf.setFloat("hbase.regions.slop", 0f);
-        balanceFactor.setConf(conf);
-
-        return CommandAdapter.makePlan(admin, clusterState, conf);
+        return result;
     }
 
     @Override
@@ -146,7 +161,7 @@ public class Balance implements Command {
         } else {
             balance(args, regionPlanList, Phase.PREVIEW, asynchronous);
             if (regionPlanList.size() > 0) {
-                System.out.println(regionPlanList.size() + " of " + createRegionAssignmentMap(admin, tableNameSet).size() + " region(s) will be moved.");
+                System.out.println(regionPlanList.size() + " of " + getRegionAssignmentMap(admin, tableNameSet).size() + " region(s) will be moved.");
                 warnBalanceAgain(regionPlanList);
                 proceed = Util.askProceed();
             } else {

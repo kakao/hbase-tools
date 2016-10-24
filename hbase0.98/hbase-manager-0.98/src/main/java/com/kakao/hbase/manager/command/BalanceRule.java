@@ -17,6 +17,8 @@
 package com.kakao.hbase.manager.command;
 
 import com.kakao.hbase.common.Args;
+import com.kakao.hbase.specific.CommandAdapter;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
@@ -32,7 +34,7 @@ enum BalanceRule {
         @Override
         List<RegionPlan> makePlan(HBaseAdmin admin, Set<String> tableNameSet, Args args) throws IOException {
             List<ServerName> serverNames = getServerNames(admin);
-            Map<HRegionInfo, ServerName> regionLocations = Balance.createRegionAssignmentMap(admin, tableNameSet);
+            Map<HRegionInfo, ServerName> regionLocations = Balance.getRegionAssignmentMap(admin, tableNameSet);
 
             int i = 0;
             List<RegionPlan> regionPlanList = new ArrayList<>();
@@ -52,7 +54,7 @@ enum BalanceRule {
         List<RegionPlan> makePlan(HBaseAdmin admin, Set<String> tableNameSet, Args args) throws IOException {
             List<ServerName> serverNames = getServerNames(admin);
             List<ServerName> serverNamesToMove = new ArrayList<>(serverNames);
-            Map<HRegionInfo, ServerName> regionLocations = Balance.createRegionAssignmentMap(admin, tableNameSet);
+            Map<HRegionInfo, ServerName> regionLocations = Balance.getRegionAssignmentMap(admin, tableNameSet);
 
             List<RegionPlan> regionPlanList = new ArrayList<>();
             for (String tableName : tableNameSet) {
@@ -72,7 +74,21 @@ enum BalanceRule {
     ST {
         @Override
         List<RegionPlan> makePlan(HBaseAdmin admin, Set<String> tableNameSet, Args args) throws IOException {
-            return Balance.makePlan(admin, tableNameSet, BalanceFactor.parseArg(args));
+            return makeStochasticPlan(admin, tableNameSet, BalanceFactor.parseArg(args));
+        }
+    },
+    ST2 {
+        @Override
+        List<RegionPlan> makePlan(HBaseAdmin admin, Set<String> tableNameSet, Args args) throws IOException {
+            List<RegionPlan> regionPlanList = new ArrayList<>();
+            for (final String tableName : tableNameSet) {
+                HashSet<String> singleTableName = new HashSet<>();
+                singleTableName.add(tableName);
+                List<RegionPlan> regionPlans = makeStochasticPlan(admin, singleTableName, BalanceFactor.parseArg(args));
+                regionPlanList.addAll(regionPlans);
+            }
+
+            return regionPlanList;
         }
     },
     DEFAULT {
@@ -81,6 +97,23 @@ enum BalanceRule {
             throw new IllegalStateException("do not call me");
         }
     };
+
+    private static List<RegionPlan> makeStochasticPlan(
+            HBaseAdmin admin, Set<String> tableNameSet, BalanceFactor balanceFactor) throws IOException
+    {
+        Map<ServerName, List<HRegionInfo>> clusterState = CommandAdapter.initializeRegionMap(admin);
+
+        Map<HRegionInfo, ServerName> regionAssignmentMap = Balance.getRegionAssignmentMap(admin, tableNameSet);
+        for (Map.Entry<HRegionInfo, ServerName> entry : regionAssignmentMap.entrySet()) {
+            clusterState.get(entry.getValue()).add(entry.getKey());
+        }
+
+        Configuration conf = admin.getConfiguration();
+        conf.setFloat("hbase.regions.slop", 0f);
+        balanceFactor.setConf(conf);
+
+        return CommandAdapter.makePlan(admin, clusterState, conf);
+    }
 
     static List<ServerName> getServerNames(HBaseAdmin admin) throws IOException {
         ClusterStatus clusterStatus = admin.getClusterStatus();

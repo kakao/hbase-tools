@@ -23,9 +23,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.*;
 
 public class BalanceRuleTest extends TestBase {
@@ -98,14 +100,87 @@ public class BalanceRuleTest extends TestBase {
                     serverCountMap.put(entry.getValue(), serverCountMap.get(entry.getValue()) + 1);
                 }
             }
+            Assert.assertEquals(Math.min(getServerNameList().size(), regionLocations.size()), serverCountMap.size());
+
             int regionCount = 0;
             for (ServerName serverName : getServerNameList()) {
                 List<HRegionInfo> regionInfoList = getRegionInfoList(serverName, tableName);
-                Assert.assertNotEquals(4, regionInfoList);
+                Assert.assertNotEquals(4, regionInfoList.size());
                 regionCount += regionInfoList.size();
             }
             Assert.assertEquals(4, regionCount);
         }
+    }
+
+    @Test
+    public void testBalanceST2() throws Exception {
+        splitTable("a".getBytes());
+        splitTable("b".getBytes());
+        splitTable("c".getBytes());
+
+        String tableName2 = createAdditionalTable(tableName + "2");
+        splitTable(tableName2, "a".getBytes());
+        splitTable(tableName2, "b".getBytes());
+        splitTable(tableName2, "c".getBytes());
+
+        NavigableMap<HRegionInfo, ServerName> regionLocations;
+        List<Map.Entry<HRegionInfo, ServerName>> hRegionInfoList;
+
+        try (HTable table1 = getTable(tableName);
+             HTable table2 = getTable(tableName2))
+        {
+            // for table1
+            regionLocations = table1.getRegionLocations();
+            hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
+            Assert.assertEquals(4, regionLocations.size());
+            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
+            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
+            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
+
+            // for table2
+            regionLocations = table2.getRegionLocations();
+            hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
+            Assert.assertEquals(4, regionLocations.size());
+            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
+            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
+            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
+
+            // balance with st2
+            String[] argsParam = {"zookeeper", ".*", "St2", "--force-proceed"};
+            Args args = new ManagerArgs(argsParam);
+            Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
+            Balance command = new Balance(admin, args);
+            command.run();
+
+            validateST2(table1);
+            validateST2(table2);
+        }
+    }
+
+    private void validateST2(HTable table1) throws IOException {
+        NavigableMap<HRegionInfo, ServerName> regionLocations;
+        List<Map.Entry<HRegionInfo, ServerName>> hRegionInfoList;
+        regionLocations = table1.getRegionLocations();
+        hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
+        Map<ServerName, Integer> serverCountMap = new HashMap<>();
+        for (Map.Entry<HRegionInfo, ServerName> entry : hRegionInfoList) {
+            if (serverCountMap.get(entry.getValue()) == null) {
+                serverCountMap.put(entry.getValue(), 1);
+            } else {
+                serverCountMap.put(entry.getValue(), serverCountMap.get(entry.getValue()) + 1);
+            }
+        }
+        Assert.assertEquals(Math.min(getServerNameList().size(), regionLocations.size()), serverCountMap.size());
+
+        int regionCount;
+        regionCount = 0;
+        for (ServerName serverName : getServerNameList()) {
+            List<HRegionInfo> regionInfoList = getRegionInfoList(serverName, Bytes.toString(table1.getTableName()));
+            Assert.assertNotEquals(4, regionInfoList.size());
+            Assert.assertEquals(2, regionInfoList.size());
+            regionCount += regionInfoList.size();
+        }
+        Assert.assertEquals(4, regionCount);
     }
 
     @Test

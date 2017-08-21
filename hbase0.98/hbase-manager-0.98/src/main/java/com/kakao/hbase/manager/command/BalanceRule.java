@@ -105,7 +105,10 @@ enum BalanceRule {
 
         Map<HRegionInfo, ServerName> regionAssignmentMap = Balance.getRegionAssignmentMap(admin, tableNameSet);
         for (Map.Entry<HRegionInfo, ServerName> entry : regionAssignmentMap.entrySet()) {
-            clusterState.get(entry.getValue()).add(entry.getKey());
+            List<HRegionInfo> hRegionInfos = clusterState.get(entry.getValue());
+            if (hRegionInfos != null) {
+                hRegionInfos.add(entry.getKey());
+            }
         }
 
         Configuration conf = admin.getConfiguration();

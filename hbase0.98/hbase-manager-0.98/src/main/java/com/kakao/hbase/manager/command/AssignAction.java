@@ -111,6 +111,8 @@ enum AssignAction {
                 move(args, admin, sourceServerName, plan, printPlanOnly, asynchronous);
                 Util.printVerboseMessage(args, "emptyInternal.move - end", startTimeStamp);
 
+                AssignAction.sleep(args, plan.size());
+
                 // move remained regions cause of splitting or asynchronous move
                 if (!printPlanOnly) {
                     int i;
@@ -315,7 +317,7 @@ enum AssignAction {
             }
 
             move(admin, args, assignmentList);
-            Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
+            AssignAction.sleep(args, assignmentList.size());
 
             retryImport(admin, args, importingServers, assignmentList);
         }
@@ -518,6 +520,8 @@ enum AssignAction {
                 moveRegion(admin, args, serverNameMap, tableName,
                     regionMap, regionsToMove.size(), encodedRegionName, serverNameCur);
             }
+
+            sleep(args, regionsToMove.size());
         }
 
         private void moveRegion(HBaseAdmin admin, Args args, Map<String, ServerName> serverNameMap,
@@ -582,6 +586,16 @@ enum AssignAction {
             }
         }
     };
+
+    /**
+     * Wait for regions to be assigned
+     * Waiting time is increased by every 100 regions
+     */
+    private static void sleep(Args args, int numRegions) throws InterruptedException {
+      if (args.has(Args.OPTION_MOVE_ASYNC)) {
+        Thread.sleep(Math.max(Constant.LARGE_WAIT_INTERVAL_MS, Constant.SMALL_WAIT_INTERVAL_MS * ((numRegions / 100) + 1)));
+      }
+    }
 
     static final String MESSAGE_TURN_BALANCER_OFF = "Turn automatic balancer off.";
     static final String DELIMITER = "/";

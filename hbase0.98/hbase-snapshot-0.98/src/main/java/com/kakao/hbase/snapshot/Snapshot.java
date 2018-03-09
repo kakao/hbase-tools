@@ -33,14 +33,15 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class Snapshot implements Watcher {
+    static final SimpleDateFormat DATE_FORMAT_SNAPSHOT = new SimpleDateFormat("yyyyMMddHHmmss");
     private static final int SESSION_TIMEOUT = 120000;
-    private static final SimpleDateFormat DATE_FORMAT_SNAPSHOT = new SimpleDateFormat("yyyyMMddHHmmss");
     private static final SimpleDateFormat DATE_FORMAT_LOG = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     private static final String ABORT_WATCH_PREFIX = "/hbase/online-snapshot/abort/";
     private static final String ACQUIRED_WATCH_PREFIX = "/hbase/online-snapshot/acquired/";
     private static final String TIMESTAMP_PREFIX = "_S";
     private static final int MAX_RETRY = 10;
     private static final long RETRY_INTERVAL = 2000;
+    private static final int ABORT_ZNODE_AGE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
     @VisibleForTesting
     static boolean skipCheckTableExistence = false;
     private final SnapshotArgs args;
@@ -137,6 +138,7 @@ public class Snapshot implements Watcher {
                 deleteOldSnapshots(admin, tableName);
             }
             deleteSnapshotsForNotExistingTables();
+            deleteOldAbortZnodes(zooKeeper);
 
             retrySnapshot(zooKeeper, failedSnapshotMap);
             Util.sendAlertAfterSuccess(args, this.getClass());
@@ -149,6 +151,19 @@ public class Snapshot implements Watcher {
         } finally {
             if (zooKeeper != null && zooKeeper.getState().isConnected()) {
                 zooKeeper.close();
+            }
+        }
+    }
+
+    private void deleteOldAbortZnodes(ZooKeeper zooKeeper) throws KeeperException, InterruptedException {
+        String parentZnode = ABORT_WATCH_PREFIX.substring(0, ABORT_WATCH_PREFIX.length() - 1);
+        List<String> children = zooKeeper.getChildren(parentZnode, false);
+        for (String snapshotName : children) {
+            long abortZnodeAge = System.currentTimeMillis() - SnapshotUtil.getSnapshotTimestamp(snapshotName);
+            if (abortZnodeAge > ABORT_ZNODE_AGE_THRESHOLD_MS) {
+                String abortZnode = ABORT_WATCH_PREFIX + snapshotName;
+                System.out.println(timestamp(TimestampFormat.log) + " - znode deleted - " + abortZnode);
+                zooKeeper.delete(abortZnode, -1);
             }
         }
     }

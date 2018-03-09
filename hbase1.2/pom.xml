@@ -56,7 +56,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.7</java.version>
-        <version.unified>1.5.1</version.unified>
+        <version.unified>1.5.2</version.unified>
         <cluster.secured>false</cluster.secured>
         <cluster.type>mini</cluster.type>
     </properties>

@@ -50,7 +50,6 @@ public abstract class Args {
     public static final String OPTION_AFTER_SUCCESS = "after-success";
     public static final String OPTION_AFTER_FINISH = "after-finish";
     public static final String OPTION_CLEAR_WATCH_LEAK = "clear-watch-leak";
-    public static final String OPTION_CLEAR_WATCH_LEAK_ONLY = "clear-watch-leak-only";
     public static final String OPTION_OPTIMIZE = "optimize";
     public static final String OPTION_TURN_BALANCER_OFF = "turn-balancer-off";
     public static final String OPTION_BALANCE_FACTOR = "factor";

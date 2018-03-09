@@ -27,9 +27,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.zookeeper.*;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -51,12 +49,12 @@ public class Snapshot implements Watcher {
     // for testing
     private final Map<String, Integer> tableSnapshotCountMaxMap = new HashMap<>();
 
-    public Snapshot(HBaseAdmin admin, SnapshotArgs args) {
+    Snapshot(HBaseAdmin admin, SnapshotArgs args) {
         this.admin = admin;
         this.args = args;
     }
 
-    static void setLoggingThreshold(String loggingLevel) {
+    private static void setLoggingThreshold(String loggingLevel) {
         Properties props = new Properties();
         props.setProperty("log4j.threshold", loggingLevel);
         PropertyConfigurator.configure(props);
@@ -77,9 +75,6 @@ public class Snapshot implements Watcher {
                 + "=<tables expression> : Tables to be excluded.\n"
                 + "    --" + SnapshotArgs.OPTION_CLEAR_WATCH_LEAK
                 + " : Clear watch leaks. Workaround for HBASE-13885. This is not necessary as of HBase 0.98.14.\n"
-                + "    --" + SnapshotArgs.OPTION_CLEAR_WATCH_LEAK_ONLY
-                + " : Clear watch leaks only. It does not create any snapshot. Workaround for HBASE-13885."
-                + " This is not necessary as of HBase 0.98.14.\n"
                 + "    --" + SnapshotArgs.OPTION_DELETE_SNAPSHOT_FOR_NOT_EXISTING_TABLE
                 + " : Delete the snapshots for not existing tables.\n"
                 + Args.commonUsage()
@@ -124,30 +119,26 @@ public class Snapshot implements Watcher {
             Map<String, String> failedSnapshotMap = new TreeMap<>();
 
             zooKeeper = new ZooKeeper(connectString, SESSION_TIMEOUT, this);
-            if (args.has(Args.OPTION_CLEAR_WATCH_LEAK_ONLY)) {
-                clearWatchLeak(args, zooKeeper);
-            } else {
-                for (String tableName : args.tableSet(admin)) {
-                    if (args.isExcluded(tableName)) {
-                        System.out.println(timestamp(TimestampFormat.log)
-                                + " - Table \"" + tableName + "\" - EXCLUDED");
-                        continue;
-                    }
-
-                    String snapshotName = getPrefix(tableName) + timestamp;
-                    try {
-                        snapshot(zooKeeper, tableName, snapshotName);
-                    } catch (Throwable e) {
-                        failedSnapshotMap.put(snapshotName, tableName);
-                    }
-
-                    // delete old snapshots after creating new one
-                    deleteOldSnapshots(admin, tableName);
+            for (String tableName : args.tableSet(admin)) {
+                if (args.isExcluded(tableName)) {
+                    System.out.println(timestamp(TimestampFormat.log)
+                            + " - Table \"" + tableName + "\" - EXCLUDED");
+                    continue;
                 }
-                deleteSnapshotsForNotExistingTables();
 
-                retrySnapshot(zooKeeper, failedSnapshotMap);
+                String snapshotName = getPrefix(tableName) + timestamp;
+                try {
+                    snapshot(zooKeeper, tableName, snapshotName);
+                } catch (Throwable e) {
+                    failedSnapshotMap.put(snapshotName, tableName);
+                }
+
+                // delete old snapshots after creating new one
+                deleteOldSnapshots(admin, tableName);
             }
+            deleteSnapshotsForNotExistingTables();
+
+            retrySnapshot(zooKeeper, failedSnapshotMap);
             Util.sendAlertAfterSuccess(args, this.getClass());
         } catch (Throwable e) {
             String message = "ConnectionString= " + connectString + ", CurrentHost= "
@@ -205,42 +196,6 @@ public class Snapshot implements Watcher {
                             + "\" - Delete snapshot - \"" + snapshotName + "\" - SKIPPED");
                 }
             }
-        }
-    }
-
-    private void clearWatchLeak(Args args, ZooKeeper zooKeeper)
-            throws IOException, InterruptedException, KeeperException {
-        String zookeeperNodeArg = args.getZookeeperQuorum().split(",")[0];
-        String zookeeperNode = zookeeperNodeArg.split(":")[0];
-        String zookeeperPort = zookeeperNodeArg.split(":").length > 1 ? zookeeperNodeArg.split(":")[1] : "2181";
-        String command = "echo \"wchc\" | nc " + zookeeperNode + " "
-                + zookeeperPort + " | grep online-snapshot | sort | uniq";
-        Process exec = Runtime.getRuntime().exec(new String[]{"bash", "-c", command});
-        exec.waitFor();
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(exec.getInputStream()));
-
-        List<String> watchNameList = new ArrayList<>();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            watchNameList.add(line.trim());
-        }
-        for (String watchName : watchNameList) {
-            System.out.println(watchName);
-        }
-        if (watchNameList.size() > 0) {
-            System.out.print("There are " + watchNameList.size() + " watch leaks. Clear them all. ");
-            boolean proceed = Util.askProceed();
-            if (proceed) {
-                for (String watchName : watchNameList) {
-                    if (watchName.startsWith(ABORT_WATCH_PREFIX)) {
-                        String snapshotName = watchName.replace(ABORT_WATCH_PREFIX, "");
-                        clearAbortWatchLeak(zooKeeper, snapshotName);
-                    }
-                }
-            }
-        } else {
-            System.out.print("There is no watch leak.");
         }
     }
 

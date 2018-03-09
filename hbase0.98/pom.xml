@@ -117,8 +117,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.18.1</version>
                 <configuration>
-                    <forkCount>4</forkCount>
-                    <reuseForks>true</reuseForks>
                     <systemPropertyVariables>
                         <cluster.type>${cluster.type}</cluster.type>
                         <cluster.secured>${cluster.secured}</cluster.secured>

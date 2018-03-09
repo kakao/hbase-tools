@@ -39,6 +39,7 @@ public class Snapshot implements Watcher {
     private static final SimpleDateFormat DATE_FORMAT_SNAPSHOT = new SimpleDateFormat("yyyyMMddHHmmss");
     private static final SimpleDateFormat DATE_FORMAT_LOG = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     private static final String ABORT_WATCH_PREFIX = "/hbase/online-snapshot/abort/";
+    private static final String ACQUIRED_WATCH_PREFIX = "/hbase/online-snapshot/acquired/";
     private static final String TIMESTAMP_PREFIX = "_S";
     private static final int MAX_RETRY = 10;
     private static final long RETRY_INTERVAL = 2000;
@@ -302,12 +303,14 @@ public class Snapshot implements Watcher {
 
     private void clearAbortWatchLeak(ZooKeeper zooKeeper, String snapshotName)
             throws KeeperException, InterruptedException {
-        if (zooKeeper != null && zooKeeper.getState().isConnected()) {
-            String path = ABORT_WATCH_PREFIX + snapshotName;
-            if (zooKeeper.exists(path, false) == null) {
-                zooKeeper.create(path, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-            }
-        }
+        if (zooKeeper == null || !zooKeeper.getState().isConnected()) return;
+        createEmptyEphemeralZnode(zooKeeper, ABORT_WATCH_PREFIX + snapshotName);
+        createEmptyEphemeralZnode(zooKeeper, ACQUIRED_WATCH_PREFIX + snapshotName);
+    }
+
+    private void createEmptyEphemeralZnode(ZooKeeper zooKeeper, String path) throws KeeperException, InterruptedException {
+        if (zooKeeper.exists(path, false) != null) return;
+        zooKeeper.create(path, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
     }
 
     private String timestamp(TimestampFormat format) {

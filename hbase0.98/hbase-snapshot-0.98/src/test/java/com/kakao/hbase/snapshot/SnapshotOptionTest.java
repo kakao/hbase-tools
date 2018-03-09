@@ -155,6 +155,24 @@ public class SnapshotOptionTest extends TestBase {
     }
 
     @Test
+    public void testClearWatchLeak() throws Exception {
+        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        String[] argsParam;
+        SnapshotArgs args;
+        Snapshot app;
+
+        // with option
+        argsParam = new String[]{"localhost", ".*", "--test", "--clear-watch-leak"};
+        args = new SnapshotArgs(argsParam);
+        app = new Snapshot(admin, args);
+
+        // create snapshot
+        app.run();
+        snapshotDescriptions = listSnapshots(tableName + ".*");
+        assertEquals(1, snapshotDescriptions.size());
+    }
+
+    @Test
     public void testExcludeRegexList() throws Exception {
         List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
         String[] argsParam;

@@ -93,10 +93,12 @@ public class TestBase extends SecureTestUtil {
                     verifyConfiguration(conf);
                     hbase.startMiniCluster(RS_COUNT);
                     hbase.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName(), 10000);
+                    updateTestZkQuorum();
                     admin = new HBaseAdminWrapper(conf);
                 } else {
                     hbase.startMiniCluster(RS_COUNT);
-                    admin = hbase.getHBaseAdmin();
+                    updateTestZkQuorum();
+                    admin = new HBaseAdminWrapper(conf);
                 }
             }
         } else {
@@ -119,6 +121,11 @@ public class TestBase extends SecureTestUtil {
         createNamespace(admin, TEST_NAMESPACE);
 
         USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
+    }
+
+    private static void updateTestZkQuorum() {
+        String newZkQuorum = hbase.getConfiguration().get("hbase.zookeeper.quorum") + ":" + hbase.getZkCluster().getClientPort();
+        conf.set("hbase.zookeeper.quorum", newZkQuorum);
     }
 
     @AfterClass

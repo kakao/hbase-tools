@@ -93,13 +93,11 @@ public class TestBase extends SecureTestUtil {
                     verifyConfiguration(conf);
                     hbase.startMiniCluster(RS_COUNT);
                     hbase.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName(), 10000);
-                    updateTestZkQuorum();
-                    admin = new HBaseAdminWrapper(conf);
                 } else {
                     hbase.startMiniCluster(RS_COUNT);
-                    updateTestZkQuorum();
-                    admin = new HBaseAdminWrapper(conf);
                 }
+                updateTestZkQuorum();
+                admin = new HBaseAdminWrapper(conf);
             }
         } else {
             if (admin == null) {

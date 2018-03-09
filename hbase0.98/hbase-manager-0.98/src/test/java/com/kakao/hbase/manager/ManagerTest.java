@@ -20,10 +20,11 @@ import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.HBaseClient;
 import com.kakao.hbase.common.InvalidTableException;
-import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.common.util.AlertSender;
 import com.kakao.hbase.common.util.AlertSenderTest;
+import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.manager.command.Command;
+import com.kakao.hbase.specific.HBaseAdminWrapper;
 import joptsimple.OptionException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -150,7 +151,7 @@ public class ManagerTest extends TestBase {
 
         String commandName = "assign";
         String[] args = {commandName, "localhost", "balancer", "invalid",
-            "--" + Args.OPTION_AFTER_FAILURE + "=" + AlertSenderTest.ALERT_SCRIPT};
+                "--" + Args.OPTION_AFTER_FAILURE + "=" + AlertSenderTest.ALERT_SCRIPT};
         Args argsObject = Manager.parseArgs(args);
         Manager manager = new Manager(argsObject, commandName);
 
@@ -163,6 +164,9 @@ public class ManagerTest extends TestBase {
         }
 
         Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
+
+        // recreate admin because it is closed in Manager
+        admin = new HBaseAdminWrapper(conf);
     }
 
     @Test
@@ -171,7 +175,7 @@ public class ManagerTest extends TestBase {
 
         String commandName = "assign";
         String[] args = {commandName, "localhost", "balancer", "on",
-            "--" + Args.OPTION_AFTER_SUCCESS + "=" + AlertSenderTest.ALERT_SCRIPT};
+                "--" + Args.OPTION_AFTER_SUCCESS + "=" + AlertSenderTest.ALERT_SCRIPT};
         Args argsObject = Manager.parseArgs(args);
         Manager manager = new Manager(argsObject, commandName);
 
@@ -180,6 +184,9 @@ public class ManagerTest extends TestBase {
         manager.run();
 
         Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
+
+        // recreate admin because it is closed in Manager
+        admin = new HBaseAdminWrapper(conf);
     }
 
     @Test
@@ -188,7 +195,7 @@ public class ManagerTest extends TestBase {
 
         String commandName = "assign";
         String[] args = {commandName, "localhost", "balancer", "invalid",
-            "--" + Args.OPTION_AFTER_FINISH + "=" + AlertSenderTest.ALERT_SCRIPT};
+                "--" + Args.OPTION_AFTER_FINISH + "=" + AlertSenderTest.ALERT_SCRIPT};
         Args argsObject = Manager.parseArgs(args);
         Manager manager = new Manager(argsObject, commandName);
 
@@ -201,6 +208,9 @@ public class ManagerTest extends TestBase {
         }
 
         Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
+
+        // recreate admin because it is closed in Manager
+        admin = new HBaseAdminWrapper(conf);
     }
 
     @Test
@@ -209,7 +219,7 @@ public class ManagerTest extends TestBase {
 
         String commandName = "assign";
         String[] args = {commandName, "localhost", "balancer", "on",
-            "--" + Args.OPTION_AFTER_FINISH + "=" + AlertSenderTest.ALERT_SCRIPT};
+                "--" + Args.OPTION_AFTER_FINISH + "=" + AlertSenderTest.ALERT_SCRIPT};
         Args argsObject = Manager.parseArgs(args);
         Manager manager = new Manager(argsObject, commandName);
 
@@ -218,5 +228,8 @@ public class ManagerTest extends TestBase {
         manager.run();
 
         Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
+
+        // recreate admin because it is closed in Manager
+        admin = new HBaseAdminWrapper(conf);
     }
 }

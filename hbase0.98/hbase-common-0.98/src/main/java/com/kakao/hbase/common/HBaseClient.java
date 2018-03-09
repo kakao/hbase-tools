@@ -51,9 +51,9 @@ public class HBaseClient {
         if (args.has(Args.OPTION_DEBUG)) {
             sb.append("debug=true\n");
         }
-        if (args.has(Args.OPTION_KEY_TAB)) {
+        if (args.has(Args.OPTION_KEY_TAB, Args.OPTION_KEY_TAB_SHORT)) {
             sb.append("useKeyTab=true\n");
-            sb.append("keyTab=\"").append(args.valueOf(Args.OPTION_KEY_TAB)).append("\"\n");
+            sb.append("keyTab=\"").append(args.valueOf(Args.OPTION_KEY_TAB, Args.OPTION_KEY_TAB_SHORT)).append("\"\n");
             sb.append("principal=\"").append(principal(args)).append("\"\n");
         } else {
             sb.append("useKeyTab=false\n");
@@ -109,10 +109,8 @@ public class HBaseClient {
 
     private static String principal(Args args) {
         if (principal == null) {
-            if (args.has(Args.OPTION_PRINCIPAL)) {
-                principal = (String) args.valueOf(Args.OPTION_PRINCIPAL);
-            } else if (args.has(Args.OPTION_PRINCIPAL_SHORT) ) {
-                principal = (String) args.valueOf(Args.OPTION_PRINCIPAL_SHORT);
+            if (args.has(Args.OPTION_PRINCIPAL, Args.OPTION_PRINCIPAL_SHORT)) {
+                principal = (String) args.valueOf(Args.OPTION_PRINCIPAL, Args.OPTION_PRINCIPAL_SHORT);
             } else {
                 System.out.print("Principal: ");
                 Scanner scanner = new Scanner(System.in);
@@ -189,12 +187,9 @@ public class HBaseClient {
 
         updateConf(conf, realm);
 
-        if (args.has(Args.OPTION_KEY_TAB)) {
+        if (args.has(Args.OPTION_KEY_TAB, Args.OPTION_KEY_TAB_SHORT)) {
             UserGroupInformation.setConfiguration(conf);
-            UserGroupInformation.loginUserFromKeytab(principal(args), (String) args.valueOf(Args.OPTION_KEY_TAB));
-        } else if (args.has(Args.OPTION_KEY_TAB_SHORT)) {
-            UserGroupInformation.setConfiguration(conf);
-            UserGroupInformation.loginUserFromKeytab(principal(args), (String) args.valueOf(Args.OPTION_KEY_TAB_SHORT));
+            UserGroupInformation.loginUserFromKeytab(principal(args), (String) args.valueOf(Args.OPTION_KEY_TAB, Args.OPTION_KEY_TAB_SHORT));
         } else {
             loginWithPassword(args, conf);
         }

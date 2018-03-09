@@ -288,6 +288,10 @@ public abstract class Args {
         return optionSet.has(optionName);
     }
 
+    public boolean has(String optionLongName, String optionShortName) {
+        return optionSet.has(optionLongName) || optionSet.has(optionShortName);
+    }
+
     public Object valueOf(String optionName) {
         Object arg = optionSet.valueOf(optionName);
         if (arg != null && arg instanceof String) {
@@ -296,6 +300,21 @@ public abstract class Args {
         } else {
             return arg;
         }
+    }
+
+    public Object valueOf(String optionLongName, String optionShortName) {
+        Object arg = optionSet.valueOf(optionName(optionLongName, optionShortName));
+        if (arg != null && arg instanceof String) {
+            String argString = ((String) arg).trim();
+            return argString.length() == 0 ? null : argString;
+        } else {
+            return arg;
+        }
+    }
+
+    private String optionName(String optionLongName, String optionShortName) {
+        if (has(optionLongName)) return optionLongName;
+        else return optionShortName;
     }
 
     public OptionSet getOptionSet() {

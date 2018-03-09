@@ -19,6 +19,7 @@ package com.kakao.hbase;
 import com.kakao.hbase.common.Args;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -48,5 +49,40 @@ public class ArgsTest {
         assertEquals(2, configurations.size());
         assertEquals("a2", configurations.get("a"));
         assertEquals("b1", configurations.get("b"));
+    }
+
+    @Test
+    public void testShortAndLongName() throws IOException {
+        String[] argsParam;
+        Args args;
+        Map<String, String> configurations;
+
+        argsParam = new String[]{"zookeeper", "--conf=a=a1"};
+        args = new TestBase.TestArgs(argsParam);
+        configurations = args.getConfigurations();
+        assertEquals(1, configurations.size());
+        assertEquals("a1", configurations.get("a"));
+
+        argsParam = new String[]{"zookeeper", "-ca=a1"};
+        args = new TestBase.TestArgs(argsParam);
+        configurations = args.getConfigurations();
+        assertEquals(1, configurations.size());
+        assertEquals("a1", configurations.get("a"));
+
+        argsParam = new String[]{"zookeeper", "--principal=p1"};
+        args = new TestBase.TestArgs(argsParam);
+        assertEquals("p1", args.valueOf(Args.OPTION_PRINCIPAL, Args.OPTION_PRINCIPAL_SHORT));
+
+        argsParam = new String[]{"zookeeper", "-p=p1"};
+        args = new TestBase.TestArgs(argsParam);
+        assertEquals("p1", args.valueOf(Args.OPTION_PRINCIPAL, Args.OPTION_PRINCIPAL_SHORT));
+
+        argsParam = new String[]{"zookeeper", "--keytab=k1"};
+        args = new TestBase.TestArgs(argsParam);
+        assertEquals("k1", args.valueOf(Args.OPTION_KEY_TAB, Args.OPTION_KEY_TAB_SHORT));
+
+        argsParam = new String[]{"zookeeper", "-k=k1"};
+        args = new TestBase.TestArgs(argsParam);
+        assertEquals("k1", args.valueOf(Args.OPTION_KEY_TAB, Args.OPTION_KEY_TAB_SHORT));
     }
 }

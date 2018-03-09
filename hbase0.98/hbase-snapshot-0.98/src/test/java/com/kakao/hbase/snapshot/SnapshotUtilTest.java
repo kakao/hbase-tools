@@ -16,4 +16,10 @@ public class SnapshotUtilTest {
         Assert.assertEquals(date.getTime(), snapshotTimestamp);
         Assert.assertEquals(timestampMS, snapshotTimestamp);
     }
+
+    @Test
+    public void testInvalidSnapshotName() {
+        Assert.assertTrue(SnapshotUtil.isOldZnode("valid-snapshot-name_S20000309110025"));
+        Assert.assertFalse(SnapshotUtil.isOldZnode("invalid-snapshot-name"));
+    }
 }

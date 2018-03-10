@@ -44,6 +44,11 @@ public class HBaseClient {
     }
 
     private static String createJaasConfigFile(Args args) throws FileNotFoundException, UnsupportedEncodingException {
+        // fixme hash collision may occur in args.hashStr()
+        final String authConfFileName = "/tmp/" + "hbase-client-" + args.hashStr() + ".jaas";
+        File file = new File(authConfFileName);
+        if (file.exists()) return authConfFileName;
+
         StringBuilder sb = new StringBuilder();
         sb.append("Client {\n");
         sb.append("com.sun.security.auth.module.Krb5LoginModule required\n");
@@ -60,7 +65,6 @@ public class HBaseClient {
         }
         sb.append(";};");
 
-        String authConfFileName = "/tmp/" + "hbase-client-" + args.hashStr() + ".jaas";
         try (PrintWriter writer = new PrintWriter(authConfFileName, Constant.CHARSET.name())) {
             writer.print(sb);
         }

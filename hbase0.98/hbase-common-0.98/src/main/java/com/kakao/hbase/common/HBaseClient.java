@@ -43,7 +43,7 @@ public class HBaseClient {
     private HBaseClient() {
     }
 
-    private static String createJaasConfigFile(Args args, String fileName) throws FileNotFoundException, UnsupportedEncodingException {
+    private static String createJaasConfigFile(Args args) throws FileNotFoundException, UnsupportedEncodingException {
         StringBuilder sb = new StringBuilder();
         sb.append("Client {\n");
         sb.append("com.sun.security.auth.module.Krb5LoginModule required\n");
@@ -60,7 +60,7 @@ public class HBaseClient {
         }
         sb.append(";};");
 
-        String authConfFileName = "/tmp/" + fileName;
+        String authConfFileName = "/tmp/" + "hbase-client-" + args.hashStr() + ".jaas";
         try (PrintWriter writer = new PrintWriter(authConfFileName, Constant.CHARSET.name())) {
             writer.print(sb);
         }
@@ -171,7 +171,7 @@ public class HBaseClient {
             System.setProperty("sun.security.spnego.debug", "true");
         }
 
-        System.setProperty("java.security.auth.login.config", createJaasConfigFile(args, "hbase-client.jaas"));
+        System.setProperty("java.security.auth.login.config", createJaasConfigFile(args));
         System.setProperty("java.security.krb5.conf", kerberosConfigFile(args));
 
         Config krbConfig = Config.getInstance();

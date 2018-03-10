@@ -324,4 +324,8 @@ public abstract class Args {
     public boolean isForceProceed() {
         return optionSet.has(OPTION_FORCE_PROCEED);
     }
+
+    public String hashStr() {
+        return Integer.toHexString(optionSet.hashCode());
+    }
 }

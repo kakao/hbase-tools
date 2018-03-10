@@ -17,6 +17,7 @@
 package com.kakao.hbase;
 
 import com.kakao.hbase.common.Args;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -84,5 +85,40 @@ public class ArgsTest {
         argsParam = new String[]{"zookeeper", "-k=k1"};
         args = new TestBase.TestArgs(argsParam);
         assertEquals("k1", args.valueOf(Args.OPTION_KEY_TAB, Args.OPTION_KEY_TAB_SHORT));
+    }
+
+    @Test
+    public void testHashStr() throws IOException {
+        String[] argsParam;
+        Args args;
+
+        argsParam = new String[]{"zookeeper", "--conf=a=a1"};
+        args = new TestBase.TestArgs(argsParam);
+        String hashStr1 = args.hashStr();
+
+        argsParam = new String[]{"zookeeper", "--conf=a=a1"};
+        args = new TestBase.TestArgs(argsParam);
+        String hashStr2 = args.hashStr();
+        Assert.assertEquals(hashStr1, hashStr2);
+
+        argsParam = new String[]{"zookeeper", "-ca=a1"};
+        args = new TestBase.TestArgs(argsParam);
+        String hashStr3 = args.hashStr();
+        Assert.assertNotEquals(hashStr1, hashStr3);
+
+        argsParam = new String[]{"zookeeper", "--principal=p1"};
+        args = new TestBase.TestArgs(argsParam);
+        String hashStr4 = args.hashStr();
+        Assert.assertNotEquals(hashStr1, hashStr4);
+
+        argsParam = new String[]{"zookeeper2", "--principal=p1"};
+        args = new TestBase.TestArgs(argsParam);
+        String hashStr5 = args.hashStr();
+        Assert.assertNotEquals(hashStr4, hashStr5);
+
+        argsParam = new String[]{"zookeeper2", "--principal=p1", "--principal=p2"};
+        args = new TestBase.TestArgs(argsParam);
+        String hashStr6 = args.hashStr();
+        Assert.assertNotEquals(hashStr5, hashStr6);
     }
 }

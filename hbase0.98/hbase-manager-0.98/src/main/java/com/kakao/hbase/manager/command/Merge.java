@@ -28,12 +28,14 @@ import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 public class Merge implements Command {
     private final HBaseAdmin admin;
@@ -43,6 +45,7 @@ public class Merge implements Command {
     private final HConnection connection;
     private boolean proceed = false;
     private boolean test = false;
+    private boolean isPhoenixSaltingTable;
 
     public Merge(HBaseAdmin admin, Args args) throws IOException {
         if (args.getOptionSet().nonOptionArguments().size() < 2
@@ -57,6 +60,8 @@ public class Merge implements Command {
         this.connection = HConnectionManager.createConnection(admin.getConfiguration());
 
         tableNameSet = Util.parseTableSet(admin, args);
+
+        if (args.has(Args.OPTION_PHOENIX)) this.isPhoenixSaltingTable = true;
     }
 
     @SuppressWarnings("unused")
@@ -213,6 +218,27 @@ public class Merge implements Command {
         return Integer.MAX_VALUE;
     }
 
+    private boolean isRegionBoundaryOfPhoenixSaltingTable(HRegionInfo regionInfo) {
+        byte[] endKey = regionInfo.getEndKey();
+        boolean boundaryRegionForPhoenix = true;
+
+        if (endKey.length > 0) {
+            for (int i = 1, limit = endKey.length; i < limit; i++) {
+                if (endKey[i] != 0) {
+                    boundaryRegionForPhoenix = false;
+                    break;
+                }
+            }
+        }
+
+        if (boundaryRegionForPhoenix) {
+            Util.printVerboseMessage(args, regionInfo.getEncodedName() + " is boundary region of phoenix : "
+                    + Bytes.toStringBinary(regionInfo.getStartKey()) + " ~ " + Bytes.toStringBinary(regionInfo.getEndKey()));
+        }
+
+        return boundaryRegionForPhoenix;
+    }
+
     private void emptyFast(TableInfo tableInfo) throws Exception {
         long timestampPrev;
         boolean merged;
@@ -243,6 +269,11 @@ public class Merge implements Command {
 
             for (int i = 0; i < emptyRegions.size(); i++) {
                 HRegionInfo regionA = emptyRegions.get(i);
+                // 첫번째 리전의 endKey가 피닉스 솔팅 테이블의 리전 바운더리가 아니여야 한다.
+                if (isPhoenixSaltingTable && isRegionBoundaryOfPhoenixSaltingTable(regionA)) {
+                    continue;
+                }
+
                 if (i != emptyRegions.size() - 1) {
                     HRegionInfo regionB = emptyRegions.get(i + 1);
 

@@ -40,6 +40,7 @@ public class ManagerArgs extends Args {
         optionParser.accepts(OPTION_LOCALITY_THRESHOLD).withRequiredArg().ofType(Double.class);
         optionParser.accepts(OPTION_CF).withRequiredArg().ofType(String.class);
         optionParser.accepts(OPTION_INTERACTIVE);
+        optionParser.accepts(OPTION_PHOENIX);
         return optionParser;
     }
 }

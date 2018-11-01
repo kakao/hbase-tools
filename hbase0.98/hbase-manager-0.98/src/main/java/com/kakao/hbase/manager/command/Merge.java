@@ -35,7 +35,6 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
 
 public class Merge implements Command {
     private final HBaseAdmin admin;

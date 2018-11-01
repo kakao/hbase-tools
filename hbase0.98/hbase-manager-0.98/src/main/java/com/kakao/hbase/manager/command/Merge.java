@@ -74,6 +74,7 @@ public class Merge implements Command {
                 + "    empty            - Merge all empty regions.\n"
                 + "  options:\n"
                 + "    --" + Args.OPTION_MAX_ITERATION + " - Set max iteration.\n"
+                + "    --" + Args.OPTION_PHOENIX + " - Set if the table to be merged is phoenix salted table.\n"
                 + Args.commonUsage();
     }
 

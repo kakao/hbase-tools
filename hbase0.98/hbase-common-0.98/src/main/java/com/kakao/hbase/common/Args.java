@@ -64,6 +64,7 @@ public abstract class Args {
     public static final String OPTION_INTERACTIVE = "interactive";
     public static final String OPTION_CONF = "conf";
     public static final String OPTION_CONF_SHORT = "c";
+    public static final String OPTION_PHOENIX = "phoenix-salting-table";
 
     public static final String INVALID_ARGUMENTS = "Invalid arguments";
     public static final String ALL_TABLES = "";

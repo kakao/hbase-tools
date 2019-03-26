@@ -29,10 +29,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 public class LoadIO {
     public static final String NO_SAVED_FILE = "There is no saved file.";
@@ -242,6 +239,7 @@ public class LoadIO {
     List<String> savedFileNameList(Args args) {
         List<String> fileNameList = new ArrayList<>();
         listFiles(fileNameList, args);
+        Collections.sort(fileNameList);
         return fileNameList;
     }
 

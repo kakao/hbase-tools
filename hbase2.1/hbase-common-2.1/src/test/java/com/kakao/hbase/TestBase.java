@@ -36,10 +36,11 @@ import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class TestBase extends SecureTestUtil {
-    protected static final String TEST_TABLE_CF = "d";
-    protected static final String TEST_TABLE_CF2 = "e";
+    protected static final byte[] TEST_TABLE_CF = "d".getBytes();
+    protected static final byte[] TEST_TABLE_CF2 = "e".getBytes();
     protected static final String TEST_NAMESPACE = "unit_test";
     private static final int MAX_WAIT_ITERATION = 200;
     private static final long WAIT_INTERVAL = 100;
@@ -81,6 +82,7 @@ public class TestBase extends SecureTestUtil {
                 conf.setInt("hbase.master.info.port", -1);
                 conf.set("zookeeper.session.timeout", "3600000");
                 conf.set("dfs.client.socket-timeout", "3600000");
+                conf.set("dfs.datanode.directoryscan.throttle.limit.ms.per.sec", "1000");
                 conf.set("hbase.zookeeper.property.maxSessionTimeout", "3600000");
                 hbase = new HBaseTestingUtility(conf);
 
@@ -127,9 +129,7 @@ public class TestBase extends SecureTestUtil {
         if (!miniCluster) {
             dropNamespace(TEST_NAMESPACE);
             if (previousBalancerRunning) {
-                try(Admin admin = connection.getAdmin()) {
-                    admin.balancerSwitch(true, true);
-                }
+                admin.balancerSwitch(true, true);
             }
         }
     }
@@ -211,9 +211,9 @@ public class TestBase extends SecureTestUtil {
     }
 
     private void deleteSnapshots(TableName tableName) throws Exception {
-        for (SnapshotDescription snapshotDescription : admin.listSnapshots(".*" + tableName + ".*")) {
+        for (SnapshotDescription snapshotDescription : admin.listSnapshots(Pattern.compile(".*" + tableName + ".*"))) {
             if (snapshotDescription.getTableName().equals(tableName) || snapshotDescription.getTableName().getNameAsString().equals(TEST_NAMESPACE + ":" + tableName)) {
-                admin.deleteSnapshots(snapshotDescription.getName());
+                admin.deleteSnapshot(snapshotDescription.getName());
             }
         }
     }
@@ -246,11 +246,11 @@ public class TestBase extends SecureTestUtil {
         return tableName;
     }
 
-    @SuppressWarnings("deprecation")
     protected void createTable(TableName tableName) throws Exception {
-        HTableDescriptor td = new HTableDescriptor(tableName);
-        HColumnDescriptor cd = new HColumnDescriptor(TEST_TABLE_CF.getBytes());
-        td.addFamily(cd);
+        ColumnFamilyDescriptorBuilder cb = ColumnFamilyDescriptorBuilder.newBuilder(TEST_TABLE_CF);
+        TableDescriptorBuilder tb = TableDescriptorBuilder.newBuilder(tableName);
+        tb.setColumnFamily(cb.build());
+        TableDescriptor td = tb.build();
         admin.createTable(td);
         LOG.info(tableName + " table is successfully created.");
     }
@@ -301,12 +301,12 @@ public class TestBase extends SecureTestUtil {
         Assert.fail(Util.getMethodName() + " failed");
     }
 
-    protected void waitForSplitting(int regionCount) throws InterruptedException, IOException {
+    protected void waitForSplitting(int regionCount) throws InterruptedException {
         waitForSplitting(tableName, regionCount);
     }
 
     @SuppressWarnings("deprecation")
-    protected void waitForSplitting(TableName tableName, int regionCount) throws InterruptedException, IOException {
+    protected void waitForSplitting(TableName tableName, int regionCount) throws InterruptedException {
         int regionCountActual = 0;
         for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
             try (RegionLocator rl = connection.getRegionLocator(tableName)) {
@@ -437,8 +437,8 @@ public class TestBase extends SecureTestUtil {
         Assert.fail(Util.getMethodName() + " failed");
     }
 
-    protected List<SnapshotDescription> listSnapshots(String tableName) throws IOException {
-        return admin.listSnapshots(tableName);
+    protected List<SnapshotDescription> listSnapshots(String pattern) throws IOException {
+        return admin.listSnapshots(Pattern.compile(pattern));
     }
 
     protected void mergeRegion(RegionInfo regionA, RegionInfo regionB) throws IOException, InterruptedException {

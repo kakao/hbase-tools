@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 
@@ -42,8 +43,8 @@ public class SnapshotTest extends TestBase {
         List<SnapshotDescription> snapshotDescriptions;
 
         // create tables
-        createAdditionalTable(TableName.valueOf(tableName + "2"));
-        createAdditionalTable(TableName.valueOf(tableName + "3"));
+        createAdditionalTable(tableName + "2");
+        createAdditionalTable(tableName + "3");
 
         // all tables, keep unlimited
         String[] argsParam = {"localhost", ".*", "--test"};
@@ -100,7 +101,7 @@ public class SnapshotTest extends TestBase {
     @Test
     public void testNotExistingTable() throws Exception {
         class SnapshotArgsTest extends SnapshotArgs {
-            public SnapshotArgsTest(String[] args) throws IOException {
+            private SnapshotArgsTest(String[] args) throws IOException {
                 super(args);
             }
 
@@ -143,9 +144,7 @@ public class SnapshotTest extends TestBase {
 
             // create snapshot
             app.run();
-            try (Admin admin = connection.getAdmin()) {
-                snapshotDescriptions = admin.listSnapshots(app.getPrefix(fullTableName) + ".*");
-            }
+            snapshotDescriptions = admin.listSnapshots(Pattern.compile(app.getPrefix(fullTableName) + ".*"));
             assertEquals(1, snapshotDescriptions.size());
         } finally {
             dropTable(fullTableName);

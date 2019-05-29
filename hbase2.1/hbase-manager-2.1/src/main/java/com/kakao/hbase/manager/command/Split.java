@@ -21,11 +21,11 @@ import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.util.DecimalStringSplit;
 import com.kakao.hbase.common.util.Util;
 import org.apache.commons.codec.DecoderException;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 
@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("unused")
 public class Split implements Command {
@@ -45,7 +46,7 @@ public class Split implements Command {
             throw new IllegalArgumentException(Args.INVALID_ARGUMENTS);
         }
 
-        if (args.getTableNamePattern().equals(Args.ALL_TABLES))
+        if (args.getTableNamePatternStr().equals(Args.ALL_TABLES))
             throw new IllegalArgumentException(Args.INVALID_ARGUMENTS);
 
         this.admin = admin;
@@ -69,9 +70,9 @@ public class Split implements Command {
 
     private static Set<TableName> tableSet(Admin admin, Args args) throws IOException {
         Set<TableName> tableSet = new HashSet<>();
-        HTableDescriptor[] hTableDescriptors = admin.listTables(args.getTableNamePattern());
-        for (HTableDescriptor hTableDescriptor : hTableDescriptors) {
-            tableSet.add(hTableDescriptor.getTableName());
+        List<TableDescriptor> tds = admin.listTableDescriptors(Pattern.compile(args.getTableNamePatternStr()));
+        for (TableDescriptor td : tds) {
+            tableSet.add(td.getTableName());
         }
         return tableSet;
     }
@@ -142,11 +143,7 @@ public class Split implements Command {
 
                         String startKeyString = split[1].trim();
                         if (startKeyString.length() > 0) {
-                            List<byte[]> splitList = splitMap.get(tableName);
-                            if (splitList == null) {
-                                splitList = new ArrayList<>();
-                                splitMap.put(tableName, splitList);
-                            }
+                            List<byte[]> splitList = splitMap.computeIfAbsent(tableName, k -> new ArrayList<>());
                             splitList.add(Bytes.toBytesBinary(startKeyString));
                         }
                     } else {
@@ -154,13 +151,13 @@ public class Split implements Command {
                     }
                 }
 
-                System.out.println("Table \"" + args.getTableNamePattern() + "\" on \"" + args.getZookeeperQuorum() + "\" will be split by \"" + startkeysFileName + "\" file.");
+                System.out.println("Table \"" + args.getTableNamePatternStr() + "\" on \"" + args.getZookeeperQuorum() + "\" will be split by \"" + startkeysFileName + "\" file.");
                 return splitMap;
             }
         },
         rule {
             @Override
-            public Map<TableName, List<byte[]>> split(Set<TableName> tableSet, Args args) throws IOException, DecoderException {
+            public Map<TableName, List<byte[]>> split(Set<TableName> tableSet, Args args) {
                 Map<TableName, List<byte[]>> splitMap = new HashMap<>();
 
                 for (TableName tableName : tableSet) {

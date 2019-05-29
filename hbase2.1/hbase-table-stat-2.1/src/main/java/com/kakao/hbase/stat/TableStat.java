@@ -39,8 +39,8 @@ public class TableStat {
 
     public TableStat(Admin admin, Args args) throws Exception {
         intervalMS = args.getIntervalMS();
-        tableInfo = new TableInfo(admin, args.getTableNamePattern(), args);
-        formatter = new Formatter(args.getTableNamePattern(), tableInfo.getLoad());
+        tableInfo = new TableInfo(admin, args.getTableNamePatternStr(), args);
+        formatter = new Formatter(args.getTableNamePatternStr(), tableInfo.getLoad());
         this.args = args;
 
         webApp = WebApp.getInstance(args, this);

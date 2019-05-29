@@ -49,7 +49,7 @@ class MergeTestBase extends TestBase {
         // put data to the first region
         try (Table table = getTable(tableName)) {
             Put put = new Put("1".getBytes());
-            put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
+            put.addColumn(TEST_TABLE_CF, "c1".getBytes(), "data".getBytes());
             table.put(put);
         }
     }
@@ -65,7 +65,7 @@ class MergeTestBase extends TestBase {
         // put data to the second region
         try (Table table = getTable(tableName)) {
             Put put = new Put("b".getBytes());
-            put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
+            put.addColumn(TEST_TABLE_CF, "c1".getBytes(), "data".getBytes());
             table.put(put);
         }
     }
@@ -81,7 +81,7 @@ class MergeTestBase extends TestBase {
         // put data to the last region
         try (Table table = getTable(tableName)) {
             Put put = new Put("c".getBytes());
-            put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
+            put.addColumn(TEST_TABLE_CF, "c1".getBytes(), "data".getBytes());
             table.put(put);
         }
     }
@@ -99,10 +99,10 @@ class MergeTestBase extends TestBase {
         try (Table table = getTable(tableName)) {
             Put put;
             put = new Put("a".getBytes());
-            put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
+            put.addColumn(TEST_TABLE_CF, "c1".getBytes(), "data".getBytes());
             table.put(put);
             put = new Put("c".getBytes());
-            put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
+            put.addColumn(TEST_TABLE_CF, "c1".getBytes(), "data".getBytes());
             table.put(put);
         }
     }

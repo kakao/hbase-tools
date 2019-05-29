@@ -358,7 +358,6 @@ public class AssignTest extends TestBase {
         // move region to rs0
         move(regionInfoList.get(0), serverNameList.get(0));
 
-        // fixme
         // split and move
         splitTable("a".getBytes());
         Common.move(null, admin, tableName, serverNameList.get(1).getServerName(),

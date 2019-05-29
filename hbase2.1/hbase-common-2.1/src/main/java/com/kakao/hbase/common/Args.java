@@ -21,12 +21,13 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public abstract class Args {
     public static final String OPTION_REGION = "region";
@@ -137,10 +138,9 @@ public abstract class Args {
     }
 
     public static Set<TableName> tables(Args args, Admin admin) throws IOException {
-        return tables(args, admin, args.getTableNamePattern());
+        return tables(args, admin, args.getTableNamePatternStr());
     }
 
-    @SuppressWarnings("deprecation")
     public static Set<TableName> tables(Args args, Admin admin, String tableNamePattern) throws IOException {
         long startTimestamp = System.currentTimeMillis();
         Util.printVerboseMessage(args, Util.getMethodName() + " - start");
@@ -149,18 +149,12 @@ public abstract class Args {
             return Collections.emptySet();
         } else {
             Set<TableName> tables = new TreeSet<>();
-            HTableDescriptor[] hTableDescriptors = admin.listTables(tableNamePattern);
-            if (hTableDescriptors == null) {
+            List<TableDescriptor> tds = admin.listTableDescriptors(Pattern.compile(tableNamePattern));
+            if (tds == null) {
                 return tables;
             } else {
-                for (HTableDescriptor hTableDescriptor : hTableDescriptors) {
-                    // fixme
-                    // If hbase 1.0 client is connected to hbase 0.98,
-                    // admin.listTables(tableName) always returns all tables.
-                    // This is a workaround.
-                    String nameAsString = hTableDescriptor.getNameAsString();
-                    if (nameAsString.matches(tableNamePattern))
-                        tables.add(hTableDescriptor.getTableName());
+                for (TableDescriptor td : tds) {
+                    tables.add(td.getTableName());
                 }
             }
 
@@ -199,7 +193,7 @@ public abstract class Args {
         return nonOptionArgs + " " + optionArgs;
     }
 
-    public String getTableNamePattern() {
+    public String getTableNamePatternStr() {
         if (optionSet.nonOptionArguments().size() > 1) {
             return (String) optionSet.nonOptionArguments().get(1);
         } else {

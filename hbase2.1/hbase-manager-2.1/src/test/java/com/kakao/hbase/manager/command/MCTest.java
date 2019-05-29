@@ -44,14 +44,14 @@ public class MCTest extends TestBase {
 
     private void putData(Table table, byte[] rowkey) throws IOException {
         Put put = new Put(rowkey);
-        put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), rowkey);
+        put.addColumn(TEST_TABLE_CF, "c1".getBytes(), rowkey);
         table.put(put);
     }
 
     private void putData2(Table table, byte[] rowkey) throws IOException {
         Put put = new Put(rowkey);
-        put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), rowkey);
-        put.addColumn(TEST_TABLE_CF2.getBytes(), "c1".getBytes(), rowkey);
+        put.addColumn(TEST_TABLE_CF, "c1".getBytes(), rowkey);
+        put.addColumn(TEST_TABLE_CF2, "c1".getBytes(), rowkey);
         table.put(put);
     }
 
@@ -118,7 +118,7 @@ public class MCTest extends TestBase {
     @Test
     public void testMC_CF() throws Exception {
         // add CF
-        HColumnDescriptor cd = new HColumnDescriptor(TEST_TABLE_CF2.getBytes());
+        HColumnDescriptor cd = new HColumnDescriptor(TEST_TABLE_CF2);
         admin.addColumn(tableName, cd);
 
         // move a region to the first RS

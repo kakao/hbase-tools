@@ -20,6 +20,7 @@ import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -158,9 +159,9 @@ public class HBaseClient {
     }
 
     private static void validateAuthentication() {
-        try {
+        try (Admin admin = connection.getAdmin()){
             // Is there something better?
-            connection.getAdmin().getMaster();
+            admin.getMaster();
         } catch (IOException e) {
             System.out.println("Maybe you are connecting to the secured cluster without kerberos config.\n");
         }

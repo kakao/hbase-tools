@@ -42,8 +42,8 @@ public class SnapshotOptionTest extends TestBase {
         Snapshot app;
 
         // create tables
-        createAdditionalTable(TableName.valueOf(tableName + "2"));
-        createAdditionalTable(TableName.valueOf(tableName + "3"));
+        createAdditionalTable(tableName + "2");
+        createAdditionalTable(tableName + "3");
 
         // all tables, keep 2
         argsParam = new String[]{"localhost", ".*", "--keep=2", "--test"};
@@ -184,7 +184,7 @@ public class SnapshotOptionTest extends TestBase {
 
         // create table
         TableName tableName2 = createAdditionalTable(tableName + "2");
-        createAdditionalTable(TableName.valueOf(tableName + "21"));
+        createAdditionalTable(tableName + "21");
 
         // with table list
         argsParam = new String[]{"localhost", ".*", "--exclude=" + tableName2 + ".*", "--test"};
@@ -267,9 +267,7 @@ public class SnapshotOptionTest extends TestBase {
 
         // create snapshot does not follow hbase-snapshot naming rule
         String shouldNotBeDeleted = tableName2 + "-snapshot-test";
-        try (Admin admin = connection.getAdmin()) {
-            admin.snapshot(shouldNotBeDeleted, tableName2);
-        }
+        admin.snapshot(shouldNotBeDeleted, tableName2);
 
         // drop one table
         dropTable(tableName2);

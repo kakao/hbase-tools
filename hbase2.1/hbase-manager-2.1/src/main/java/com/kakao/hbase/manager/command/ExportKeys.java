@@ -40,7 +40,7 @@ public class ExportKeys implements Command {
         this.admin = admin;
         this.args = args;
 
-        if (args.getTableNamePattern().equals(Args.ALL_TABLES))
+        if (args.getTableNamePatternStr().equals(Args.ALL_TABLES))
             throw new IllegalArgumentException(Args.INVALID_ARGUMENTS);
 
         if (args.getOptionSet().nonOptionArguments().size() != 3)
@@ -70,7 +70,7 @@ public class ExportKeys implements Command {
         try (PrintWriter writer = new PrintWriter(outputFileName, Constant.CHARSET.name())) {
             writer.print("");
 
-            TableInfo tableInfo = new TableInfo(admin, args.getTableNamePattern(), args);
+            TableInfo tableInfo = new TableInfo(admin, args.getTableNamePatternStr(), args);
             tableInfo.refresh();
             Set<RegionInfo> regions = tableInfo.getRegionInfoSet();
 

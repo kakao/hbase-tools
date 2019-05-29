@@ -144,8 +144,8 @@ public class TableStatTableArgTest extends StatTestBase {
 
     @Test
     public void testTableName() throws Exception {
-        createAdditionalTable(TableName.valueOf(tableName + "2"));
-        createAdditionalTable(TableName.valueOf(tableName + "22"));
+        createAdditionalTable(tableName + "2");
+        createAdditionalTable(tableName + "22");
 
         String[] args = {"zookeeper", tableName.getNameAsString(), "--interval=0"};
         TableStat command = new TableStat(admin, new StatArgs(args));

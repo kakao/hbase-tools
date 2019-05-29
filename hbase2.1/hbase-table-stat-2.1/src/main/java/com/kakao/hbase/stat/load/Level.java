@@ -50,14 +50,14 @@ public class Level implements Comparable<Level> {
         } else if (level instanceof ServerName) {
             return ((ServerName) level).compareTo((ServerName) thatLevel.level);
         } else if (level instanceof TableName) {
-            return ((TableName) level).compareTo((TableName) thatLevel.level);
+            return ((TableName) level).getNameAsString().compareTo(((TableName) thatLevel.level).getNameAsString());
         } else if (level instanceof String) {
             return ((String) level).compareTo((String) thatLevel.level);
         } else
             throw new RuntimeException("can not compareTo");
     }
 
-    public boolean equalsName(String name) {
+    boolean equalsName(String name) {
         if (name == null) return false;
 
         if (level instanceof RegionName) {

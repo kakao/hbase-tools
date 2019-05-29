@@ -125,7 +125,7 @@ public class LoadIO {
 
     private StringBuilder prefix(Args args) {
         String zookeeperQuorum = safeString(args.getZookeeperQuorum());
-        String tableName = safeString(args.getTableNamePattern());
+        String tableName = safeString(args.getTableNamePatternStr());
 
         StringBuilder sb = new StringBuilder();
         sb.append(zookeeperQuorum).append("_");

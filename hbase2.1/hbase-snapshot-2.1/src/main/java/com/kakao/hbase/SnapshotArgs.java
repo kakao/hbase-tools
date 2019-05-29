@@ -19,21 +19,20 @@ package com.kakao.hbase;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.specific.SnapshotAdapter;
 import joptsimple.OptionParser;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.SnapshotType;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class SnapshotArgs extends Args {
-    public static final String COMMA = ",";
+    private static final String COMMA = ",";
     public static final int KEEP_UNLIMITED = 0;
-    static final int KEEP_DEFAULT = KEEP_UNLIMITED;
-    static final String ENTRY_DELIMITER = "/";
+    private static final int KEEP_DEFAULT = KEEP_UNLIMITED;
+    private static final String ENTRY_DELIMITER = "/";
 
     private final Map<TableName, Boolean> tableFlushMap = new HashMap<>();
     private final Map<TableName, Integer> tableKeepMap = new HashMap<>();
@@ -128,18 +127,18 @@ public class SnapshotArgs extends Args {
 
     private void parseTables(Admin admin, String[] tables, Set<TableName> tableSet) throws IOException {
         for (String table : tables) {
-            final String tableName;
+            final String tableNameStr;
             if (table.contains(ENTRY_DELIMITER)) {
                 String[] parts = table.split(ENTRY_DELIMITER);
-                tableName = parts[0];
-                tableKeepMap.put(TableName.valueOf(tableName), Integer.valueOf(parts[1]));
-                tableFlushMap.put(TableName.valueOf(tableName), Boolean.valueOf(parts[2]));
+                tableNameStr = parts[0];
+                tableKeepMap.put(TableName.valueOf(tableNameStr), Integer.valueOf(parts[1]));
+                tableFlushMap.put(TableName.valueOf(tableNameStr), Boolean.valueOf(parts[2]));
             } else {
-                tableName = table;
+                tableNameStr = table;
             }
 
-            for (HTableDescriptor hTableDescriptor : admin.listTables(tableName)) {
-                tableSet.add(hTableDescriptor.getTableName());
+            for (TableDescriptor td : admin.listTableDescriptors(Pattern.compile(tableNameStr))) {
+                tableSet.add(td.getTableName());
             }
         }
     }

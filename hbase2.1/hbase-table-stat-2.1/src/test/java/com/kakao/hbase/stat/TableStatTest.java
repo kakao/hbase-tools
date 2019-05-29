@@ -53,7 +53,6 @@ public class TableStatTest extends StatTestBase {
         Assert.assertEquals(loadEntryLength, command.getLoad().getSummaryPrev().size());
 
         // disable table
-        Admin admin = connection.getAdmin();
         System.out.println(admin.listTableDescriptors(Pattern.compile(".*")));
         admin.disableTable(tableName);
         waitForDisabled(tableName);
@@ -62,6 +61,7 @@ public class TableStatTest extends StatTestBase {
 
         // iteration 3
         command.run();
+        //fixme
         Assert.assertEquals(0, command.getLoad().getLoadMap().size());
         Assert.assertEquals(1, command.getLoad().getLoadMapPrev().size());
         Assert.assertEquals(0, command.getLoad().getSummary().size());
@@ -107,6 +107,7 @@ public class TableStatTest extends StatTestBase {
         TableStat command = new TableStat(admin, new StatArgs(args));
 
         // iteration 1
+        //fixme
         command.run();
         Assert.assertEquals(1, command.getLoad().getLoadMap().size());
         Assert.assertEquals(0, command.getLoad().getLoadMapPrev().size());
@@ -129,7 +130,7 @@ public class TableStatTest extends StatTestBase {
 
     @Test
     public void testTableRegex() throws Exception {
-        createAdditionalTable(TableName.valueOf(tableName + "2"));
+        createAdditionalTable(tableName + "2");
 
         String[] args = {"zookeeper", ".*", "--interval=0", "--test"};
         TableStat command = new TableStat(admin, new StatArgs(args));
@@ -148,6 +149,7 @@ public class TableStatTest extends StatTestBase {
         waitForDisabled(tableName);
 
         // iteration 2
+        //fixme
         command.run();
         Assert.assertEquals(1, command.getLoad().getLoadMap().size());
         Assert.assertEquals(2, command.getLoad().getLoadMapPrev().size());

@@ -32,13 +32,13 @@ class StatTestBase extends TestBase {
         try (HTable table = (HTable) connection.getTable(tableName)) {
             Put put;
             put = new Put("0".getBytes());
-            put.addColumn(TEST_TABLE_CF.getBytes(), "c".getBytes(), "0".getBytes());
+            put.addColumn(TEST_TABLE_CF, "c".getBytes(), "0".getBytes());
             table.put(put);
             put = new Put("a".getBytes());
-            put.addColumn(TEST_TABLE_CF.getBytes(), "c".getBytes(), "a".getBytes());
+            put.addColumn(TEST_TABLE_CF, "c".getBytes(), "a".getBytes());
             table.put(put);
             put = new Put("b".getBytes());
-            put.addColumn(TEST_TABLE_CF.getBytes(), "c".getBytes(), "b".getBytes());
+            put.addColumn(TEST_TABLE_CF, "c".getBytes(), "b".getBytes());
             table.put(put);
         }
     }

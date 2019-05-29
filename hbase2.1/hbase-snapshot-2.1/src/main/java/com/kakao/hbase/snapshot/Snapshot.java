@@ -26,13 +26,15 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
-import org.apache.log4j.PropertyConfigurator;
 import org.apache.zookeeper.*;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class Snapshot implements Watcher {
     static final SimpleDateFormat DATE_FORMAT_SNAPSHOT = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -55,12 +57,6 @@ public class Snapshot implements Watcher {
     Snapshot(Connection connection, SnapshotArgs args) {
         this.connection = connection;
         this.args = args;
-    }
-
-    private static void setLoggingThreshold(String loggingLevel) {
-        Properties props = new Properties();
-        props.setProperty("log4j.threshold", loggingLevel);
-        PropertyConfigurator.configure(props);
     }
 
     private static String usage() {
@@ -89,7 +85,7 @@ public class Snapshot implements Watcher {
     }
 
     public static void main(String[] argsParam) throws Exception {
-        setLoggingThreshold("ERROR");
+        Util.setLoggingThreshold("ERROR");
 
         SnapshotArgs args;
         try {

@@ -24,9 +24,11 @@ import com.kakao.hbase.common.util.AlertSenderTest;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.manager.command.Command;
 import joptsimple.OptionException;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -123,9 +125,10 @@ public class ManagerTest extends TestBase {
     public void testNamespace() throws Exception {
         TableName tn = TableName.valueOf(TEST_NAMESPACE, tableName.getNameAsString());
 
-        HTableDescriptor td = new HTableDescriptor(tn);
-        HColumnDescriptor cd = new HColumnDescriptor(TEST_TABLE_CF);
-        td.addFamily(cd);
+        ColumnFamilyDescriptor cd = ColumnFamilyDescriptorBuilder.newBuilder(TEST_TABLE_CF).build();
+        TableDescriptorBuilder tb = TableDescriptorBuilder.newBuilder(tn);
+        tb.setColumnFamily(cd);
+        TableDescriptor td = tb.build();
 
         admin.createTable(td);
 

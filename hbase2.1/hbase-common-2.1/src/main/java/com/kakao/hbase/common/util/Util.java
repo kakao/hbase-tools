@@ -60,7 +60,7 @@ public class Util {
                     tableExists = admin.tableExists(TableName.valueOf(table));
                 }
             } else {
-                tableExists = admin.listTables(tableName).length > 0;
+                tableExists = admin.listTableDescriptors(Pattern.compile(tableName)).size() > 0;
             }
         } catch (Exception e) {
             Thread.sleep(1000);
@@ -181,14 +181,14 @@ public class Util {
         String tableArg = (String) args.getOptionSet().nonOptionArguments().get(1);
         if (tableArg.contains(Constant.TABLE_DELIMITER)) {
             String[] tableArgs = tableArg.split(Constant.TABLE_DELIMITER);
-            for (String arg : tableArgs) {
-                for (HTableDescriptor hTableDescriptor : admin.listTables(arg)) {
-                    tableSet.add(hTableDescriptor.getTableName());
+            for (String tableNameStr : tableArgs) {
+                for (TableDescriptor td : admin.listTableDescriptors(Pattern.compile(tableNameStr))) {
+                    tableSet.add(td.getTableName());
                 }
             }
         } else {
-            for (HTableDescriptor hTableDescriptor : admin.listTables(tableArg)) {
-                TableName tableName = hTableDescriptor.getTableName();
+            for (TableDescriptor td : admin.listTableDescriptors(Pattern.compile(tableArg))) {
+                TableName tableName = td.getTableName();
                 if (args.has(Args.OPTION_TEST) && !tableName.getNameAsString().startsWith("UNIT_TEST_")) {
                     continue;
                 }

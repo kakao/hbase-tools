@@ -18,8 +18,10 @@ package com.kakao.hbase.stat;
 
 import com.kakao.hbase.common.InvalidTableException;
 import joptsimple.OptionException;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,14 +32,12 @@ public class ArgsTest extends StatTestBase {
 
     @Test
     public void testDisabledTable() throws Exception {
-        try (Admin admin = connection.getAdmin()) {
-            admin.disableTable(tableName);
-            try {
-                validateTable(tableName);
-            } catch (InvalidTableException e) {
-                if (!e.getMessage().contains("Table is not enabled")) {
-                    throw e;
-                }
+        admin.disableTable(tableName);
+        try {
+            validateTable(tableName);
+        } catch (InvalidTableException e) {
+            if (!e.getMessage().contains("Table is not enabled")) {
+                throw e;
             }
         }
     }
@@ -79,19 +79,18 @@ public class ArgsTest extends StatTestBase {
 
     @Test
     public void testNamespace() throws Exception {
-        try (Admin admin = connection.getAdmin()) {
-            TableName tn = TableName.valueOf(TEST_NAMESPACE, tableName.getNameAsString());
+        TableName tn = TableName.valueOf(TEST_NAMESPACE, tableName.getNameAsString());
 
-            HTableDescriptor td = new HTableDescriptor(tn);
-            HColumnDescriptor cd = new HColumnDescriptor(TEST_TABLE_CF);
-            td.addFamily(cd);
+        ColumnFamilyDescriptorBuilder cb = ColumnFamilyDescriptorBuilder.newBuilder(TEST_TABLE_CF);
+        TableDescriptorBuilder tb = TableDescriptorBuilder.newBuilder(tn);
+        tb.setColumnFamily(cb.build());
+        TableDescriptor td = tb.build();
 
-            admin.createTable(td);
+        admin.createTable(td);
 
-            validateTable(TableName.valueOf(TEST_NAMESPACE + ":" + tableName));
+        validateTable(TableName.valueOf(TEST_NAMESPACE + ":" + tableName));
 
-            admin.disableTable(tn);
-            admin.deleteTable(tn);
-        }
+        admin.disableTable(tn);
+        admin.deleteTable(tn);
     }
 }

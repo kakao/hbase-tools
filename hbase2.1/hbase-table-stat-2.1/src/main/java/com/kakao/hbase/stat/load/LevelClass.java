@@ -17,9 +17,9 @@
 package com.kakao.hbase.stat.load;
 
 import com.kakao.hbase.common.Args;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 
 public class LevelClass {
     private final Class levelClass;
@@ -28,7 +28,7 @@ public class LevelClass {
         this.levelClass = levelClass;
     }
 
-    public LevelClass(boolean multiTable, Args args) {
+    LevelClass(boolean multiTable, Args args) {
         if (multiTable && !args.has(Args.OPTION_REGION_SERVER) && !args.has(Args.OPTION_REGION)) {
             this.levelClass = TableName.class;
         } else if (args.has(Args.OPTION_REGION)) {
@@ -50,10 +50,9 @@ public class LevelClass {
         }
     }
 
-    @SuppressWarnings("deprecation")
-    public Level createLevel(HRegionInfo hRegionInfo, TableInfo tableInfo) {
+    Level createLevel(RegionInfo hRegionInfo, TableInfo tableInfo) {
         if (levelClass == TableName.class) {
-            return new Level(new TableName(Bytes.toString(hRegionInfo.getTableName())));
+            return new Level(hRegionInfo.getTable());
         } else if (levelClass == RegionName.class) {
             return new Level(new RegionName(hRegionInfo, tableInfo.serverIndex(hRegionInfo)));
         } else {

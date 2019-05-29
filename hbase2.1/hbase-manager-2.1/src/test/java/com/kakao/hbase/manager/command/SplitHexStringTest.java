@@ -19,15 +19,14 @@ package com.kakao.hbase.manager.command;
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class SplitHexStringTest extends TestBase {
     public SplitHexStringTest() {
@@ -36,7 +35,7 @@ public class SplitHexStringTest extends TestBase {
 
     @Test
     public void testSplitRuleRegex() throws Exception {
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
 
         // split
         String tableNameRegex = tableName2 + ".*";
@@ -54,12 +53,12 @@ public class SplitHexStringTest extends TestBase {
 
     @Test
     public void testSplitWithHexStringDowncaseRule() throws Exception {
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
 
-        String[] argsParam = {"zookeeper", tableName, "Rule", "hexString_down", "5", "--force-proceed"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "Rule", "hexString_down", "5", "--force-proceed"};
         Args args = new ManagerArgs(argsParam);
         assertEquals("zookeeper", args.getZookeeperQuorum());
         Split command = new Split(admin, args);
@@ -69,7 +68,7 @@ public class SplitHexStringTest extends TestBase {
 
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(5, regionInfoList.size());
-        for (HRegionInfo hRegionInfo : regionInfoList) {
+        for (RegionInfo hRegionInfo : regionInfoList) {
             byte[] startKey = hRegionInfo.getStartKey();
             if (startKey.length > 0) {
                 assertTrue(Bytes.toString(startKey).matches("[a-z0-9]*"));
@@ -80,12 +79,12 @@ public class SplitHexStringTest extends TestBase {
 
     @Test
     public void testSplitWithHexStringUpcaseRule() throws Exception {
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
 
-        String[] argsParam = {"zookeeper", tableName, "Rule", "hexString_up", "5", "--force-proceed"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "Rule", "hexString_up", "5", "--force-proceed"};
         Args args = new ManagerArgs(argsParam);
         assertEquals("zookeeper", args.getZookeeperQuorum());
         Split command = new Split(admin, args);
@@ -95,7 +94,7 @@ public class SplitHexStringTest extends TestBase {
 
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(5, regionInfoList.size());
-        for (HRegionInfo hRegionInfo : regionInfoList) {
+        for (RegionInfo hRegionInfo : regionInfoList) {
             byte[] startKey = hRegionInfo.getStartKey();
             if (startKey.length > 0) {
                 assertTrue(Bytes.toString(startKey).matches("[A-Z0-9]*"));

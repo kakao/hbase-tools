@@ -22,9 +22,10 @@ import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
 import com.kakao.hbase.specific.RegionLocationCleaner;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
@@ -34,33 +35,33 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class TableInfo {
-    private final HBaseAdmin admin;
+    private final Admin admin;
     private final Load load;
-    private final String tableName;
+    private final String tableNamePattern;
     private final Args args;
-    private NavigableMap<HRegionInfo, ServerName> regionServerMap;
-    private Map<byte[], HRegionInfo> regionMap;
+    private NavigableMap<RegionInfo, ServerName> regionServerMap;
+    private Map<byte[], RegionInfo> regionMap;
     private Set<ServerName> serverNameSet = new TreeSet<>();
     private RegionLoadAdapter regionLoadAdapter;
     private Set<Integer> indexRSs = null;
 
-    public TableInfo(HBaseAdmin admin, String tableName, Args args) throws Exception {
+    public TableInfo(Admin admin, String tableNamePattern, Args args) throws IOException {
         super();
 
         this.admin = admin;
-        this.tableName = tableName;
+        this.tableNamePattern = tableNamePattern;
         this.args = args;
 
         load = new Load(new LevelClass(isMultiTable(), args));
     }
 
-    public String getTableName() {
-        return tableName;
+    public String getTableNamePattern() {
+        return tableNamePattern;
     }
 
     private boolean isMultiTable() throws IOException {
         try {
-            return tableName.equals(Args.ALL_TABLES) || !admin.tableExists(tableName);
+            return tableNamePattern.equals(Args.ALL_TABLES) || !admin.tableExists(TableName.valueOf(tableNamePattern));
         } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("Illegal character code")
                 || e.getMessage().contains("Illegal first character")
@@ -74,19 +75,20 @@ public class TableInfo {
         return load;
     }
 
-    public Set<HRegionInfo> getRegionInfoSet() {
-        Set<HRegionInfo> regionInfoSet = new TreeSet<>();
-        for (Map.Entry<HRegionInfo, ServerName> entry : regionServerMap.entrySet()) {
+    @SuppressWarnings("SortedCollectionWithNonComparableKeys")
+    public Set<RegionInfo> getRegionInfoSet() {
+        Set<RegionInfo> regionInfoSet = new TreeSet<>();
+        for (Map.Entry<RegionInfo, ServerName> entry : regionServerMap.entrySet()) {
             regionInfoSet.add(entry.getKey());
         }
         return regionInfoSet;
     }
 
-    public RegionLoadDelegator getRegionLoad(HRegionInfo hRegionInfo) {
+    public RegionLoadDelegator getRegionLoad(RegionInfo hRegionInfo) {
         return regionLoadAdapter.get(hRegionInfo);
     }
 
-    public ServerName getServer(HRegionInfo regionInfo) {
+    ServerName getServer(RegionInfo regionInfo) {
         return regionServerMap.get(regionInfo);
     }
 
@@ -109,29 +111,27 @@ public class TableInfo {
             initializeServerNameSet();
         }
 
-        Set<String> tables = Args.tables(args, admin);
+        Set<TableName> tables = Args.tables(args, admin);
         if (tables == null) {
-            regionServerMap = CommandAdapter.regionServerMap(args, admin.getConfiguration()
-                , admin.getConnection(), false);
+            regionServerMap = CommandAdapter.regionServerMap(args, admin, false);
         } else {
-            regionServerMap = CommandAdapter.regionServerMap(args, admin.getConfiguration()
-                , admin.getConnection(), tables, false);
+            regionServerMap = CommandAdapter.regionServerMap(args, admin, tables, false);
         }
         clean(regionServerMap);
 
         Util.printVerboseMessage(args, "TableInfo.initializeRegionServerMap", timestamp);
     }
 
-    private void clean(NavigableMap<HRegionInfo, ServerName> regionServerMap) throws InterruptedException, IOException {
+    private void clean(NavigableMap<RegionInfo, ServerName> regionServerMap) throws InterruptedException {
         long timestamp = System.currentTimeMillis();
 
-        Set<String> tableNameSet = tableNameSet(regionServerMap);
+        Set<TableName> tableNameSet = tableNameSet(regionServerMap);
 
         ExecutorService executorService = Executors.newFixedThreadPool(RegionLocationCleaner.THREAD_POOL_SIZE);
         try {
-            for (String tableName : tableNameSet)
+            for (TableName tableName : tableNameSet)
                 executorService.execute(
-                        new RegionLocationCleaner(tableName, admin.getConfiguration(), regionServerMap));
+                        new RegionLocationCleaner(tableName, admin.getConnection(), regionServerMap));
         } finally {
             executorService.shutdown();
             executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -140,11 +140,11 @@ public class TableInfo {
         Util.printVerboseMessage(args, "TableInfo.clean", timestamp);
     }
 
-    private Set<String> tableNameSet(NavigableMap<HRegionInfo, ServerName> regionServerMap) {
+    private Set<TableName> tableNameSet(NavigableMap<RegionInfo, ServerName> regionServerMap) {
         long timestamp = System.currentTimeMillis();
 
-        Set<String> tableNameSet = new TreeSet<>();
-        for (Map.Entry<HRegionInfo, ServerName> entry : regionServerMap.entrySet()) {
+        Set<TableName> tableNameSet = new TreeSet<>();
+        for (Map.Entry<RegionInfo, ServerName> entry : regionServerMap.entrySet()) {
             tableNameSet.add(CommandAdapter.getTableName(entry.getKey()));
         }
 
@@ -155,7 +155,7 @@ public class TableInfo {
     private void initializeServerNameSet() throws IOException {
         long timestamp = System.currentTimeMillis();
 
-        serverNameSet = new TreeSet<>(admin.getClusterStatus().getServers());
+        serverNameSet = new TreeSet<>(admin.getRegionServers());
 
         Util.printVerboseMessage(args, "TableInfo.initializeServerNameSet", timestamp);
     }
@@ -168,7 +168,7 @@ public class TableInfo {
 
         regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
-        for (Map.Entry<HRegionInfo, ServerName> entry : regionServerMap.entrySet()) {
+        for (Map.Entry<RegionInfo, ServerName> entry : regionServerMap.entrySet()) {
             regionMap.put(entry.getKey().getRegionName(), entry.getKey());
         }
 
@@ -177,8 +177,6 @@ public class TableInfo {
 
     /**
      * Refresh region load information by querying data from HBase cluster.
-     *
-     * @throws Exception
      */
     public void refresh() throws Exception {
         if (load.isUpdating()) return;
@@ -204,7 +202,7 @@ public class TableInfo {
      * @param hRegionInfo region
      * @return region server index from all region servers
      */
-    public int serverIndex(HRegionInfo hRegionInfo) {
+    public int serverIndex(RegionInfo hRegionInfo) {
         ServerName serverName = regionServerMap.get(hRegionInfo);
         return Arrays.asList(serverNameSet.toArray()).indexOf(serverName);
     }

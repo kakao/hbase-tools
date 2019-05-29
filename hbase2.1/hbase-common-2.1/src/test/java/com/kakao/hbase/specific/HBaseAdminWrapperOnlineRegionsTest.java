@@ -19,7 +19,6 @@ package com.kakao.hbase.specific;
 import com.kakao.hbase.TestBase;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -28,37 +27,11 @@ public class HBaseAdminWrapperOnlineRegionsTest extends TestBase {
         super(HBaseAdminWrapperOnlineRegionsTest.class);
     }
 
+    @SuppressWarnings("deprecation")
     @Test
     public void testGetOnlineRegions() throws Exception {
         createAdditionalTable(tableName + "2");
 
-        int regionCount = 0;
-        for (ServerName serverName : admin.getClusterStatus().getServers()) {
-            for (HRegionInfo hRegionInfo : admin.getOnlineRegions(serverName)) {
-                System.out.println(hRegionInfo);
-                regionCount++;
-            }
-        }
-
-        if (miniCluster) {
-            if (securedCluster) {
-                Assert.assertEquals(5, regionCount);
-            } else {
-                Assert.assertEquals(4, regionCount);
-            }
-        }
-    }
-
-    @Test
-    public void testGetOnlineRegionsWithOriginalHBaseAdmin() throws Exception {
-        createAdditionalTable(tableName + "2");
-
-        HBaseAdmin admin;
-        if (securedCluster) {
-            admin = new HBaseAdmin(conf);
-        } else {
-            admin = HBaseAdminWrapperOnlineRegionsTest.admin;
-        }
         int regionCount = 0;
         for (ServerName serverName : admin.getClusterStatus().getServers()) {
             for (HRegionInfo hRegionInfo : admin.getOnlineRegions(serverName)) {

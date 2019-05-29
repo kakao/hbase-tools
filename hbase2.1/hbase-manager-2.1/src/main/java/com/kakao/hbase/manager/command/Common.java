@@ -21,11 +21,8 @@ import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
-import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.Admin;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,7 +35,7 @@ class Common {
     }
 
     @VisibleForTesting
-    static void move(Args args, HBaseAdmin admin, String tableName, String targetServerName, String encodedRegionName,
+    static void move(Args args, Admin admin, TableName tableName, String targetServerName, String encodedRegionName,
         boolean asynchronous)
         throws IOException, InterruptedException {
         int i;
@@ -46,6 +43,9 @@ class Common {
             try {
                 admin.move(encodedRegionName.getBytes(), targetServerName.getBytes());
             } catch (java.lang.reflect.UndeclaredThrowableException ignore) {
+            } catch (DoNotRetryIOException e) {
+                if (!e.getMessage().contains("is not OPEN"))
+                    throw e;
             }
 
             if (asynchronous)
@@ -57,7 +57,7 @@ class Common {
             if (!isTableEnabled(args, admin, tableName))
                 throw new IllegalStateException(Constant.MESSAGE_DISABLED_OR_NOT_FOUND_TABLE);
 
-            if (Util.isMoved(admin, tableName, encodedRegionName, targetServerName)) {
+            if (Util.isMoved(admin.getConnection(), tableName, encodedRegionName, targetServerName)) {
                 return;
             }
 
@@ -69,10 +69,10 @@ class Common {
         }
         if (i >= Constant.TRY_MAX)
             throw new IllegalStateException(Constant.MESSAGE_CANNOT_MOVE + " - "
-                + encodedRegionName + " to " + targetServerName);
+                    + encodedRegionName + " to " + targetServerName);
     }
 
-    static boolean isTableEnabled(Args args, HBaseAdmin admin, String tableName)
+    static boolean isTableEnabled(Args args, Admin admin, TableName tableName)
         throws InterruptedException, IOException {
         long startTimestamp = System.currentTimeMillis();
         int i;
@@ -96,7 +96,7 @@ class Common {
         return tableEnabled;
     }
 
-    static void moveWithPrintingResult(Args args, HBaseAdmin admin, String tableName, String encodedRegionName,
+    static void moveWithPrintingResult(Args args, Admin admin, TableName tableName, String encodedRegionName,
         String serverNameDest, boolean asynchronous) throws IOException, InterruptedException {
         try {
             move(args, admin, tableName, serverNameDest, encodedRegionName, asynchronous);
@@ -113,12 +113,9 @@ class Common {
     }
 
     /**
-     *
-     * @param admin
      * @return key: serverName exclude timestamp
-     * @throws IOException
      */
-    public static Map<String, ServerName> serverNameMap(HBaseAdmin admin) throws IOException {
+    static Map<String, ServerName> serverNameMap(Admin admin) throws IOException {
         Map<String, ServerName> serverNameMap = new HashMap<>();
         for (ServerName serverName : admin.getClusterStatus().getServers()) {
             serverNameMap.put(getServerNameKey(serverName.getServerName()), serverName);
@@ -126,15 +123,15 @@ class Common {
         return serverNameMap;
     }
 
-    public static String getServerNameKey(String serverNameOrg) {
+    static String getServerNameKey(String serverNameOrg) {
         return serverNameOrg.split(",")[0] + "," + serverNameOrg.split(",")[1];
     }
 
-    public static List<ServerName> regionServers(HBaseAdmin admin) throws IOException {
+    static List<ServerName> regionServers(Admin admin) throws IOException {
         return new ArrayList<>(admin.getClusterStatus().getServers());
     }
 
-    public static List<ServerName> regionServers(HBaseAdmin admin, String regex) throws IOException {
+    static List<ServerName> regionServers(Admin admin, String regex) throws IOException {
         List<ServerName> result = new ArrayList<>();
         for (ServerName serverName : regionServers(admin)) {
             if (serverName.getServerName().matches(regex)) result.add(serverName);

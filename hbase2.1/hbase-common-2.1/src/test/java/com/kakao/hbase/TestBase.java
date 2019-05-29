@@ -21,17 +21,12 @@ import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.HBaseClient;
 import com.kakao.hbase.common.InvalidTableException;
 import com.kakao.hbase.common.util.Util;
-import com.kakao.hbase.specific.HBaseAdminWrapper;
 import joptsimple.OptionParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -46,26 +41,26 @@ public class TestBase extends SecureTestUtil {
     protected static final String TEST_TABLE_CF = "d";
     protected static final String TEST_TABLE_CF2 = "e";
     protected static final String TEST_NAMESPACE = "unit_test";
-    protected static final int MAX_WAIT_ITERATION = 200;
-    protected static final long WAIT_INTERVAL = 100;
-    private static final List<String> additionalTables = new ArrayList<>();
+    private static final int MAX_WAIT_ITERATION = 200;
+    private static final long WAIT_INTERVAL = 100;
+    private static final List<TableName> additionalTables = new ArrayList<>();
     private static final Log LOG = LogFactory.getLog(TestBase.class);
     protected static int RS_COUNT = 2;
-    protected static HBaseAdmin admin = null;
     protected static Configuration conf = null;
-    protected static String tableName;
-    protected static HConnection hConnection;
+    protected static TableName tableName;
+    protected static Connection connection;
+    protected static Admin admin;
     protected static boolean miniCluster = false;
     protected static boolean securedCluster = false;
     protected static User USER_RW = null;
     protected static HBaseTestingUtility hbase = null;
-    private static Map<String, Map<String, Long>> tableServerWriteRequestMap = new HashMap<>();
+    private static Map<TableName, Map<String, Long>> tableServerWriteRequestMap = new HashMap<>();
     private static boolean previousBalancerRunning = true;
     private static ArrayList<ServerName> serverNameList = null;
     private static boolean testNamespaceCreated = false;
-    public final String tablePrefix;
     @Rule
     public final TestName testName = new TestName();
+    private final String tablePrefix;
 
     public TestBase(Class c) {
         tablePrefix = Constant.UNIT_TEST_TABLE_PREFIX + c.getSimpleName();
@@ -86,6 +81,7 @@ public class TestBase extends SecureTestUtil {
                 conf.setInt("hbase.master.info.port", -1);
                 conf.set("zookeeper.session.timeout", "3600000");
                 conf.set("dfs.client.socket-timeout", "3600000");
+                conf.set("hbase.zookeeper.property.maxSessionTimeout", "3600000");
                 hbase = new HBaseTestingUtility(conf);
 
                 if (securedCluster) {
@@ -97,10 +93,11 @@ public class TestBase extends SecureTestUtil {
                     hbase.startMiniCluster(RS_COUNT);
                 }
                 updateTestZkQuorum();
-                admin = new HBaseAdminWrapper(conf);
             }
+            connection = ConnectionFactory.createConnection(conf);
+            admin = connection.getAdmin();
         } else {
-            if (admin == null) {
+            if (connection == null) {
                 final String argsFileName = securedCluster ? "../../testClusterRealSecured.args" : "../../testClusterRealNonSecured.args";
                 if (!Util.isFile(argsFileName)) {
                     throw new IllegalStateException("You have to define args file " + argsFileName + " for tests.");
@@ -108,14 +105,13 @@ public class TestBase extends SecureTestUtil {
 
                 String[] testArgs = {argsFileName};
                 Args args = new TestArgs(testArgs);
-                admin = HBaseClient.getAdmin(args);
-                conf = admin.getConfiguration();
+                connection = HBaseClient.getConnection(args);
+                admin = connection.getAdmin();
+                conf = connection.getConfiguration();
                 RS_COUNT = getServerNameList().size();
             }
         }
-        previousBalancerRunning = admin.setBalancerRunning(false, true);
-        hConnection = HConnectionManager.createConnection(conf);
-
+        previousBalancerRunning = admin.balancerSwitch(false, true);
         createNamespace(admin, TEST_NAMESPACE);
 
         USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
@@ -129,15 +125,17 @@ public class TestBase extends SecureTestUtil {
     @AfterClass
     public static void tearDownOnce() throws Exception {
         if (!miniCluster) {
-            dropNamespace(admin, TEST_NAMESPACE);
+            dropNamespace(TEST_NAMESPACE);
             if (previousBalancerRunning) {
-                if (admin != null)
-                    admin.setBalancerRunning(true, true);
+                try(Admin admin = connection.getAdmin()) {
+                    admin.balancerSwitch(true, true);
+                }
             }
         }
     }
 
-    protected static void createNamespace(HBaseAdmin admin, String namespaceName) throws IOException {
+    @SuppressWarnings("SameParameterValue")
+    private static void createNamespace(Admin admin, String namespaceName) throws IOException {
         NamespaceDescriptor nd = NamespaceDescriptor.create(namespaceName).build();
         try {
             admin.createNamespace(nd);
@@ -146,7 +144,8 @@ public class TestBase extends SecureTestUtil {
         }
     }
 
-    protected static void dropNamespace(HBaseAdmin admin, String namespaceName) throws IOException {
+    @SuppressWarnings("SameParameterValue")
+    private static void dropNamespace(String namespaceName) throws IOException {
         if (!testNamespaceCreated) return;
 
         try {
@@ -156,8 +155,8 @@ public class TestBase extends SecureTestUtil {
         }
     }
 
-    protected static void validateTable(HBaseAdmin admin, String tableName) throws IOException, InterruptedException {
-        if (tableName.equals(Args.ALL_TABLES)) return;
+    protected static void validateTable(TableName tableName) throws IOException {
+        if (tableName.getNameAsString().equals(Args.ALL_TABLES)) return;
 
         boolean tableExists = admin.tableExists(tableName);
         if (tableExists) {
@@ -169,29 +168,26 @@ public class TestBase extends SecureTestUtil {
         }
     }
 
-    protected static List<HRegionInfo> getRegionInfoList(ServerName serverName, String tableName) throws IOException {
-        List<HRegionInfo> onlineRegions = new ArrayList<>();
-        for (HRegionInfo onlineRegion : admin.getOnlineRegions(serverName)) {
-            if (onlineRegion.getTable().getNameAsString().equals(tableName)) {
+    protected static List<RegionInfo> getRegionInfoList(ServerName serverName, TableName tableName) throws IOException {
+        List<RegionInfo> onlineRegions = new ArrayList<>();
+        for (RegionInfo onlineRegion : admin.getRegions(serverName)) {
+            if (onlineRegion.getTable().equals(tableName)) {
                 onlineRegions.add(onlineRegion);
             }
         }
         return onlineRegions;
     }
 
+    @SuppressWarnings("deprecation")
     protected static ArrayList<ServerName> getServerNameList() throws IOException {
         if (TestBase.serverNameList == null) {
             Set<ServerName> serverNameSet = new TreeSet<>(admin.getClusterStatus().getServers());
-            ArrayList<ServerName> serverNameList = new ArrayList<>();
-            for (ServerName serverName : serverNameSet) {
-                serverNameList.add(serverName);
-            }
-            TestBase.serverNameList = serverNameList;
+            TestBase.serverNameList = new ArrayList<>(serverNameSet);
         }
         return TestBase.serverNameList;
-    }
+}
 
-    protected void move(HRegionInfo regionInfo, ServerName serverName) throws Exception {
+    protected void move(RegionInfo regionInfo, ServerName serverName) throws Exception {
         admin.move(regionInfo.getEncodedName().getBytes(), serverName.getServerName().getBytes());
         waitForMoving(regionInfo, serverName);
     }
@@ -200,7 +196,7 @@ public class TestBase extends SecureTestUtil {
     public void setUp() throws Exception {
         additionalTables.clear();
         deleteSnapshots(tableName);
-        tableName = tablePrefix + "_" + testName.getMethodName();
+        tableName = TableName.valueOf(tablePrefix + "_" + testName.getMethodName());
         recreateTable(tableName);
     }
 
@@ -208,21 +204,21 @@ public class TestBase extends SecureTestUtil {
     public void tearDown() throws Exception {
         dropTable(tableName);
         deleteSnapshots(tableName);
-        for (String additionalTable : additionalTables) {
+        for (TableName additionalTable : additionalTables) {
             dropTable(additionalTable);
             deleteSnapshots(additionalTable);
         }
     }
 
-    protected void deleteSnapshots(String tableName) throws Exception {
-        for (HBaseProtos.SnapshotDescription snapshotDescription : admin.listSnapshots(".*" + tableName + ".*")) {
-            if (snapshotDescription.getTable().equals(tableName) || snapshotDescription.getTable().equals(TEST_NAMESPACE + ":" + tableName)) {
+    private void deleteSnapshots(TableName tableName) throws Exception {
+        for (SnapshotDescription snapshotDescription : admin.listSnapshots(".*" + tableName + ".*")) {
+            if (snapshotDescription.getTableName().equals(tableName) || snapshotDescription.getTableName().getNameAsString().equals(TEST_NAMESPACE + ":" + tableName)) {
                 admin.deleteSnapshots(snapshotDescription.getName());
             }
         }
     }
 
-    protected void dropTable(String tableName) throws IOException {
+    protected void dropTable(TableName tableName) throws IOException {
         if (admin.tableExists(tableName)) {
             try {
                 admin.disableTable(tableName);
@@ -232,19 +228,27 @@ public class TestBase extends SecureTestUtil {
         }
     }
 
-    protected void recreateTable(String tableName) throws Exception {
+    private void recreateTable(TableName tableName) throws Exception {
         dropTable(tableName);
         createTable(tableName);
     }
 
-    protected String createAdditionalTable(String tableName) throws Exception {
+    protected TableName createAdditionalTable(TableName tableName) throws Exception {
         recreateTable(tableName);
         additionalTables.add(tableName);
         return tableName;
     }
 
-    protected void createTable(String tableName) throws Exception {
-        HTableDescriptor td = new HTableDescriptor(TableName.valueOf(tableName.getBytes()));
+    protected TableName createAdditionalTable(String tableNameStr) throws Exception {
+        TableName tableName = TableName.valueOf(tableNameStr);
+        recreateTable(tableName);
+        additionalTables.add(tableName);
+        return tableName;
+    }
+
+    @SuppressWarnings("deprecation")
+    protected void createTable(TableName tableName) throws Exception {
+        HTableDescriptor td = new HTableDescriptor(tableName);
         HColumnDescriptor cd = new HColumnDescriptor(TEST_TABLE_CF.getBytes());
         td.addFamily(cd);
         admin.createTable(td);
@@ -255,25 +259,29 @@ public class TestBase extends SecureTestUtil {
         splitTable(tableName, splitPoint);
     }
 
-    protected void splitTable(String tableName, byte[] splitPoint) throws Exception {
+    protected void splitTable(TableName tableName, byte[] splitPoint) throws Exception {
         int regionCount = getRegionCount(tableName);
-        admin.split(tableName.getBytes(), splitPoint);
+        admin.split(tableName, splitPoint);
         waitForSplitting(tableName, regionCount + 1);
     }
 
-    protected int getRegionCount(String tableName) throws IOException {
-        return admin.getTableRegions(tableName.getBytes()).size();
+    private int getRegionCount(TableName tableName) throws IOException {
+        return admin.getRegions(tableName).size();
     }
 
-    protected ArrayList<HRegionInfo> getRegionInfoList(String tableName) throws IOException {
-        Set<HRegionInfo> hRegionInfoSet = new TreeSet<>();
-        try (HTable table = (HTable) hConnection.getTable(tableName)) {
-            hRegionInfoSet.addAll(table.getRegionLocations().keySet());
+    @SuppressWarnings("SortedCollectionWithNonComparableKeys")
+    protected ArrayList<RegionInfo> getRegionInfoList(TableName tableName) throws IOException {
+        Set<RegionInfo> hRegionInfoSet = new TreeSet<>();
+        try (RegionLocator rl = connection.getRegionLocator(tableName)) {
+            for (HRegionLocation allRegionLocation : rl.getAllRegionLocations()) {
+                hRegionInfoSet.add(allRegionLocation.getRegion());
+            }
         }
         return new ArrayList<>(hRegionInfoSet);
     }
 
-    protected void waitForMoving(HRegionInfo hRegionInfo, ServerName serverName) throws Exception {
+    @SuppressWarnings("deprecation")
+    private void waitForMoving(RegionInfo hRegionInfo, ServerName serverName) throws Exception {
         Map<byte[], RegionLoad> regionsLoad = null;
         for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
             ServerLoad load = admin.getClusterStatus().getLoad(serverName);
@@ -293,20 +301,21 @@ public class TestBase extends SecureTestUtil {
         Assert.fail(Util.getMethodName() + " failed");
     }
 
-    protected void waitForSplitting(int regionCount) throws IOException, InterruptedException {
+    protected void waitForSplitting(int regionCount) throws InterruptedException, IOException {
         waitForSplitting(tableName, regionCount);
     }
 
-    protected void waitForSplitting(String tableName, int regionCount) throws IOException, InterruptedException {
+    @SuppressWarnings("deprecation")
+    protected void waitForSplitting(TableName tableName, int regionCount) throws InterruptedException, IOException {
         int regionCountActual = 0;
         for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
-            try (HTable table = (HTable) hConnection.getTable(tableName)) {
+            try (RegionLocator rl = connection.getRegionLocator(tableName)) {
                 regionCountActual = 0;
-                NavigableMap<HRegionInfo, ServerName> regionLocations = table.getRegionLocations();
-                for (Map.Entry<HRegionInfo, ServerName> entry : regionLocations.entrySet()) {
-                    ServerLoad serverLoad = admin.getClusterStatus().getLoad(entry.getValue());
+                List<HRegionLocation> allRegionLocations = rl.getAllRegionLocations();
+                for (HRegionLocation entry : allRegionLocations) {
+                    ServerLoad serverLoad = admin.getClusterStatus().getLoad(entry.getServerName());
                     for (RegionLoad regionLoad : serverLoad.getRegionsLoad().values()) {
-                        if (Arrays.equals(entry.getKey().getRegionName(), regionLoad.getName()))
+                        if (Arrays.equals(entry.getRegion().getRegionName(), regionLoad.getName()))
                             regionCountActual++;
                     }
                 }
@@ -320,7 +329,7 @@ public class TestBase extends SecureTestUtil {
         Assert.assertEquals("TestBase.waitForSplitting - failed - ", regionCount, regionCountActual);
     }
 
-    protected void updateWritingRequestMetric(String tableName, ServerName serverName) throws IOException {
+    protected void updateWritingRequestMetric(TableName tableName, ServerName serverName) throws IOException {
         Map<String, Long> serverMap = tableServerWriteRequestMap.get(tableName);
         if (serverMap == null) {
             serverMap = new HashMap<>();
@@ -331,16 +340,17 @@ public class TestBase extends SecureTestUtil {
         tableServerWriteRequestMap.put(tableName, serverMap);
     }
 
-    private long getWriteRequestCountActual(String tableName, ServerName serverName) throws IOException {
+    @SuppressWarnings("deprecation")
+    private long getWriteRequestCountActual(TableName tableName, ServerName serverName) throws IOException {
         long writeRequestCountActual;
-        try (HTable table = (HTable) hConnection.getTable(tableName)) {
+        try (RegionLocator rl = connection.getRegionLocator(tableName)) {
             writeRequestCountActual = 0;
-            NavigableMap<HRegionInfo, ServerName> regionLocations = table.getRegionLocations();
-            for (Map.Entry<HRegionInfo, ServerName> entry : regionLocations.entrySet()) {
-                if (serverName.equals(entry.getValue())) {
-                    ServerLoad serverLoad = admin.getClusterStatus().getLoad(entry.getValue());
+            List<HRegionLocation> allRegionLocations = rl.getAllRegionLocations();
+            for (HRegionLocation entry : allRegionLocations) {
+                if (serverName.equals(entry.getServerName())) {
+                    ServerLoad serverLoad = admin.getClusterStatus().getLoad(entry.getServerName());
                     for (RegionLoad regionLoad : serverLoad.getRegionsLoad().values()) {
-                        if (Arrays.equals(entry.getKey().getRegionName(), regionLoad.getName()))
+                        if (Arrays.equals(entry.getRegion().getRegionName(), regionLoad.getName()))
                             writeRequestCountActual += regionLoad.getWriteRequestsCount();
                     }
                 }
@@ -351,22 +361,12 @@ public class TestBase extends SecureTestUtil {
         return writeRequestCountActual - aLong;
     }
 
-    private Long getWriteRequestMetric(String tableName, ServerName serverName) {
-        Map<String, Long> serverMap = tableServerWriteRequestMap.get(tableName);
-        if (serverMap == null) {
-            serverMap = new HashMap<>();
-            tableServerWriteRequestMap.put(tableName, serverMap);
-        }
-
-        Long writeRequest = serverMap.get(serverName.getServerName());
-        if (writeRequest == null) {
-            writeRequest = 0L;
-            serverMap.put(serverName.getServerName(), writeRequest);
-        }
-        return writeRequest;
+    private Long getWriteRequestMetric(TableName tableName, ServerName serverName) {
+        Map<String, Long> serverMap = tableServerWriteRequestMap.computeIfAbsent(tableName, k -> new HashMap<>());
+        return serverMap.computeIfAbsent(serverName.getServerName(), k -> 0L);
     }
 
-    protected void waitForWriting(String tableName, long writeRequestCount) throws Exception {
+    protected void waitForWriting(TableName tableName, long writeRequestCount) throws Exception {
         long writeRequestCountActual = 0;
         for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
             writeRequestCountActual = getWriteRequestCountActual(tableName);
@@ -378,15 +378,16 @@ public class TestBase extends SecureTestUtil {
         Assert.assertEquals(Util.getMethodName() + " failed - ", writeRequestCount, writeRequestCountActual);
     }
 
-    private long getWriteRequestCountActual(String tableName) throws IOException {
+    @SuppressWarnings("deprecation")
+    private long getWriteRequestCountActual(TableName tableName) throws IOException {
         long writeRequestCountActual;
-        try (HTable table = (HTable) hConnection.getTable(tableName)) {
+        try (RegionLocator rl = connection.getRegionLocator(tableName)) {
             writeRequestCountActual = 0;
-            NavigableMap<HRegionInfo, ServerName> regionLocations = table.getRegionLocations();
-            for (Map.Entry<HRegionInfo, ServerName> entry : regionLocations.entrySet()) {
-                ServerLoad serverLoad = admin.getClusterStatus().getLoad(entry.getValue());
+            List<HRegionLocation> allRegionLocations = rl.getAllRegionLocations();
+            for (HRegionLocation entry : allRegionLocations) {
+                ServerLoad serverLoad = admin.getClusterStatus().getLoad(entry.getServerName());
                 for (RegionLoad regionLoad : serverLoad.getRegionsLoad().values()) {
-                    if (Arrays.equals(entry.getKey().getRegionName(), regionLoad.getName()))
+                    if (Arrays.equals(entry.getRegion().getRegionName(), regionLoad.getName()))
                         writeRequestCountActual += regionLoad.getWriteRequestsCount();
                 }
             }
@@ -394,7 +395,7 @@ public class TestBase extends SecureTestUtil {
         return writeRequestCountActual;
     }
 
-    protected void waitForWriting(String tableName, ServerName serverName, long writeRequestCount) throws Exception {
+    protected void waitForWriting(TableName tableName, ServerName serverName, long writeRequestCount) throws Exception {
         long writeRequestCountActual = 0;
         for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
             writeRequestCountActual = getWriteRequestCountActual(tableName, serverName);
@@ -406,7 +407,7 @@ public class TestBase extends SecureTestUtil {
         Assert.assertEquals(Util.getMethodName() + " failed - ", writeRequestCount, writeRequestCountActual);
     }
 
-    protected void waitForDisabled(String tableName) throws Exception {
+    protected void waitForDisabled(TableName tableName) throws Exception {
         for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
             if (admin.isTableDisabled(tableName)) {
                 return;
@@ -416,7 +417,7 @@ public class TestBase extends SecureTestUtil {
         Assert.fail(Util.getMethodName() + " failed");
     }
 
-    protected void waitForEnabled(String tableName) throws Exception {
+    protected void waitForEnabled(TableName tableName) throws Exception {
         for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
             if (admin.isTableEnabled(tableName)) {
                 return;
@@ -426,7 +427,7 @@ public class TestBase extends SecureTestUtil {
         Assert.fail(Util.getMethodName() + " failed");
     }
 
-    protected void waitForDelete(String tableName) throws Exception {
+    protected void waitForDelete(TableName tableName) throws Exception {
         for (int i = 0; i < MAX_WAIT_ITERATION; i++) {
             if (!admin.tableExists(tableName)) {
                 return;
@@ -436,21 +437,22 @@ public class TestBase extends SecureTestUtil {
         Assert.fail(Util.getMethodName() + " failed");
     }
 
-    protected List<HBaseProtos.SnapshotDescription> listSnapshots(String tableName) throws IOException {
+    protected List<SnapshotDescription> listSnapshots(String tableName) throws IOException {
         return admin.listSnapshots(tableName);
     }
 
-    protected void mergeRegion(HRegionInfo regionA, HRegionInfo regionB) throws IOException, InterruptedException {
+    protected void mergeRegion(RegionInfo regionA, RegionInfo regionB) throws IOException, InterruptedException {
         mergeRegion(tableName, regionA, regionB);
     }
 
-    protected void mergeRegion(String tableName, HRegionInfo regionA, HRegionInfo regionB) throws IOException, InterruptedException {
+    protected void mergeRegion(TableName tableName, RegionInfo regionA, RegionInfo regionB) throws IOException, InterruptedException {
         int size = getRegionInfoList(tableName).size();
-        admin.mergeRegions(regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false);
+        admin.mergeRegionsAsync(regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false);
         waitForSplitting(tableName, size - 1);
     }
 
-    protected RegionLoad getRegionLoad(HRegionInfo regionInfo, ServerName serverName) throws IOException {
+    @SuppressWarnings("deprecation")
+    protected RegionLoad getRegionLoad(RegionInfo regionInfo, ServerName serverName) throws IOException {
         ServerLoad serverLoad = admin.getClusterStatus().getLoad(serverName);
         Map<byte[], RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
         for (Map.Entry<byte[], RegionLoad> entry : regionsLoad.entrySet()) {
@@ -461,12 +463,12 @@ public class TestBase extends SecureTestUtil {
         return null;
     }
 
-    protected HTable getTable(String tableName) throws IOException {
-        return (HTable) hConnection.getTable(tableName);
+    protected Table getTable(TableName tableName) throws IOException {
+        return connection.getTable(tableName);
     }
 
     public static class TestArgs extends Args {
-        public TestArgs(String[] args) throws IOException {
+        TestArgs(String[] args) throws IOException {
             super(args);
         }
 

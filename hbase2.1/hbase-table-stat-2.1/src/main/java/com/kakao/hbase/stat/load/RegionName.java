@@ -17,12 +17,13 @@
 package com.kakao.hbase.stat.load;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 
 public class RegionName implements Comparable<RegionName> {
-    private final HRegionInfo hRegionInfo;
+    private final RegionInfo hRegionInfo;
     private final int serverIndex;
 
-    public RegionName(HRegionInfo hRegionInfo, int serverIndex) {
+    public RegionName(RegionInfo hRegionInfo, int serverIndex) {
         this.hRegionInfo = hRegionInfo;
         this.serverIndex = serverIndex;
     }
@@ -31,8 +32,9 @@ public class RegionName implements Comparable<RegionName> {
         return hRegionInfo.getEncodedName() + " | " + serverIndex;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public int compareTo(RegionName o) {
-        return hRegionInfo.compareTo(o.hRegionInfo);
+        return new HRegionInfo(hRegionInfo).compareTo(new HRegionInfo(o.hRegionInfo));
     }
 }

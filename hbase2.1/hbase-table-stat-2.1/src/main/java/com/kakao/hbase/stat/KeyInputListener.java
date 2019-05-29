@@ -26,7 +26,7 @@ public class KeyInputListener implements Runnable {
     private static boolean fileLoadMode = false;
     private final TableStat tableStat;
 
-    public KeyInputListener(TableStat tableStat) {
+    KeyInputListener(TableStat tableStat) {
         this.tableStat = tableStat;
     }
 
@@ -44,7 +44,7 @@ public class KeyInputListener implements Runnable {
         switch (option) {
             case "h":
                 result = TableStat.dynamicOptions();
-                if (result != null) System.out.println(result);
+                System.out.println(result);
                 break;
             case "q":
                 System.out.println("Bye!");

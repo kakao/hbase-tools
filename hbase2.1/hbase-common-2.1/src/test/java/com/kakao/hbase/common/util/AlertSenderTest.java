@@ -23,7 +23,7 @@ public class AlertSenderTest {
     public static final String ALERT_SCRIPT = "echo ";
 
     @Test
-    public void testSend() throws Exception {
+    public void testSend() {
         int sendCountBefore = AlertSender.getSendCount();
         AlertSender.send(ALERT_SCRIPT, "snapshot test");
         Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());

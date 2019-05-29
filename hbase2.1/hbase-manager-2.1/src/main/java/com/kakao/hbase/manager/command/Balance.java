@@ -21,26 +21,27 @@ import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.util.*;
 
 @SuppressWarnings("unused")
 public class Balance implements Command {
-    private static Map<HRegionInfo, ServerName> regionLocations = null;
-    private static Set<String> cachedTableNames = new HashSet<>();
-    private final HBaseAdmin admin;
+    private static Map<RegionInfo, ServerName> regionLocations = null;
+    private static Set<TableName> cachedTableNames = new HashSet<>();
+    private final Admin admin;
     private final Args args;
     private final String ruleParam;
-    private final Set<String> tableNameSet;
+    private final Set<TableName> tableNameSet;
 
-    public Balance(HBaseAdmin admin, Args args) throws IOException {
+    Balance(Admin admin, Args args) throws IOException {
         if (args.getOptionSet().nonOptionArguments().size() != 3) {
             throw new RuntimeException(Args.INVALID_ARGUMENTS);
         }
@@ -80,16 +81,16 @@ public class Balance implements Command {
     }
 
     // does not contain catalog tables
-    private static Map<HRegionInfo, ServerName> createRegionAssignmentMap(HBaseAdmin admin, Set<String> tableNameSet)
+    private static Map<RegionInfo, ServerName> createRegionAssignmentMap(Admin admin, Set<TableName> tableNameSet)
             throws IOException
     {
         if (regionLocations == null) {
             regionLocations = new HashMap<>();
-            for (String tableName : tableNameSet) {
+            for (TableName tableName : tableNameSet) {
                 getRegionLocations(admin, tableName);
             }
         } else {
-            for (String tableName : tableNameSet) {
+            for (TableName tableName : tableNameSet) {
                 if (!cachedTableNames.contains(tableName)) {
                     getRegionLocations(admin, tableName);
                 }
@@ -98,21 +99,23 @@ public class Balance implements Command {
         return regionLocations;
     }
 
-    private static void getRegionLocations(HBaseAdmin admin, String tableName) throws IOException {
-        try (HTable table = new HTable(admin.getConfiguration(), tableName)) {
-            regionLocations.putAll(table.getRegionLocations());
+    private static void getRegionLocations(Admin admin, TableName tableName) throws IOException {
+        try (RegionLocator rl = admin.getConnection().getRegionLocator(tableName)) {
+            for (HRegionLocation allRegionLocation : rl.getAllRegionLocations()) {
+                regionLocations.put(allRegionLocation.getRegion(), allRegionLocation.getServerName());
+            }
             cachedTableNames.add(tableName);
         }
     }
 
     @SuppressWarnings("deprecation")
-    public static Map<HRegionInfo, ServerName> getRegionAssignmentMap(HBaseAdmin admin, Set<String> tableNameSet)
+    static Map<RegionInfo, ServerName> getRegionAssignmentMap(Admin admin, Set<TableName> tableNameSet)
             throws IOException
     {
-        Map<HRegionInfo, ServerName> regionAssignmentMap = createRegionAssignmentMap(admin, tableNameSet);
-        Map<HRegionInfo, ServerName> result = new HashMap<>();
-        for (Map.Entry<HRegionInfo, ServerName> entry : regionAssignmentMap.entrySet()) {
-            if (tableNameSet.contains(Bytes.toString(entry.getKey().getTableName()))) {
+        Map<RegionInfo, ServerName> regionAssignmentMap = createRegionAssignmentMap(admin, tableNameSet);
+        Map<RegionInfo, ServerName> result = new HashMap<>();
+        for (Map.Entry<RegionInfo, ServerName> entry : regionAssignmentMap.entrySet()) {
+            if (tableNameSet.contains(entry.getKey().getTable())) {
                 result.put(entry.getKey(), entry.getValue());
             }
         }
@@ -197,7 +200,7 @@ public class Balance implements Command {
     private void balance(Args args, List<RegionPlan> regionPlanList, Phase phase, boolean asynchronous) throws IOException, InterruptedException {
         int progress = 1;
         for (RegionPlan regionPlan : regionPlanList) {
-            String tableName = Bytes.toString(regionPlan.getRegionInfo().getTableName());
+            TableName tableName = regionPlan.getRegionInfo().getTable();
             String encodedRegionName = regionPlan.getRegionInfo().getEncodedName();
             String serverNameDest = regionPlan.getDestination().getServerName();
             String serverNameSource;

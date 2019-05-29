@@ -18,7 +18,6 @@ package com.kakao.hbase.specific;
 
 import com.kakao.hbase.TestBase;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -30,6 +29,7 @@ public class HBaseAdminWrapperListTableTest extends TestBase {
         super(HBaseAdminWrapperListTableTest.class);
     }
 
+    @SuppressWarnings("deprecation")
     @Test
     public void testListTablesAsSuperUser() throws Exception {
         createAdditionalTable(tableName + "2");
@@ -45,18 +45,14 @@ public class HBaseAdminWrapperListTableTest extends TestBase {
         }
     }
 
+    @SuppressWarnings({"unchecked", "deprecation"})
     @Test
     public void testListTablesAsRWUser() throws Exception {
         createAdditionalTable(tableName + "2");
 
         final HTableDescriptor[] hTableDescriptors;
         if (securedCluster) {
-            PrivilegedExceptionAction listTables = new PrivilegedExceptionAction() {
-                @Override
-                public Object run() throws Exception {
-                    return admin.listTables();
-                }
-            };
+            PrivilegedExceptionAction listTables = () -> admin.listTables();
             hTableDescriptors = (HTableDescriptor[]) USER_RW.runAs(listTables);
         } else {
             hTableDescriptors = admin.listTables();
@@ -73,25 +69,23 @@ public class HBaseAdminWrapperListTableTest extends TestBase {
         }
     }
 
+    @SuppressWarnings({"deprecation", "unchecked"})
     @Test
     public void testListTablesAsRWUserWithOriginalHBaseAdmin() throws Exception {
         createAdditionalTable(tableName + "2");
 
         final HTableDescriptor[] hTableDescriptors;
         if (securedCluster) {
-            PrivilegedExceptionAction listTables = new PrivilegedExceptionAction() {
-                @Override
-                public Object run() throws Exception {
-                    try {
-                        return new HBaseAdmin(conf).listTables();
-                    } catch (AccessDeniedException e) {
-                        return new HTableDescriptor[0];
-                    }
+            PrivilegedExceptionAction listTables = () -> {
+                try {
+                    return connection.getAdmin().listTables();
+                } catch (AccessDeniedException e) {
+                    return new HTableDescriptor[0];
                 }
             };
             hTableDescriptors = (HTableDescriptor[]) USER_RW.runAs(listTables);
         } else {
-            hTableDescriptors = new HBaseAdmin(conf).listTables();
+            hTableDescriptors = connection.getAdmin().listTables();
         }
 
         int tableCount = 0;
@@ -102,7 +96,7 @@ public class HBaseAdminWrapperListTableTest extends TestBase {
 
         if (miniCluster) {
             if (securedCluster)
-                Assert.assertEquals(0, tableCount);
+                Assert.assertEquals(2, tableCount);
             else
                 Assert.assertEquals(2, tableCount);
         }

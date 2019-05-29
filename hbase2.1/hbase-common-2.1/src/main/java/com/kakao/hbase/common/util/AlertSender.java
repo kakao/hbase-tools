@@ -29,7 +29,7 @@ public class AlertSender {
     private AlertSender() {
     }
 
-    public static void send(String alertScript, String message) {
+    static void send(String alertScript, String message) {
         try {
             Process alert = Runtime.getRuntime().exec(alertScript + " \"" + message + "\"");
             alert.waitFor();

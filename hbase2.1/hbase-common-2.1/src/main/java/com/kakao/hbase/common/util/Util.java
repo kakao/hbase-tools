@@ -19,11 +19,8 @@ package com.kakao.hbase.common.util;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.common.InvalidTableException;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.PropertyConfigurator;
 
@@ -31,6 +28,7 @@ import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class Util {
     public static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -48,7 +46,10 @@ public class Util {
         PropertyConfigurator.configure(props);
     }
 
-    public static void validateTable(HBaseAdmin admin, String tableName) throws IOException, InterruptedException {
+    /**
+     * @param tableName Should be string, not TableName
+     */
+    public static void validateTable(Admin admin, String tableName) throws IOException, InterruptedException {
         if (tableName.equals(Args.ALL_TABLES)) return;
 
         boolean tableExists = false;
@@ -56,7 +57,7 @@ public class Util {
             if (tableName.contains(Constant.TABLE_DELIMITER)) {
                 String[] tables = tableName.split(Constant.TABLE_DELIMITER);
                 for (String table : tables) {
-                    tableExists = admin.tableExists(table);
+                    tableExists = admin.tableExists(TableName.valueOf(table));
                 }
             } else {
                 tableExists = admin.listTables(tableName).length > 0;
@@ -69,7 +70,7 @@ public class Util {
         }
         if (tableExists) {
             try {
-                if (!admin.isTableEnabled(tableName)) {
+                if (!admin.isTableEnabled(TableName.valueOf(tableName))) {
                     throw new InvalidTableException("Table is not enabled.");
                 }
             } catch (Exception ignore) {
@@ -79,27 +80,24 @@ public class Util {
         }
     }
 
-    public static boolean isMoved(HBaseAdmin admin, String tableName, String regionName, String serverNameTarget) {
-        try (HTable table = new HTable(admin.getConfiguration(), tableName)) {
-            NavigableMap<HRegionInfo, ServerName> regionLocations = table.getRegionLocations();
-            for (Map.Entry<HRegionInfo, ServerName> regionLocation : regionLocations.entrySet()) {
-                if (regionLocation.getKey().getEncodedName().equals(regionName)) {
-                    return regionLocation.getValue().getServerName().equals(serverNameTarget);
-                }
+    public static boolean isMoved(Connection connection, TableName tableName, String regionName, String serverNameTarget) throws IOException {
+        RegionLocator regionLocator = connection.getRegionLocator(tableName);
+        List<HRegionLocation> regionLocations = regionLocator.getAllRegionLocations();
+        for (HRegionLocation regionLocation : regionLocations) {
+            if (regionLocation.getRegion().getEncodedName().equals(regionName)) {
+                return regionLocation.getServerName().getServerName().equals(serverNameTarget);
             }
-
-            if (!existsRegion(regionName, regionLocations.keySet()))
-                return true; // skip moving
-        } catch (IOException e) {
-            return false;
         }
+
+        if (!existsRegion(regionName, regionLocations))
+            return true; // skip moving
         return false;
     }
 
-    public static boolean existsRegion(String regionName, Set<HRegionInfo> regionLocations) {
+    private static boolean existsRegion(String regionName, List<HRegionLocation> regionLocations) {
         boolean regionExists = false;
-        for (HRegionInfo hRegionInfo : regionLocations) {
-            if (hRegionInfo.getEncodedName().equals(regionName))
+        for (HRegionLocation regionLocation : regionLocations) {
+            if (regionLocation.getRegion().getEncodedName().equals(regionName))
                 regionExists = true;
         }
         return regionExists;
@@ -138,6 +136,7 @@ public class Util {
 
         ClassLoader cLoader = Util.class.getClassLoader();
         try (InputStream i = cLoader.getResourceAsStream(rsc)) {
+            assert i != null;
             BufferedReader r = new BufferedReader(new InputStreamReader(i));
 
             String l;
@@ -162,6 +161,7 @@ public class Util {
 
     public static String readFromResource(String fileName) throws IOException {
         try (InputStream in = Util.class.getClassLoader().getResourceAsStream(fileName)) {
+            assert in != null;
             return readString(new InputStreamReader(in));
         }
     }
@@ -175,20 +175,21 @@ public class Util {
         return file.exists() && !file.isDirectory();
     }
 
-    public static Set<String> parseTableSet(HBaseAdmin admin, Args args) throws IOException {
-        Set<String> tableSet = new HashSet<>();
+
+    public static Set<TableName> parseTableSet(Admin admin, Args args) throws IOException {
+        Set<TableName> tableSet = new HashSet<>();
         String tableArg = (String) args.getOptionSet().nonOptionArguments().get(1);
         if (tableArg.contains(Constant.TABLE_DELIMITER)) {
             String[] tableArgs = tableArg.split(Constant.TABLE_DELIMITER);
             for (String arg : tableArgs) {
                 for (HTableDescriptor hTableDescriptor : admin.listTables(arg)) {
-                    tableSet.add(hTableDescriptor.getNameAsString());
+                    tableSet.add(hTableDescriptor.getTableName());
                 }
             }
         } else {
             for (HTableDescriptor hTableDescriptor : admin.listTables(tableArg)) {
-                String tableName = hTableDescriptor.getNameAsString();
-                if (args.has(Args.OPTION_TEST) && !tableName.startsWith("UNIT_TEST_")) {
+                TableName tableName = hTableDescriptor.getTableName();
+                if (args.has(Args.OPTION_TEST) && !tableName.getNameAsString().startsWith("UNIT_TEST_")) {
                     continue;
                 }
                 tableSet.add(tableName);
@@ -197,9 +198,8 @@ public class Util {
         return tableSet;
     }
 
-    @SuppressWarnings("deprecation")
-    public static String getRegionInfoString(HRegionInfo regionA) {
-        return "{TABLE => " + Bytes.toString(regionA.getTableName())
+    public static String getRegionInfoString(RegionInfo regionA) {
+        return "{TABLE => " + regionA.getTable().getNameWithNamespaceInclAsString()
                 + ", ENCODED => " + regionA.getEncodedName()
                 + ", STARTKEY => '" + Bytes.toStringBinary(regionA.getStartKey())
                 + "', ENDKEY => '" + Bytes.toStringBinary(regionA.getEndKey()) + "'";
@@ -218,7 +218,8 @@ public class Util {
         sendAlertAfterSuccess(args, clazz, null);
     }
 
-    public static void sendAlertAfterSuccess(Args args, Class clazz, String message) {
+    @SuppressWarnings("SameParameterValue")
+    private static void sendAlertAfterSuccess(Args args, Class clazz, String message) {
         if (args != null && args.getAfterSuccessScript() != null)
             AlertSender.send(args.getAfterSuccessScript(),
                     "SUCCESS - " + clazz.getSimpleName()
@@ -227,7 +228,7 @@ public class Util {
         sendAlertAfterFinish(args, clazz, message, true);
     }
 
-    public static void sendAlertAfterFinish(Args args, Class clazz, String message, boolean success) {
+    private static void sendAlertAfterFinish(Args args, Class clazz, String message, boolean success) {
         if (args != null && args.getAfterFinishScript() != null)
             AlertSender.send(args.getAfterFinishScript(),
                     (success ? "SUCCESS - " : "FAIL - ") + clazz.getSimpleName()
@@ -251,13 +252,24 @@ public class Util {
         }
     }
 
+    public static NavigableMap<RegionInfo, ServerName> getRegionLocationsMap(Connection connection, TableName tableName) throws IOException {
+        final NavigableMap<RegionInfo, ServerName> result = new TreeMap<>();
+        try(RegionLocator rl = connection.getRegionLocator(tableName)) {
+            for (HRegionLocation e : rl.getAllRegionLocations()) {
+                result.put(e.getRegion(), e.getServerName());
+            }
+        }
+        return result;
+    }
+
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public static boolean askProceedInteractively(Args args, boolean printNewLine) {
         if (args.has(Args.OPTION_INTERACTIVE)) {
             if (args.has(Args.OPTION_FORCE_PROCEED)) {
                 if (printNewLine) System.out.println();
             } else {
                 System.out.print(" - ");
-                if (!askProceed()) return false;
+                return askProceed();
             }
         } else {
             if (printNewLine) System.out.println();

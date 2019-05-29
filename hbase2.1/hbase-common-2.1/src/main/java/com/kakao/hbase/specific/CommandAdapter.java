@@ -19,19 +19,13 @@ package com.kakao.hbase.specific;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.util.Util;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.balancer.ClusterLoadState;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import javax.security.auth.Subject;
@@ -39,35 +33,34 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * For HBase 0.98/0.96
+ * For HBase 2.1
  */
 public class CommandAdapter {
-
-    public static List<RegionPlan> makePlan(HBaseAdmin admin,
-        Map<ServerName, List<HRegionInfo>> clusterState, Configuration conf) throws IOException {
+    public static List<RegionPlan> makePlan(Admin admin,
+        Map<ServerName, List<RegionInfo>> clusterState, Configuration conf) throws IOException {
         StochasticLoadBalancer balancer = new StochasticLoadBalancer() {
             @Override
-            protected boolean needsBalance(ClusterLoadState cs) {
+            protected boolean needsBalance(Cluster c) {
                 return true;
             }
         };
         balancer.setConf(conf);
-        balancer.setClusterStatus(admin.getClusterStatus());
+        balancer.setClusterMetrics(admin.getClusterMetrics());
         List<RegionPlan> regionPlanList = balancer.balanceCluster(clusterState);
-        return regionPlanList == null ? new ArrayList<RegionPlan>() : regionPlanList;
+        return regionPlanList == null ? new ArrayList<>() : regionPlanList;
     }
 
-    public static List<RegionPlan> makePlan(HBaseAdmin admin, List<RegionPlan> newRegionPlan) throws IOException {
+    public static List<RegionPlan> makePlan(Admin admin, List<RegionPlan> newRegionPlan) throws IOException {
         // snapshot current region assignment
-        Map<HRegionInfo, ServerName> regionAssignmentMap = createRegionAssignmentMap(admin);
+        Map<RegionInfo, ServerName> regionAssignmentMap = createRegionAssignmentMap(admin);
 
         // update with new plan
         for (RegionPlan regionPlan : newRegionPlan) {
             regionAssignmentMap.put(regionPlan.getRegionInfo(), regionPlan.getDestination());
         }
 
-        Map<ServerName, List<HRegionInfo>> clusterState = initializeRegionMap(admin);
-        for (Map.Entry<HRegionInfo, ServerName> entry : regionAssignmentMap.entrySet())
+        Map<ServerName, List<RegionInfo>> clusterState = initializeRegionMap(admin);
+        for (Map.Entry<RegionInfo, ServerName> entry : regionAssignmentMap.entrySet())
             clusterState.get(entry.getValue()).add(entry.getKey());
 
         StochasticLoadBalancer balancer = new StochasticLoadBalancer();
@@ -78,45 +71,45 @@ public class CommandAdapter {
     }
 
     // contains catalog tables
-    private static Map<HRegionInfo, ServerName> createRegionAssignmentMap(HBaseAdmin admin) throws IOException {
-        Map<HRegionInfo, ServerName> regionMap = new HashMap<>();
-        for (ServerName serverName : admin.getClusterStatus().getServers()) {
-            for (HRegionInfo hRegionInfo : admin.getOnlineRegions(serverName)) {
+    private static Map<RegionInfo, ServerName> createRegionAssignmentMap(Admin admin) throws IOException {
+        Map<RegionInfo, ServerName> regionMap = new HashMap<>();
+        for (ServerName serverName : admin.getRegionServers()) {
+            for (RegionInfo hRegionInfo : admin.getRegions(serverName)) {
                 regionMap.put(hRegionInfo, serverName);
             }
         }
         return regionMap;
     }
 
-    public static List<HRegionInfo> getOnlineRegions(Args args, HBaseAdmin admin, ServerName serverName)
+    public static List<RegionInfo> getOnlineRegions(Args args, Admin admin, ServerName serverName)
         throws IOException {
         long startTimestamp = System.currentTimeMillis();
         Util.printVerboseMessage(args, "getOnlineRegions - start");
-        List<HRegionInfo> onlineRegions = admin.getOnlineRegions(serverName);
+        List<RegionInfo> onlineRegions = admin.getRegions(serverName);
         Util.printVerboseMessage(args, "getOnlineRegions - end", startTimestamp);
         return onlineRegions;
     }
 
-    public static boolean isMetaTable(String tableName) {
-        return tableName.equals(TableName.META_TABLE_NAME.getNameAsString());
+    public static boolean isMetaTable(TableName tableName) {
+        return tableName.equals(TableName.META_TABLE_NAME);
     }
 
-    public static String metaTableName() {
-        return TableName.META_TABLE_NAME.getNameAsString();
+    private static TableName metaTableName() {
+        return TableName.META_TABLE_NAME;
     }
 
-    public static boolean isBalancerRunning(HBaseAdmin admin) throws IOException {
-        boolean balancerRunning = admin.setBalancerRunning(false, false);
+    public static boolean isBalancerRunning(Admin admin) throws IOException {
+        boolean balancerRunning = admin.balancerSwitch(false, false);
         if (balancerRunning) {
-            admin.setBalancerRunning(true, false);
+            admin.balancerSwitch(true, false);
         }
         return balancerRunning;
     }
 
-    public static Map<ServerName, List<HRegionInfo>> initializeRegionMap(HBaseAdmin admin) throws IOException {
-        Map<ServerName, List<HRegionInfo>> regionMap = new TreeMap<>();
-        for (ServerName serverName : admin.getClusterStatus().getServers())
-            regionMap.put(serverName, new ArrayList<HRegionInfo>());
+    public static Map<ServerName, List<RegionInfo>> initializeRegionMap(Admin admin) throws IOException {
+        Map<ServerName, List<RegionInfo>> regionMap = new TreeMap<>();
+        for (ServerName serverName : admin.getRegionServers())
+            regionMap.put(serverName, new ArrayList<>());
         return regionMap;
     }
 
@@ -125,95 +118,104 @@ public class CommandAdapter {
         UserGroupInformation.loginUserFromSubject(subject);
     }
 
-    @SuppressWarnings("UnusedParameters")
-    public static NavigableMap<HRegionInfo, ServerName> regionServerMap(Args args, Configuration conf,
-        HConnection connection, final boolean offlined) throws IOException {
+    @SuppressWarnings("SortedCollectionWithNonComparableKeys")
+    public static NavigableMap<RegionInfo, ServerName> regionServerMap(Args args, Admin admin, final boolean offlined) throws IOException {
         long timestamp = System.currentTimeMillis();
 
-        final NavigableMap<HRegionInfo, ServerName> regionServerMap = new TreeMap<>();
-        MetaScanner.DefaultMetaScannerVisitor visitor = new MetaScanner.DefaultMetaScannerVisitor() {
+        final NavigableMap<RegionInfo, ServerName> regions = new TreeMap<>();
+        MetaTableAccessor.Visitor visitor = new MetaTableAccessor.DefaultVisitorBase() {
             @Override
-            public boolean processRowInternal(Result rowResult) throws IOException {
-                HRegionInfo info = HRegionInfo.getHRegionInfo(rowResult);
-                ServerName serverName = HRegionInfo.getServerName(rowResult);
-
-                if (info.getTable().getNameAsString().startsWith("hbase:")) return true;
-                if (info.isOffline() && !offlined) return true;
-                regionServerMap.put(info, serverName);
-                return true;
-            }
-        };
-        MetaScanner.metaScan(conf, visitor);
-
-        Util.printVerboseMessage(args, "CommandAdapter.regionServerMap", timestamp);
-        return regionServerMap;
-    }
-
-    @SuppressWarnings("UnusedParameters")
-    public static NavigableMap<HRegionInfo, ServerName> regionServerMap(Args args, Configuration conf,
-        HConnection connection, final Set<String> tableNames, final boolean offlined) throws IOException {
-        long timestamp = System.currentTimeMillis();
-
-        final NavigableMap<HRegionInfo, ServerName> regionServerMap = new TreeMap<>();
-
-        if (tableNames.size() == 1) {
-            return regionServerMap(args, conf, connection, tableNames.toArray(new String[1])[0], offlined);
-        } else if (tableNames.size() > 1) {
-            MetaScanner.DefaultMetaScannerVisitor visitor = new MetaScanner.DefaultMetaScannerVisitor() {
-                @Override
-                public boolean processRowInternal(Result rowResult) throws IOException {
-                    HRegionInfo info = HRegionInfo.getHRegionInfo(rowResult);
-                    ServerName serverName = HRegionInfo.getServerName(rowResult);
-
-                    String tableName = info.getTable().getNameAsString();
-                    if (tableName.startsWith("hbase:")) return true;
-                    if (info.isOffline() && !offlined) return true;
-
-                    if (tableNames.contains(tableName))
-                        regionServerMap.put(info, serverName);
-                    return true;
+            public boolean visitInternal(Result result) {
+                RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
+                if (locations == null) return true;
+                for (HRegionLocation loc : locations.getRegionLocations()) {
+                    if (loc != null) {
+                        RegionInfo regionInfo = loc.getRegion();
+                        if (regionInfo.getTable().getNameAsString().startsWith("hbase:")) return true;
+                        if (regionInfo.isOffline() && !offlined) return true;
+                        regions.put(regionInfo, loc.getServerName());
+                    }
                 }
-            };
-            MetaScanner.metaScan(conf, visitor);
-        }
-
-        Util.printVerboseMessage(args, "CommandAdapter.regionServerMap", timestamp);
-        return regionServerMap;
-    }
-
-    private static NavigableMap<HRegionInfo, ServerName> regionServerMap(Args args, Configuration conf,
-        HConnection connection, final String tableNameParam, final boolean offlined) throws IOException {
-        long timestamp = System.currentTimeMillis();
-
-        final NavigableMap<HRegionInfo, ServerName> regions = new TreeMap<>();
-        TableName tableName = TableName.valueOf(tableNameParam);
-        MetaScanner.MetaScannerVisitor visitor = new MetaScanner.TableMetaScannerVisitor(tableName) {
-            @Override
-            public boolean processRowInternal(Result rowResult) throws IOException {
-                HRegionInfo info = HRegionInfo.getHRegionInfo(rowResult);
-                ServerName serverName = HRegionInfo.getServerName(rowResult);
-
-                if (info.isOffline() && !offlined) return true;
-                regions.put(info, serverName);
                 return true;
             }
         };
-        MetaScanner.metaScan(conf, connection, visitor, tableName);
+        MetaTableAccessor.fullScanRegions(admin.getConnection(), visitor);
 
         Util.printVerboseMessage(args, "CommandAdapter.regionServerMap", timestamp);
         return regions;
     }
 
-    public static String getTableName(HRegionInfo hRegionInfo) {
-        return hRegionInfo.getTable().getNameAsString();
-    }
-
-    public static boolean mergeRegions(Args args, HBaseAdmin admin,
-        HRegionInfo regionA, HRegionInfo regionB) throws IOException {
+    @SuppressWarnings("SortedCollectionWithNonComparableKeys")
+    public static NavigableMap<RegionInfo, ServerName> regionServerMap(Args args,
+                                                                       Admin admin, final Set<TableName> tableNames, final boolean offlined) throws IOException {
         long timestamp = System.currentTimeMillis();
 
-        if (HRegionInfo.areAdjacent(regionA, regionB)) {
-            admin.mergeRegions(regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false);
+        final NavigableMap<RegionInfo, ServerName> regions = new TreeMap<>();
+        if (tableNames.size() == 1) {
+            return regionServerMap(args, admin, tableNames.toArray(new TableName[1])[0], offlined);
+        } else if (tableNames.size() > 1) {
+            MetaTableAccessor.Visitor visitor = new MetaTableAccessor.DefaultVisitorBase() {
+                @Override
+                public boolean visitInternal(Result result) {
+                    RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
+                    if (locations == null) return true;
+                    for (HRegionLocation loc : locations.getRegionLocations()) {
+                        if (loc != null) {
+                            RegionInfo regionInfo = loc.getRegion();
+                            TableName table = regionInfo.getTable();
+                            if (table.getNameAsString().startsWith("hbase:")) return true;
+                            if (regionInfo.isOffline() && !offlined) return true;
+                            if (tableNames.contains(table))
+                                regions.put(regionInfo, loc.getServerName());
+                        }
+                    }
+                    return true;
+                }
+            };
+            MetaTableAccessor.fullScanRegions(admin.getConnection(), visitor);
+        }
+
+        Util.printVerboseMessage(args, "CommandAdapter.regionServerMap", timestamp);
+        return regions;
+    }
+
+    @SuppressWarnings("SortedCollectionWithNonComparableKeys")
+    private static NavigableMap<RegionInfo, ServerName> regionServerMap(Args args,
+                                                                        Admin admin, final TableName tableName, final boolean offlined) throws IOException {
+        long timestamp = System.currentTimeMillis();
+
+        final NavigableMap<RegionInfo, ServerName> regions = new TreeMap<>();
+        MetaTableAccessor.Visitor visitor = new MetaTableAccessor.TableVisitorBase(tableName) {
+            @Override
+            public boolean visitInternal(Result result) {
+                RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
+                if (locations == null) return true;
+                for (HRegionLocation loc : locations.getRegionLocations()) {
+                    if (loc != null) {
+                        RegionInfo regionInfo = loc.getRegion();
+                        if (regionInfo.isOffline() && !offlined) return true;
+                        regions.put(regionInfo, loc.getServerName());
+                    }
+                }
+                return true;
+            }
+        };
+        MetaTableAccessor.fullScanRegions(admin.getConnection(), visitor);
+
+        Util.printVerboseMessage(args, "CommandAdapter.regionServerMap", timestamp);
+        return regions;
+    }
+
+    public static TableName getTableName(RegionInfo hRegionInfo) {
+        return hRegionInfo.getTable();
+    }
+
+    public static boolean mergeRegions(Args args, Admin admin,
+        RegionInfo regionA, RegionInfo regionB) throws IOException {
+        long timestamp = System.currentTimeMillis();
+
+        if (RegionInfo.areAdjacent(regionA, regionB)) {
+            admin.mergeRegionsAsync(regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false);
             Util.printVerboseMessage(args, "CommandAdapter.mergeRegions", timestamp);
             return true;
         } else {
@@ -222,12 +224,12 @@ public class CommandAdapter {
         }
     }
 
-    public static List<HRegionInfo> adjacentEmptyRegions(List<HRegionInfo> emptyRegions) {
-        List<HRegionInfo> adjacentEmptyRegions = new ArrayList<>();
+    public static List<RegionInfo> adjacentEmptyRegions(List<RegionInfo> emptyRegions) {
+        List<RegionInfo> adjacentEmptyRegions = new ArrayList<>();
         for (int i = 0; i < emptyRegions.size() - 1; i++) {
-            HRegionInfo regionA = emptyRegions.get(i);
-            HRegionInfo regionB = emptyRegions.get(i + 1);
-            if (HRegionInfo.areAdjacent(regionA, regionB)) {
+            RegionInfo regionA = emptyRegions.get(i);
+            RegionInfo regionB = emptyRegions.get(i + 1);
+            if (RegionInfo.areAdjacent(regionA, regionB)) {
                 adjacentEmptyRegions.add(regionA);
                 adjacentEmptyRegions.add(regionB);
                 i++;
@@ -237,24 +239,24 @@ public class CommandAdapter {
     }
 
     @SuppressWarnings("UnusedParameters")
-    public static boolean isMajorCompacting(Args args, HBaseAdmin admin, String tableName)
-        throws IOException, InterruptedException {
-        CompactionState compactionState = admin.getCompactionState(tableName);
+    public static boolean isMajorCompacting(Args args, Admin admin, TableName tableName)
+        throws IOException {
+        org.apache.hadoop.hbase.client.CompactionState compactionState = admin.getCompactionState(tableName);
         return compactionState == CompactionState.MAJOR_AND_MINOR || compactionState == CompactionState.MAJOR;
     }
 
-    public static boolean isReallyEmptyRegion(HConnection connection,
-        String tableName, HRegionInfo regionInfo) throws IOException {
+    public static boolean isReallyEmptyRegion(Connection connection,
+        String tableName, RegionInfo regionInfo) throws IOException {
         boolean emptyRegion = false;
         // verify really empty region by scanning records
-        try (HTableInterface table = connection.getTable(tableName)) {
-            Scan scan = new Scan(regionInfo.getStartKey(), regionInfo.getEndKey());
+        try (Table table = connection.getTable(TableName.valueOf(tableName))) {
+            Scan scan = new Scan().withStartRow(regionInfo.getStartKey()).withStopRow(regionInfo.getEndKey());
             FilterList filterList = new FilterList();
             filterList.addFilter(new KeyOnlyFilter());
             filterList.addFilter(new FirstKeyOnlyFilter());
             scan.setFilter(filterList);
             scan.setCacheBlocks(false);
-            scan.setSmall(true);
+            scan.setReadType(Scan.ReadType.PREAD);
             scan.setCaching(1);
 
             try (ResultScanner scanner = table.getScanner(scan)) {
@@ -265,35 +267,52 @@ public class CommandAdapter {
     }
 
     @SuppressWarnings("deprecation")
-    public static Map<String, Map<String, String>> versionedRegionMap(HBaseAdmin admin, long timestamp)
+    // tableName, encodeRegionName, regionServer
+    public static Map<TableName, Map<String, String>> versionedRegionMap(Connection connection, long timestamp)
         throws IOException {
-        Map<String, Map<String, String>> regionLocationMap = new HashMap<>();
-        try (HTable metaTable = new HTable(admin.getConfiguration(), metaTableName())) {
+        Map<TableName, Map<String, String>> regionLocationMap = new HashMap<>();
+        try (Table metaTable = connection.getTable(metaTableName())) {
             Scan scan = new Scan();
             scan.setSmall(true);
             scan.setCaching(1000);
             scan.setMaxVersions();
             ResultScanner scanner = metaTable.getScanner(scan);
             for (Result result : scanner) {
+                RegionInfo regionInfo = MetaTableAccessor.getRegionInfo(result);
                 List<Cell> columnCells = result.getColumnCells("info".getBytes(), "server".getBytes());
                 for (Cell cell : columnCells) {
                     if (cell.getTimestamp() <= timestamp) {
-                        String tableName = Bytes.toString(HRegionInfo.getTableName(cell.getRow()));
-                        String encodeRegionName = HRegionInfo.encodeRegionName(cell.getRow());
-                        String regionServer = Bytes.toString(cell.getValue()).replaceAll(":", ",");
+                        TableName tableName = regionInfo.getTable();
+                        String encodeRegionName = regionInfo.getEncodedName();
+                        ServerName serverName = getServerName(result, cell);
+                        if (serverName != null) {
+                            String regionServerStr = serverName.toShortString().replaceAll(":", ",");
 
-                        Map<String, String> innerMap = regionLocationMap.get(tableName);
-                        if (innerMap == null) {
-                            innerMap = new HashMap<>();
-                            regionLocationMap.put(tableName, innerMap);
+                            Map<String, String> innerMap = regionLocationMap.computeIfAbsent(tableName, k -> new HashMap<>());
+                            innerMap.putIfAbsent(encodeRegionName, regionServerStr);
                         }
-                        if (innerMap.get(encodeRegionName) == null)
-                            innerMap.put(encodeRegionName, regionServer);
                     }
                 }
             }
         }
         return regionLocationMap;
+    }
+
+    private static ServerName getServerName(Result result, Cell currentCell) {
+        List<Cell> resultCells = new ArrayList<>();
+
+        resultCells.add(currentCell);
+        long timestamp = currentCell.getTimestamp();
+
+        List<Cell> cells = result.getColumnCells("info".getBytes(), MetaTableAccessor.getStartCodeColumn(0));
+        for (Cell cell : cells) {
+            if (cell.getTimestamp() == timestamp) {
+                resultCells.add(cell);
+                return MetaTableAccessor.getServerName(Result.create(resultCells), 0);
+            }
+        }
+
+        return null;
     }
 
     public static ServerName create(String serverNameStr) {

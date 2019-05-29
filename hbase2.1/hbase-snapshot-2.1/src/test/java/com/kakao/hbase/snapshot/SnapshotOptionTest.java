@@ -18,7 +18,10 @@ package com.kakao.hbase.snapshot;
 
 import com.kakao.hbase.SnapshotArgs;
 import com.kakao.hbase.TestBase;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.junit.Test;
 
 import java.util.List;
@@ -33,26 +36,26 @@ public class SnapshotOptionTest extends TestBase {
 
     @Test
     public void testAllTablesWithKeep() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
         String[] argsParam;
         SnapshotArgs args;
         Snapshot app;
 
         // create tables
-        createAdditionalTable(tableName + "2");
-        createAdditionalTable(tableName + "3");
+        createAdditionalTable(TableName.valueOf(tableName + "2"));
+        createAdditionalTable(TableName.valueOf(tableName + "3"));
 
         // all tables, keep 2
         argsParam = new String[]{"localhost", ".*", "--keep=2", "--test"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         // create snapshot 1
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(3, snapshotDescriptions.size());
-        for (HBaseProtos.SnapshotDescription description : snapshotDescriptions) {
-            assertEquals(1, app.getMaxCount(description.getTable()));
+        for (SnapshotDescription description : snapshotDescriptions) {
+            assertEquals(1, app.getMaxCount(description.getTableName()));
         }
 
         // create snapshot 2
@@ -60,8 +63,8 @@ public class SnapshotOptionTest extends TestBase {
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(6, snapshotDescriptions.size());
-        for (HBaseProtos.SnapshotDescription description : snapshotDescriptions) {
-            assertEquals(2, app.getMaxCount(description.getTable()));
+        for (SnapshotDescription description : snapshotDescriptions) {
+            assertEquals(2, app.getMaxCount(description.getTableName()));
         }
 
         // create snapshot 3
@@ -69,8 +72,8 @@ public class SnapshotOptionTest extends TestBase {
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(6, snapshotDescriptions.size());
-        for (HBaseProtos.SnapshotDescription description : snapshotDescriptions) {
-            assertEquals(3, app.getMaxCount(description.getTable()));
+        for (SnapshotDescription description : snapshotDescriptions) {
+            assertEquals(3, app.getMaxCount(description.getTableName()));
         }
 
         // create snapshot 4
@@ -78,8 +81,8 @@ public class SnapshotOptionTest extends TestBase {
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(6, snapshotDescriptions.size());
-        for (HBaseProtos.SnapshotDescription description : snapshotDescriptions) {
-            assertEquals(3, app.getMaxCount(description.getTable()));
+        for (SnapshotDescription description : snapshotDescriptions) {
+            assertEquals(3, app.getMaxCount(description.getTableName()));
         }
     }
 
@@ -92,7 +95,7 @@ public class SnapshotOptionTest extends TestBase {
         argsParam = new String[]{"localhost", ".*", "--keep=-2"};
         try {
             args = new SnapshotArgs(argsParam);
-            app = new Snapshot(admin, args);
+            app = new Snapshot(connection, args);
             app.run();
             fail();
         } catch (IllegalArgumentException e) {
@@ -103,7 +106,7 @@ public class SnapshotOptionTest extends TestBase {
 
     @Test
     public void testSkipFlush() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
         String[] argsParam;
         SnapshotArgs args;
         Snapshot app;
@@ -111,52 +114,52 @@ public class SnapshotOptionTest extends TestBase {
         // skip flush
         argsParam = new String[]{"localhost", ".*", "--skip-flush=true", "--test"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         // create snapshot
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(1, snapshotDescriptions.size());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.SKIPFLUSH, snapshotDescriptions.get(0).getType());
+        assertEquals(SnapshotType.SKIPFLUSH, snapshotDescriptions.get(0).getType());
 
         // do not skip flush
         argsParam = new String[]{"localhost", ".*", "--test"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         // create snapshot
         Thread.sleep(1000);
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(2, snapshotDescriptions.size());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.FLUSH, snapshotDescriptions.get(1).getType());
+        assertEquals(SnapshotType.FLUSH, snapshotDescriptions.get(1).getType());
     }
 
     @Test
     public void testExclude() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
         String[] argsParam;
         SnapshotArgs args;
         Snapshot app;
 
         // create table
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
 
         // with table list
         argsParam = new String[]{"localhost", ".*", "--exclude=" + tableName, "--test"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         // create snapshot
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(1, snapshotDescriptions.size());
-        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTableName());
     }
 
     @Test
     public void testClearWatchLeak() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
         String[] argsParam;
         SnapshotArgs args;
         Snapshot app;
@@ -164,7 +167,7 @@ public class SnapshotOptionTest extends TestBase {
         // with option
         argsParam = new String[]{"localhost", ".*", "--test", "--clear-watch-leak"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         // create snapshot
         app.run();
@@ -174,97 +177,99 @@ public class SnapshotOptionTest extends TestBase {
 
     @Test
     public void testExcludeRegexList() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
         String[] argsParam;
         SnapshotArgs args;
         Snapshot app;
 
         // create table
-        String tableName2 = createAdditionalTable(tableName + "2");
-        createAdditionalTable(tableName + "21");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
+        createAdditionalTable(TableName.valueOf(tableName + "21"));
 
         // with table list
         argsParam = new String[]{"localhost", ".*", "--exclude=" + tableName2 + ".*", "--test"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         // create snapshot
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(1, snapshotDescriptions.size());
-        assertEquals(tableName, snapshotDescriptions.get(0).getTable());
+        assertEquals(tableName, snapshotDescriptions.get(0).getTableName());
     }
 
     @Test
     public void testOverride() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
         String[] argsParam;
         SnapshotArgs args;
         Snapshot app;
 
         // create table
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
 
         // with table list
         argsParam = new String[]{"localhost", ".*", "--override=" + tableName + "/1/true", "--keep=2", "--test"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         // create snapshot 1
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(2, snapshotDescriptions.size());
-        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.FLUSH, snapshotDescriptions.get(0).getType());
-        assertEquals(tableName, snapshotDescriptions.get(1).getTable());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.SKIPFLUSH, snapshotDescriptions.get(1).getType());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTableName());
+        assertEquals(SnapshotType.FLUSH, snapshotDescriptions.get(0).getType());
+        assertEquals(tableName, snapshotDescriptions.get(1).getTableName());
+        assertEquals(SnapshotType.SKIPFLUSH, snapshotDescriptions.get(1).getType());
 
         // create snapshot 2
         Thread.sleep(1000);
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(3, snapshotDescriptions.size());
-        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.FLUSH, snapshotDescriptions.get(0).getType());
-        assertEquals(tableName2, snapshotDescriptions.get(1).getTable());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.FLUSH, snapshotDescriptions.get(1).getType());
-        assertEquals(tableName, snapshotDescriptions.get(2).getTable());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.SKIPFLUSH, snapshotDescriptions.get(2).getType());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTableName());
+        assertEquals(SnapshotType.FLUSH, snapshotDescriptions.get(0).getType());
+        assertEquals(tableName2, snapshotDescriptions.get(1).getTableName());
+        assertEquals(SnapshotType.FLUSH, snapshotDescriptions.get(1).getType());
+        assertEquals(tableName, snapshotDescriptions.get(2).getTableName());
+        assertEquals(SnapshotType.SKIPFLUSH, snapshotDescriptions.get(2).getType());
     }
 
     @Test
     public void testDeleteSnapshotsForNotExistingTables() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
         String[] argsParam;
         SnapshotArgs args;
         Snapshot app;
 
         // create table
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
 
         // create snapshot for 2 tables and keep 1
         argsParam = new String[]{"localhost", ".*", "--keep=1", "--test", "--delete-snapshot-for-not-existing-table"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         // create snapshot first
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(2, snapshotDescriptions.size());
-        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
-        assertEquals(tableName, snapshotDescriptions.get(1).getTable());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTableName());
+        assertEquals(tableName, snapshotDescriptions.get(1).getTableName());
 
         // create snapshot once more
         Thread.sleep(1000);
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(2, snapshotDescriptions.size());
-        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
-        assertEquals(tableName, snapshotDescriptions.get(1).getTable());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTableName());
+        assertEquals(tableName, snapshotDescriptions.get(1).getTableName());
 
         // create snapshot does not follow hbase-snapshot naming rule
         String shouldNotBeDeleted = tableName2 + "-snapshot-test";
-        admin.snapshot(shouldNotBeDeleted, tableName2);
+        try (Admin admin = connection.getAdmin()) {
+            admin.snapshot(shouldNotBeDeleted, tableName2);
+        }
 
         // drop one table
         dropTable(tableName2);
@@ -272,25 +277,25 @@ public class SnapshotOptionTest extends TestBase {
         // create snapshot for only one table and snapshot for dropped table should not be deleted yet
         argsParam = new String[]{"localhost", ".*", "--keep=1", "--test"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
         Thread.sleep(1000);
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(3, snapshotDescriptions.size());
-        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
-        assertEquals(tableName2, snapshotDescriptions.get(1).getTable());
-        assertEquals(tableName, snapshotDescriptions.get(2).getTable());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTableName());
+        assertEquals(tableName2, snapshotDescriptions.get(1).getTableName());
+        assertEquals(tableName, snapshotDescriptions.get(2).getTableName());
 
         // create snapshot for only one table and delete snapshot for dropped table
         argsParam = new String[]{"localhost", ".*", "--keep=1", "--test", "--delete-snapshot-for-not-existing-table"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
         Thread.sleep(1000);
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(2, snapshotDescriptions.size());
-        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTableName());
         assertEquals(shouldNotBeDeleted, snapshotDescriptions.get(0).getName());
-        assertEquals(tableName, snapshotDescriptions.get(1).getTable());
+        assertEquals(tableName, snapshotDescriptions.get(1).getTableName());
     }
 }

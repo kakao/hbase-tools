@@ -18,7 +18,9 @@ package com.kakao.hbase.snapshot;
 
 import com.kakao.hbase.SnapshotArgs;
 import com.kakao.hbase.TestBase;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.junit.Test;
 
 import java.util.List;
@@ -33,15 +35,15 @@ public class SnapshotTableArgTest extends TestBase {
     @Test
     public void testRegexList() throws Exception {
         // create tables
-        String tableName2 = createAdditionalTable(tableName + "2");
-        String tableName3 = createAdditionalTable(tableName + "3");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName3 = createAdditionalTable(tableName + "3");
 
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
 
         // all tables, keep unlimited
         String[] argsParam = {"localhost", tableName + ".*," + tableName2 + ".*," + tableName3 + ".*"};
         SnapshotArgs args = new SnapshotArgs(argsParam);
-        Snapshot app = new Snapshot(admin, args);
+        Snapshot app = new Snapshot(connection, args);
 
         // create snapshot 1
         app.run();
@@ -69,18 +71,18 @@ public class SnapshotTableArgTest extends TestBase {
 
     @Test
     public void testList() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
         String[] argsParam;
         SnapshotArgs args;
         Snapshot app;
 
         // create table
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
 
         // with table list
         argsParam = new String[]{"localhost", tableName + "," + tableName2};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         // create snapshot
         app.run();
@@ -90,7 +92,7 @@ public class SnapshotTableArgTest extends TestBase {
         // with table list contains blank
         argsParam = new String[]{"localhost", tableName + " , " + tableName2};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         // create snapshot
         Thread.sleep(1000);
@@ -101,38 +103,38 @@ public class SnapshotTableArgTest extends TestBase {
 
     @Test
     public void testDetailList() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
         String[] argsParam;
         SnapshotArgs args;
         Snapshot app;
 
         // create table
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
 
         // with table list
         argsParam = new String[]{"localhost", tableName + "/1/true," + tableName2 + "/2/false"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         // create snapshot 1
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(2, snapshotDescriptions.size());
-        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.FLUSH, snapshotDescriptions.get(0).getType());
-        assertEquals(tableName, snapshotDescriptions.get(1).getTable());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.SKIPFLUSH, snapshotDescriptions.get(1).getType());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTableName());
+        assertEquals(SnapshotType.FLUSH, snapshotDescriptions.get(0).getType());
+        assertEquals(tableName, snapshotDescriptions.get(1).getTableName());
+        assertEquals(SnapshotType.SKIPFLUSH, snapshotDescriptions.get(1).getType());
 
         // create snapshot 2
         Thread.sleep(1000);
         app.run();
         snapshotDescriptions = listSnapshots(tableName + ".*");
         assertEquals(3, snapshotDescriptions.size());
-        assertEquals(tableName2, snapshotDescriptions.get(0).getTable());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.FLUSH, snapshotDescriptions.get(0).getType());
-        assertEquals(tableName2, snapshotDescriptions.get(1).getTable());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.FLUSH, snapshotDescriptions.get(1).getType());
-        assertEquals(tableName, snapshotDescriptions.get(2).getTable());
-        assertEquals(HBaseProtos.SnapshotDescription.Type.SKIPFLUSH, snapshotDescriptions.get(2).getType());
+        assertEquals(tableName2, snapshotDescriptions.get(0).getTableName());
+        assertEquals(SnapshotType.FLUSH, snapshotDescriptions.get(0).getType());
+        assertEquals(tableName2, snapshotDescriptions.get(1).getTableName());
+        assertEquals(SnapshotType.FLUSH, snapshotDescriptions.get(1).getType());
+        assertEquals(tableName, snapshotDescriptions.get(2).getTableName());
+        assertEquals(SnapshotType.SKIPFLUSH, snapshotDescriptions.get(2).getType());
     }
 }

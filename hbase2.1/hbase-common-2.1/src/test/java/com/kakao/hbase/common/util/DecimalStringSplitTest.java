@@ -25,7 +25,7 @@ import static org.junit.Assert.fail;
 
 public class DecimalStringSplitTest {
     @Test
-    public void testSplit10_10() throws Exception {
+    public void testSplit10_10() {
         int numRegions = 10;
         int cardinality = 10;
 
@@ -39,7 +39,7 @@ public class DecimalStringSplitTest {
     }
 
     @Test
-    public void testSplit3_10() throws Exception {
+    public void testSplit3_10() {
         int numRegions = 3;
         int cardinality = 10;
 
@@ -54,7 +54,7 @@ public class DecimalStringSplitTest {
 
 
     @Test
-    public void testSplit300_1000() throws Exception {
+    public void testSplit300_1000() {
         int numRegions = 300;
         int cardinality = 1000;
 
@@ -70,7 +70,7 @@ public class DecimalStringSplitTest {
     }
 
     @Test
-    public void testDigits() throws Exception {
+    public void testDigits() {
         assertEquals(1, DecimalStringSplit.digits(0));
         assertEquals(1, DecimalStringSplit.digits(1));
         assertEquals(1, DecimalStringSplit.digits(9));
@@ -82,7 +82,7 @@ public class DecimalStringSplitTest {
     }
 
     @Test
-    public void testSplitPoint() throws Exception {
+    public void testSplitPoint() {
         assertEquals(1, DecimalStringSplit.splitPoint(10, 10, 0));
         assertEquals(9, DecimalStringSplit.splitPoint(10, 10, 8));
         try {

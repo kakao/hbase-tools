@@ -29,7 +29,7 @@ class Length {
         this.total = 0;
     }
 
-    public static Length getLength(Map<String, Length> lengthMap, String key) {
+    static Length getLength(Map<String, Length> lengthMap, String key) {
         Length length = lengthMap.get(key);
         if (length == null) {
             length = new Length();
@@ -46,19 +46,19 @@ class Length {
         this.value = value;
     }
 
-    public int getDiff() {
+    int getDiff() {
         return diff;
     }
 
-    public void setDiff(int diff) {
+    void setDiff(int diff) {
         this.diff = diff;
     }
 
-    public int getTotal() {
+    int getTotal() {
         return total;
     }
 
-    public void setTotal(int total) {
+    void setTotal(int total) {
         this.total = total;
     }
 }

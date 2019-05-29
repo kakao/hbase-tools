@@ -17,29 +17,29 @@
 package com.kakao.hbase.manager.command;
 
 import com.kakao.hbase.TestBase;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.Table;
 
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class MergeTestBase extends TestBase {
-    public MergeTestBase(Class c) {
+class MergeTestBase extends TestBase {
+    MergeTestBase(Class c) {
         super(c);
     }
 
-    protected void makeTestData1() throws Exception {
-        List<HRegionInfo> regionInfoList;// split table to 3 regions
+    void makeTestData1() throws Exception {
+        List<RegionInfo> regionInfoList;// split table to 3 regions
         splitTable("a".getBytes());
         splitTable("b".getBytes());
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(3, regionInfoList.size());
     }
 
-    protected void makeTestData2() throws Exception {
-        List<HRegionInfo> regionInfoList;// split table to 4 regions
+    void makeTestData2() throws Exception {
+        List<RegionInfo> regionInfoList;// split table to 4 regions
         splitTable("a".getBytes());
         splitTable("b".getBytes());
         splitTable("c".getBytes());
@@ -47,15 +47,15 @@ public class MergeTestBase extends TestBase {
         assertEquals(4, regionInfoList.size());
 
         // put data to the first region
-        try (HTableInterface table = getTable(tableName)) {
+        try (Table table = getTable(tableName)) {
             Put put = new Put("1".getBytes());
-            put.add(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
+            put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
             table.put(put);
         }
     }
 
-    protected void makeTestData3() throws Exception {
-        List<HRegionInfo> regionInfoList;// split table to 4 regions
+    void makeTestData3() throws Exception {
+        List<RegionInfo> regionInfoList;// split table to 4 regions
         splitTable("a".getBytes());
         splitTable("b".getBytes());
         splitTable("c".getBytes());
@@ -63,15 +63,15 @@ public class MergeTestBase extends TestBase {
         assertEquals(4, regionInfoList.size());
 
         // put data to the second region
-        try (HTableInterface table = getTable(tableName)) {
+        try (Table table = getTable(tableName)) {
             Put put = new Put("b".getBytes());
-            put.add(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
+            put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
             table.put(put);
         }
     }
 
-    protected void makeTestData4() throws Exception {
-        List<HRegionInfo> regionInfoList;// split table to 4 regions
+    void makeTestData4() throws Exception {
+        List<RegionInfo> regionInfoList;// split table to 4 regions
         splitTable("a".getBytes());
         splitTable("b".getBytes());
         splitTable("c".getBytes());
@@ -79,15 +79,15 @@ public class MergeTestBase extends TestBase {
         assertEquals(4, regionInfoList.size());
 
         // put data to the last region
-        try (HTableInterface table = getTable(tableName)) {
+        try (Table table = getTable(tableName)) {
             Put put = new Put("c".getBytes());
-            put.add(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
+            put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
             table.put(put);
         }
     }
 
-    protected void makeTestData5() throws Exception {
-        List<HRegionInfo> regionInfoList;// split table to 5 regions
+    void makeTestData5() throws Exception {
+        List<RegionInfo> regionInfoList;// split table to 5 regions
         splitTable("a".getBytes());
         splitTable("b".getBytes());
         splitTable("c".getBytes());
@@ -96,19 +96,19 @@ public class MergeTestBase extends TestBase {
         assertEquals(5, regionInfoList.size());
 
         // put data to the second and forth region
-        try (HTableInterface table = getTable(tableName)) {
+        try (Table table = getTable(tableName)) {
             Put put;
             put = new Put("a".getBytes());
-            put.add(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
+            put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
             table.put(put);
             put = new Put("c".getBytes());
-            put.add(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
+            put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), "data".getBytes());
             table.put(put);
         }
     }
 
-    protected void makeTestData6() throws Exception {
-        List<HRegionInfo> regionInfoList;// split table
+    void makeTestData6() throws Exception {
+        List<RegionInfo> regionInfoList;// split table
         splitTable("a".getBytes());
         splitTable("b".getBytes());
         splitTable("c".getBytes());

@@ -21,7 +21,7 @@ import org.junit.Test;
 
 public class LoadEntryTest {
     @Test
-    public void testDataLocalityToString() throws Exception {
+    public void testDataLocalityToString() {
         Assert.assertEquals("100.00%", LoadEntry.DataLocality.toString(1.00001));
         Assert.assertEquals("-0.00%", LoadEntry.DataLocality.toString(-0.000001));
         Assert.assertEquals("-0.01%", LoadEntry.DataLocality.toString(-0.00005));
@@ -30,14 +30,14 @@ public class LoadEntryTest {
     }
 
     @Test
-    public void testDataLocalityToRateString() throws Exception {
+    public void testDataLocalityToRateString() {
         Assert.assertEquals("5.00%/s", LoadEntry.DataLocality.toRateString(0.05, 1000));
         Assert.assertEquals("2.50%/s", LoadEntry.DataLocality.toRateString(0.05, 2000));
         Assert.assertEquals("0.03%/s", LoadEntry.DataLocality.toRateString(0.0005, 2000));
     }
 
     @Test
-    public void testCompareAndCompareTo() throws Exception {
+    public void testCompareAndCompareTo() {
         RatioNumber number1 = new RatioNumber(100, 0.1);
         RatioNumber number2 = new RatioNumber(100, 0.2);
         RatioNumber number3 = new RatioNumber(100, 0.1);
@@ -55,7 +55,7 @@ public class LoadEntryTest {
     }
 
     @Test
-    public void testCompareTo() throws Exception {
+    public void testCompareTo() {
         RatioNumber number1 = new RatioNumber(100, 0.1);
         RatioNumber number2 = new RatioNumber(100, 0.2);
         RatioNumber number3 = new RatioNumber(100, 0.1);

@@ -19,11 +19,10 @@ package com.kakao.hbase.snapshot;
 import com.kakao.hbase.SnapshotArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
-import com.kakao.hbase.common.util.AlertSender;
 import com.kakao.hbase.common.util.AlertSenderTest;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.junit.Assert;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -40,16 +39,16 @@ public class SnapshotTest extends TestBase {
 
     @Test
     public void testAllTables() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
 
         // create tables
-        createAdditionalTable(tableName + "2");
-        createAdditionalTable(tableName + "3");
+        createAdditionalTable(TableName.valueOf(tableName + "2"));
+        createAdditionalTable(TableName.valueOf(tableName + "3"));
 
         // all tables, keep unlimited
         String[] argsParam = {"localhost", ".*", "--test"};
         SnapshotArgs args = new SnapshotArgs(argsParam);
-        Snapshot app = new Snapshot(admin, args);
+        Snapshot app = new Snapshot(connection, args);
 
         // create snapshot 1
         app.run();
@@ -77,14 +76,14 @@ public class SnapshotTest extends TestBase {
 
     @Test
     public void testDuplicatedName() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
         String[] argsParam;
         SnapshotArgs args;
         Snapshot app;
 
         argsParam = new String[]{"localhost", ".*", "--test"};
         args = new SnapshotArgs(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
 
         String snapshotName = app.getPrefix(tableName) + "test";
         // create snapshot first
@@ -106,9 +105,9 @@ public class SnapshotTest extends TestBase {
             }
 
             @Override
-            public Set<String> tableSet(HBaseAdmin admin) throws IOException {
-                Set<String> set = new TreeSet<>();
-                set.add("INVALID_TABLE");
+            public Set<TableName> tableSet(Admin admin) {
+                Set<TableName> set = new TreeSet<>();
+                set.add(TableName.valueOf("INVALID_TABLE"));
                 return set;
             }
         }
@@ -120,31 +119,33 @@ public class SnapshotTest extends TestBase {
         argsParam = new String[]{"localhost", ".*",
                 "--" + Args.OPTION_AFTER_FAILURE + "=" + AlertSenderTest.ALERT_SCRIPT};
         args = new SnapshotArgsTest(argsParam);
-        app = new Snapshot(admin, args);
+        app = new Snapshot(connection, args);
         app.run();
     }
 
     @Test
     public void testNamespace() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
         String[] argsParam;
         SnapshotArgs args;
         Snapshot app;
-        String fullTableName = null;
+        TableName fullTableName = null;
 
         try {
             // create table with namespace
-            fullTableName = TEST_NAMESPACE + ":" + TestBase.tableName;
+            fullTableName = TableName.valueOf(TEST_NAMESPACE + ":" + TestBase.tableName);
             createTable(fullTableName);
 
             // table with namespace
-            argsParam = new String[]{"localhost", fullTableName};
+            argsParam = new String[]{"localhost", fullTableName.getNameAsString()};
             args = new SnapshotArgs(argsParam);
-            app = new Snapshot(admin, args);
+            app = new Snapshot(connection, args);
 
             // create snapshot
             app.run();
-            snapshotDescriptions = admin.listSnapshots(app.getPrefix(fullTableName) + ".*");
+            try (Admin admin = connection.getAdmin()) {
+                snapshotDescriptions = admin.listSnapshots(app.getPrefix(fullTableName) + ".*");
+            }
             assertEquals(1, snapshotDescriptions.size());
         } finally {
             dropTable(fullTableName);

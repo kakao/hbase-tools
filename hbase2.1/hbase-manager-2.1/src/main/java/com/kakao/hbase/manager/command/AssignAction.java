@@ -23,12 +23,12 @@ import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.ipc.RemoteException;
 
 import java.io.IOException;
@@ -41,7 +41,7 @@ import java.util.*;
 enum AssignAction {
     EMPTY {
         @Override
-        public void run(HBaseAdmin admin, Args args) throws IOException, InterruptedException {
+        public void run(Admin admin, Args args) throws IOException, InterruptedException {
             final boolean balancerRunning = isBalancerRunning(admin, args);
 
             try {
@@ -59,7 +59,7 @@ enum AssignAction {
             }
         }
 
-        private void empty(HBaseAdmin admin, Args args, List<ServerName> targetList,
+        private void empty(Admin admin, Args args, List<ServerName> targetList,
             String sourceRsRegex, String expFileName) throws IOException, InterruptedException {
             List<ServerName> sourceServerNames = removeSource(sourceRsRegex, targetList);
 
@@ -76,7 +76,7 @@ enum AssignAction {
                 }
 
                 for (ServerName sourceServerName : sourceServerNames) {
-                    List<Triple<String, String, String>> plan = plan(args, admin, targetList, sourceServerName);
+                    List<Triple<TableName, String, String>> plan = plan(args, admin, targetList, sourceServerName);
 
                     if (!args.isForceProceed()) {
                         emptyInternal(admin, targetList, sourceServerName, plan, true, args);
@@ -102,8 +102,8 @@ enum AssignAction {
             System.out.println(sourceServerNames.size() + " RSs will be emptied.");
         }
 
-        private void emptyInternal(HBaseAdmin admin, List<ServerName> targetList, ServerName sourceServerName
-            , List<Triple<String, String, String>> plan, boolean printPlanOnly, Args args)
+        private void emptyInternal(Admin admin, List<ServerName> targetList, ServerName sourceServerName
+            , List<Triple<TableName, String, String>> plan, boolean printPlanOnly, Args args)
             throws IOException, InterruptedException {
             long startTimeStamp = System.currentTimeMillis();
             boolean asynchronous = args.has(Args.OPTION_MOVE_ASYNC);
@@ -119,7 +119,7 @@ enum AssignAction {
                     for (i = 0; i < Constant.TRY_MAX; i++) {
                         Util.printVerboseMessage(args, "emptyInternal.move.retry - iteration - "
                             + i + " - plan - start");
-                        List<Triple<String, String, String>> planRemained =
+                        List<Triple<TableName, String, String>> planRemained =
                             plan(args, admin, targetList, sourceServerName);
                         Util.printVerboseMessage(args, "emptyInternal.move.retry - iteration - "
                             + i + " - plan - end", startTimeStamp);
@@ -134,13 +134,13 @@ enum AssignAction {
 
                         if (asynchronous && i > 1) {
                             // assign region again
-                            for (Triple<String, String, String> triple : planRemained) {
+                            for (Triple<TableName, String, String> triple : planRemained) {
                                 try {
                                     Util.printVerboseMessage(args, "emptyInternal.move.retry - iteration - "
-                                        + i + " - assign - start");
+                                            + i + " - assign - start");
                                     admin.assign(triple.getRight().getBytes());
                                     Util.printVerboseMessage(args, "emptyInternal.move.retry - iteration - "
-                                        + i + " - assign - end", startTimeStamp);
+                                            + i + " - assign - end", startTimeStamp);
                                 } catch (UnknownRegionException ignore) {
                                 } catch (RemoteException e) {
                                     if (!e.getMessage().contains("UnknownRegionException"))
@@ -157,12 +157,12 @@ enum AssignAction {
             }
         }
 
-        private void move(Args args, HBaseAdmin admin, ServerName sourceServerName,
-            List<Triple<String, String, String>> plan,
+        private void move(Args args, Admin admin, ServerName sourceServerName,
+            List<Triple<TableName, String, String>> plan,
             boolean printPlanOnly, boolean asynchronous) throws IOException, InterruptedException {
             int progress = 1;
-            for (Triple<String, String, String> planEntry : plan) {
-                String targetTableName = planEntry.getLeft();
+            for (Triple<TableName, String, String> planEntry : plan) {
+                TableName targetTableName = planEntry.getLeft();
                 String targetServerName = planEntry.getMiddle();
                 String encodedRegionName = planEntry.getRight();
                 System.out.print(progress++ + "/" + plan.size() + " - move " + encodedRegionName
@@ -178,25 +178,25 @@ enum AssignAction {
             }
         }
 
-        private List<Triple<String, String, String>> plan(Args args, HBaseAdmin admin, List<ServerName> targetList,
+        private List<Triple<TableName, String, String>> plan(Args args, Admin admin, List<ServerName> targetList,
             ServerName sourceServerName)
-            throws IOException, InterruptedException {
+            throws IOException {
             long startTimestamp = System.currentTimeMillis();
-            List<Triple<String, String, String>> plan = new ArrayList<>();
+            List<Triple<TableName, String, String>> plan = new ArrayList<>();
 
             Util.printVerboseMessage(args, "plan.getOnlineRegions - start");
-            List<HRegionInfo> onlineRegions = CommandAdapter.getOnlineRegions(args, admin, sourceServerName);
+            List<RegionInfo> onlineRegions = CommandAdapter.getOnlineRegions(args, admin, sourceServerName);
             Util.printVerboseMessage(args, "plan.getOnlineRegions - end", startTimestamp);
             List<ServerName> targetListToMove = new ArrayList<>();
             if (onlineRegions.size() > 0) {
-                for (HRegionInfo hRegionInfo : onlineRegions) {
+                for (RegionInfo hRegionInfo : onlineRegions) {
                     if (targetListToMove.size() == 0)
                         targetListToMove = new ArrayList<>(targetList);
 
                     ServerName targetServerName =
                         targetListToMove.remove(new Random().nextInt(targetListToMove.size()));
                     String encodedRegionName = hRegionInfo.getEncodedName();
-                    plan.add(new ImmutableTriple<>(CommandAdapter.getTableName(hRegionInfo),
+                    plan.add(new ImmutableTriple<TableName, String, String>(CommandAdapter.getTableName(hRegionInfo),
                         targetServerName.getServerName(), encodedRegionName));
                 }
             }
@@ -232,7 +232,7 @@ enum AssignAction {
         }
     }, BALANCER {
         @Override
-        public void run(HBaseAdmin admin, Args args) throws IOException {
+        public void run(Admin admin, Args args) throws IOException {
             String statusStr = ((String) args.getOptionSet().nonOptionArguments().get(2)).toLowerCase();
             final boolean targetStatus;
             switch (statusStr) {
@@ -251,7 +251,7 @@ enum AssignAction {
         }
     }, EXPORT {
         @Override
-        public void run(HBaseAdmin admin, Args args) throws IOException, InterruptedException {
+        public void run(Admin admin, Args args) throws IOException {
             final boolean balancerRunning = isBalancerRunning(admin, args);
 
             try {
@@ -268,7 +268,7 @@ enum AssignAction {
         }
     }, IMPORT {
         @Override
-        public void run(HBaseAdmin admin, Args args) throws IOException, InterruptedException {
+        public void run(Admin admin, Args args) throws IOException, InterruptedException {
             final boolean balancerRunning = isBalancerRunning(admin, args);
 
             try {
@@ -284,12 +284,12 @@ enum AssignAction {
             }
         }
 
-        private void importInternal(HBaseAdmin admin, String fileName, String regionServerRegex, Args args)
+        private void importInternal(Admin admin, String fileName, String regionServerRegex, Args args)
             throws IOException, InterruptedException {
             Map<String, ServerName> serverNameMap = Common.serverNameMap(admin);
 
             Set<String> importingServers = new HashSet<>();
-            List<Triple<String, String, String>> assignmentList = new ArrayList<>();
+            List<Triple<TableName, String, String>> assignmentList = new ArrayList<>();
             for (String assignment : Files.readAllLines(Paths.get(fileName), Constant.CHARSET)) {
                 String[] split = assignment.split(DELIMITER);
                 String serverNameOrg = split[0];
@@ -300,7 +300,7 @@ enum AssignAction {
                 }
                 String serverNameStr = serverName.getServerName();
                 String encodedRegionName = split[1];
-                String tableName = split[2];
+                TableName tableName = TableName.valueOf(split[2]);
 
                 if (!(serverNameStr == null || regionServerRegex != null
                     && !serverNameStr.matches(removeTimestamp(regionServerRegex)))) {
@@ -322,13 +322,13 @@ enum AssignAction {
             retryImport(admin, args, importingServers, assignmentList);
         }
 
-        private void retryImport(HBaseAdmin admin, Args args, Set<String> importingServers
-            , List<Triple<String, String, String>> assignmentList) throws IOException, InterruptedException {
+        private void retryImport(Admin admin, Args args, Set<String> importingServers
+            , List<Triple<TableName, String, String>> assignmentList) throws IOException, InterruptedException {
             if (!args.has(Args.OPTION_MOVE_ASYNC)) return;
             long startTimestamp = System.currentTimeMillis();
 
             int i;
-            List<Triple<String, String, String>> assignmentListRemaining = null;
+            List<Triple<TableName, String, String>> assignmentListRemaining = null;
             for (i = 0; i < Constant.TRY_MAX; i++) {
                 assignmentListRemaining = regionsNotImportedYet(args, admin, importingServers, assignmentList);
                 if (assignmentListRemaining.size() == 0)
@@ -339,12 +339,12 @@ enum AssignAction {
 
                 Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
                 if (i > 1) {
-                    for (Triple<String, String, String> triple : assignmentListRemaining) {
+                    for (Triple<TableName, String, String> triple : assignmentListRemaining) {
                         Util.printVerboseMessage(args, "retryImport - iteration - " +
-                            i + " - assign - start");
+                                i + " - assign - start");
                         admin.assign(triple.getRight().getBytes());
                         Util.printVerboseMessage(args, "retryImport - iteration - " +
-                            i + " - assign - end", startTimestamp);
+                                i + " - assign - end", startTimestamp);
                     }
                 }
                 Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
@@ -357,22 +357,21 @@ enum AssignAction {
             }
         }
 
-        @SuppressWarnings("deprecation")
-        private List<Triple<String, String, String>> regionsNotImportedYet(
-            Args args, HBaseAdmin admin, Set<String> importingServers,
-            List<Triple<String, String, String>> assignmentList) throws IOException, InterruptedException {
-            List<Triple<String, String, String>> assignmentListRemaining = new ArrayList<>();
+        private List<Triple<TableName, String, String>> regionsNotImportedYet(
+            Args args, Admin admin, Set<String> importingServers,
+            List<Triple<TableName, String, String>> assignmentList) throws IOException, InterruptedException {
+            List<Triple<TableName, String, String>> assignmentListRemaining = new ArrayList<>();
             Set<String> onlineRegions = new HashSet<>();
             for (String server : importingServers) {
-                for (HRegionInfo hRegionInfo :
+                for (RegionInfo hRegionInfo :
                     CommandAdapter.getOnlineRegions(args, admin, CommandAdapter.create(server))) {
                     onlineRegions.add(hRegionInfo.getEncodedName());
                 }
             }
 
-            Map<String, Boolean> tableEnabledMap = createTableEnabledMap(args, admin, assignmentList);
+            Map<TableName, Boolean> tableEnabledMap = createTableEnabledMap(args, admin, assignmentList);
 
-            for (Triple<String, String, String> triple : assignmentList) {
+            for (Triple<TableName, String, String> triple : assignmentList) {
                 if (tableEnabledMap.get(triple.getLeft())) {
                     if (onlineRegions.contains(triple.getRight())) {
                         if (!onlineRegions.contains(triple.getRight()))
@@ -384,24 +383,24 @@ enum AssignAction {
         }
 
         // for better performance
-        private Map<String, Boolean> createTableEnabledMap(Args args, HBaseAdmin admin,
-            List<Triple<String, String, String>> assignmentList) throws InterruptedException, IOException {
-            Set<String> tables = new HashSet<>();
-            for (Triple<String, String, String> triple : assignmentList) {
+        private Map<TableName, Boolean> createTableEnabledMap(Args args, Admin admin,
+            List<Triple<TableName, String, String>> assignmentList) throws InterruptedException, IOException {
+            Set<TableName> tables = new HashSet<>();
+            for (Triple<TableName, String, String> triple : assignmentList) {
                 tables.add(triple.getLeft());
             }
-            Map<String, Boolean> tableEnabledMap = new HashMap<>();
-            for (String table : tables) {
+            Map<TableName, Boolean> tableEnabledMap = new HashMap<>();
+            for (TableName table : tables) {
                 tableEnabledMap.put(table, Common.isTableEnabled(args, admin, table));
             }
             return tableEnabledMap;
         }
 
-        private void move(HBaseAdmin admin, Args args, List<Triple<String, String, String>> assignmentList)
+        private void move(Admin admin, Args args, List<Triple<TableName, String, String>> assignmentList)
             throws IOException, InterruptedException {
             int progress = 1;
-            for (Triple<String, String, String> assignment : assignmentList) {
-                String tableName = assignment.getLeft();
+            for (Triple<TableName, String, String> assignment : assignmentList) {
+                TableName tableName = assignment.getLeft();
                 String serverName = assignment.getMiddle();
                 String encodedRegionName = assignment.getRight();
 
@@ -421,9 +420,8 @@ enum AssignAction {
             }
         }
     }, RESTORE {
-        @SuppressWarnings("deprecation")
         @Override
-        public void run(HBaseAdmin admin, Args args) throws IOException, InterruptedException {
+        public void run(Admin admin, Args args) throws IOException, InterruptedException {
             final boolean balancerRunning = isBalancerRunning(admin, args);
             processedCount = 0;
 
@@ -435,22 +433,21 @@ enum AssignAction {
                 long timestamp = Util.parseTimestamp(arguments.get(4).toString());
 
                 // key: tableName, value: key: encodedRegionName, value: serverNameKey
-                Map<String, Map<String, String>> versionedRegionMap
-                    = CommandAdapter.versionedRegionMap(admin, timestamp);
+                Map<TableName, Map<String, String>> versionedRegionMap
+                    = CommandAdapter.versionedRegionMap(admin.getConnection(), timestamp);
                 Map<String, ServerName> serverNameMap = Common.serverNameMap(admin);
                 switch (level.toLowerCase()) {
                     case "table":
-                        for (String tableName : Args.tables(args, admin, regex)) {
+                        for (TableName tableName : Args.tables(args, admin, regex)) {
                             progress = 1;
                             System.out.println("Restoring the assignments of table - " + tableName);
 
                             // encodedRegionName, tableName, serverNameCurrent
-                            List<Triple<String, String, String>> regionsToMove = new ArrayList<>();
+                            List<Triple<String, TableName, ServerName>> regionsToMove = new ArrayList<>();
 
-                            NavigableMap<HRegionInfo, ServerName> regionLocations = getRegionLocations(tableName, admin);
-                            for (Map.Entry<HRegionInfo, ServerName> regionLocation : regionLocations.entrySet()) {
-                                regionsToMove.add(Triple.of(regionLocation.getKey().getEncodedName(), tableName,
-                                    regionLocation.getValue().getServerName()));
+                            for (HRegionLocation regionLocation : admin.getConnection().getRegionLocator(tableName).getAllRegionLocations()) {
+                                regionsToMove.add(Triple.of(regionLocation.getRegion().getEncodedName(), tableName,
+                                    regionLocation.getServerName()));
                             }
                             regionsToMove = filterRegionsToMove(serverNameMap, versionedRegionMap, regionsToMove);
 
@@ -472,21 +469,23 @@ enum AssignAction {
                                 + serverName.getServerName());
 
                             // encodedRegionName, tableName, serverNameCurrent
-                            List<Triple<String, String, String>> regionsToMove = new ArrayList<>();
+                            List<Triple<String, TableName, ServerName>> regionsToMove = new ArrayList<>();
 
                             // find regions in this RS currently
-                            for (HRegionInfo hRegionInfo : CommandAdapter.getOnlineRegions(args, admin, serverName))
+                            for (RegionInfo hRegionInfo : CommandAdapter.getOnlineRegions(args, admin, serverName))
                                 regionsToMove.add(Triple.of(hRegionInfo.getEncodedName(),
-                                    Bytes.toString(hRegionInfo.getTableName()),
-                                    serverName.getServerName()));
+                                    hRegionInfo.getTable(),
+                                    serverName));
                             regionsToMove = filterRegionsToMove(serverNameMap, versionedRegionMap, regionsToMove);
 
                             // find regions in this RS at that timestamp
-                            for (Map.Entry<String, Map<String, String>> outerEntry : versionedRegionMap.entrySet()) {
+                            for (Map.Entry<TableName, Map<String, String>> outerEntry : versionedRegionMap.entrySet()) {
                                 for (Map.Entry<String, String> entry : outerEntry.getValue().entrySet()) {
-                                    if (serverName.getServerName().startsWith(entry.getValue()))
-                                        regionsToMove.add(Triple.of(entry.getKey(), outerEntry.getKey(),
-                                            serverName.getServerName()));
+                                    if (serverName.getServerName().startsWith(entry.getValue())) {
+                                        TableName tableName = outerEntry.getKey();
+                                        String encodedRegionName = entry.getKey();
+                                        regionsToMove.add(Triple.of(encodedRegionName, tableName, serverName));
+                                    }
                                 }
                             }
 
@@ -509,13 +508,13 @@ enum AssignAction {
             }
         }
 
-        private void moveRegions(HBaseAdmin admin, Args args, Map<String, Map<String, String>> versionedRegionMap,
-            Map<String, ServerName> serverNameMap, List<Triple<String, String, String>> regionsToMove)
+        private void moveRegions(Admin admin, Args args, Map<TableName, Map<String, String>> versionedRegionMap,
+            Map<String, ServerName> serverNameMap, List<Triple<String, TableName, ServerName>> regionsToMove)
             throws IOException, InterruptedException {
-            for (Triple<String, String, String> triple : regionsToMove) {
+            for (Triple<String, TableName, ServerName> triple : regionsToMove) {
                 String encodedRegionName = triple.getLeft();
-                String tableName = triple.getMiddle();
-                String serverNameCur = triple.getRight();
+                TableName tableName = triple.getMiddle();
+                ServerName serverNameCur = triple.getRight();
                 Map<String, String> regionMap = versionedRegionMap.get(tableName);
                 moveRegion(admin, args, serverNameMap, tableName,
                     regionMap, regionsToMove.size(), encodedRegionName, serverNameCur);
@@ -524,9 +523,9 @@ enum AssignAction {
             sleep(args, regionsToMove.size());
         }
 
-        private void moveRegion(HBaseAdmin admin, Args args, Map<String, ServerName> serverNameMap,
-            String tableName, Map<String, String> regionMap, int maxProgress, String encodedRegionName,
-            String serverNameCur)
+        private void moveRegion(Admin admin, Args args, Map<String, ServerName> serverNameMap,
+            TableName tableName, Map<String, String> regionMap, int maxProgress, String encodedRegionName,
+            ServerName serverNameCur)
             throws IOException, InterruptedException {
             System.out.print(progress++ + "/" + maxProgress + " - move " + encodedRegionName
                 + " of " + tableName + " from " + serverNameCur);
@@ -552,22 +551,21 @@ enum AssignAction {
         }
 
         // encodedRegionName, tableName, serverNameCurrent
-        private List<Triple<String, String, String>> filterRegionsToMove(Map<String, ServerName> serverNameMap,
-            Map<String, Map<String, String>> versionedRegionMap,
-            List<Triple<String, String, String>> regionsToMove)
-            throws IOException, InterruptedException {
-            List<Triple<String, String, String>> result = new ArrayList<>();
+        private List<Triple<String, TableName, ServerName>> filterRegionsToMove(Map<String, ServerName> serverNameMap,
+            Map<TableName, Map<String, String>> versionedRegionMap,
+            List<Triple<String, TableName, ServerName>> regionsToMove) {
+            List<Triple<String, TableName, ServerName>> result = new ArrayList<>();
 
-            for (Triple<String, String, String> triple : regionsToMove) {
+            for (Triple<String, TableName, ServerName> triple : regionsToMove) {
                 String encodedRegionName = triple.getLeft();
-                String tableName = triple.getMiddle();
-                String serverNameCur = triple.getRight();
+                TableName tableName = triple.getMiddle();
+                ServerName serverNameCur = triple.getRight();
 
                 Map<String, String> regionMap = versionedRegionMap.get(tableName);
                 if (regionMap != null) {
                     String serverNameKey = regionMap.get(encodedRegionName);
                     if (serverNameKey != null) {
-                        String serverNamePrev = serverNameMap.get(serverNameKey).getServerName();
+                        ServerName serverNamePrev = serverNameMap.get(serverNameKey);
                         if (serverNamePrev != null) {
                             if (!serverNameCur.equals(serverNamePrev))
                                 result.add(Triple.of(encodedRegionName, tableName, serverNameCur));
@@ -577,13 +575,6 @@ enum AssignAction {
             }
 
             return result;
-        }
-
-        private NavigableMap<HRegionInfo, ServerName> getRegionLocations(String tableName, HBaseAdmin admin)
-            throws IOException {
-            try (HTable table = new HTable(admin.getConfiguration(), tableName)) {
-                return table.getRegionLocations();
-            }
         }
     };
 
@@ -602,8 +593,8 @@ enum AssignAction {
     private static int processedCount = 0;
     private static int progress = 1;
 
-    private static void setBalancerRunning(HBaseAdmin admin, boolean targetStatus) throws IOException {
-        boolean balancerRunning = admin.setBalancerRunning(targetStatus, true);
+    private static void setBalancerRunning(Admin admin, boolean targetStatus) throws IOException {
+        boolean balancerRunning = admin.balancerSwitch(targetStatus, true);
         if (targetStatus) {
             if (balancerRunning) {
                 System.out.println("Automatic balancer is already turned on.");
@@ -624,7 +615,7 @@ enum AssignAction {
         return processedCount;
     }
 
-    private static boolean isBalancerRunning(HBaseAdmin admin, Args args) throws IOException {
+    private static boolean isBalancerRunning(Admin admin, Args args) throws IOException {
         final boolean balancerRunning = CommandAdapter.isBalancerRunning(admin);
         final boolean balancerOffOption = args.has(Args.OPTION_TURN_BALANCER_OFF);
         if (balancerRunning) {
@@ -637,7 +628,7 @@ enum AssignAction {
         return balancerRunning;
     }
 
-    private static void export(Args args, HBaseAdmin admin, String fileName, String regionServerRegex)
+    private static void export(Args args, Admin admin, String fileName, String regionServerRegex)
         throws IOException {
         processedCount = 0;
 
@@ -645,7 +636,7 @@ enum AssignAction {
             List<ServerName> serverNameList = Common.regionServers(admin);
             for (ServerName serverName : serverNameList) {
                 if (regionServerRegex == null || serverName.getServerName().matches(regionServerRegex)) {
-                    for (HRegionInfo hRegionInfo : CommandAdapter.getOnlineRegions(args, admin, serverName)) {
+                    for (RegionInfo hRegionInfo : CommandAdapter.getOnlineRegions(args, admin, serverName)) {
                         String assignment = serverName.getServerName() + DELIMITER + hRegionInfo.getEncodedName()
                             + DELIMITER + CommandAdapter.getTableName(hRegionInfo);
                         System.out.println(assignment);
@@ -657,5 +648,5 @@ enum AssignAction {
         }
     }
 
-    public abstract void run(HBaseAdmin admin, Args args) throws IOException, InterruptedException;
+    public abstract void run(Admin admin, Args args) throws IOException, InterruptedException;
 }

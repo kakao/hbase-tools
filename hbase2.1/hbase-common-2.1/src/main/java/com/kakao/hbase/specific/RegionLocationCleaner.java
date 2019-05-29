@@ -16,9 +16,8 @@
 
 package com.kakao.hbase.specific;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
@@ -30,26 +29,24 @@ import java.util.List;
 import java.util.NavigableMap;
 
 public class RegionLocationCleaner implements Runnable {
-    public static final Object LOCK = new Object();
+    private static final Object LOCK = new Object();
     public static final int THREAD_POOL_SIZE = 5;
-    private static HConnection connection = null;
-    private final String tableName;
-    private final NavigableMap<HRegionInfo, ServerName> regionServerMap;
+    private final Connection connection;
+    private final TableName tableName;
+    private final NavigableMap<RegionInfo, ServerName> regionServerMap;
 
-    public RegionLocationCleaner(String tableName, Configuration conf, NavigableMap<HRegionInfo, ServerName> regionServerMap) throws IOException {
+    public RegionLocationCleaner(TableName tableName, Connection connection, NavigableMap<RegionInfo, ServerName> regionServerMap) {
         this.tableName = tableName;
-        if (connection == null) {
-            connection = HConnectionManager.createConnection(conf);
-        }
+        this.connection = connection;
         this.regionServerMap = regionServerMap;
     }
 
     @Override
     public void run() {
-        try (HTableInterface table = connection.getTable(tableName.getBytes())) {
+        try (Table table = connection.getTable(tableName)) {
             // Do not use Get not to increase read request count metric.
             // Use Scan.
-            Scan scan = new Scan("".getBytes(), "".getBytes());
+            Scan scan = new Scan().withStartRow("".getBytes()).withStopRow("".getBytes());
             FilterList filterList = new FilterList();
             filterList.addFilter(new KeyOnlyFilter());
             filterList.addFilter(new FirstKeyOnlyFilter());
@@ -64,15 +61,15 @@ public class RegionLocationCleaner implements Runnable {
         clean(tableName);
     }
 
-    private void clean(String tableName) {
+    private void clean(TableName tableName) {
         synchronized (LOCK) {
-            List<HRegionInfo> toRemoveList = new ArrayList<>();
-            for (HRegionInfo hRegionInfo : regionServerMap.keySet()) {
+            List<RegionInfo> toRemoveList = new ArrayList<>();
+            for (RegionInfo hRegionInfo : regionServerMap.keySet()) {
                 if (CommandAdapter.getTableName(hRegionInfo).equals(tableName)) {
                     toRemoveList.add(hRegionInfo);
                 }
             }
-            for (HRegionInfo hRegionInfo : toRemoveList) {
+            for (RegionInfo hRegionInfo : toRemoveList) {
                 regionServerMap.remove(hRegionInfo);
             }
         }

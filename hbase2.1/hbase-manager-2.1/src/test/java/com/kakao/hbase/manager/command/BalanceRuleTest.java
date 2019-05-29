@@ -19,11 +19,11 @@ package com.kakao.hbase.manager.command;
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
-import org.apache.hadoop.hbase.HRegionInfo;
+import com.kakao.hbase.common.util.Util;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,29 +41,28 @@ public class BalanceRuleTest extends TestBase {
         splitTable("b".getBytes());
         splitTable("c".getBytes());
 
-        NavigableMap<HRegionInfo, ServerName> regionLocations;
-        List<Map.Entry<HRegionInfo, ServerName>> hRegionInfoList;
+        NavigableMap<RegionInfo, ServerName> regionLocations;
+        List<Map.Entry<RegionInfo, ServerName>> hRegionInfoList;
 
-        try (HTable table = getTable(tableName)) {
-            regionLocations = table.getRegionLocations();
-            hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
-            Assert.assertEquals(4, regionLocations.size());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
+        regionLocations = Util.getRegionLocationsMap(connection, tableName);
+        hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
+        Assert.assertEquals(4, regionLocations.size());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
 
-            String[] argsParam = {"zookeeper", tableName, "rD", "--force-proceed"};
-            Args args = new ManagerArgs(argsParam);
-            Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
-            Balance command = new Balance(admin, args);
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "rD", "--force-proceed"};
+        Args args = new ManagerArgs(argsParam);
+        Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
+        Balance command = new Balance(admin, args);
 
-            command.run();
+        // fixme
+        command.run();
 
-            regionLocations = table.getRegionLocations();
-            hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
-            Assert.assertNotEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
-            Assert.assertNotEquals(hRegionInfoList.get(2).getValue(), hRegionInfoList.get(3).getValue());
-        }
+        regionLocations = Util.getRegionLocationsMap(connection, tableName);
+        hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
+        Assert.assertNotEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
+        Assert.assertNotEquals(hRegionInfoList.get(2).getValue(), hRegionInfoList.get(3).getValue());
     }
 
     @Test
@@ -72,44 +71,38 @@ public class BalanceRuleTest extends TestBase {
         splitTable("b".getBytes());
         splitTable("c".getBytes());
 
-        NavigableMap<HRegionInfo, ServerName> regionLocations;
-        List<Map.Entry<HRegionInfo, ServerName>> hRegionInfoList;
+        NavigableMap<RegionInfo, ServerName> regionLocations;
+        List<Map.Entry<RegionInfo, ServerName>> hRegionInfoList;
 
-        try (HTable table = getTable(tableName)) {
-            regionLocations = table.getRegionLocations();
-            hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
-            Assert.assertEquals(4, regionLocations.size());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
+        regionLocations = Util.getRegionLocationsMap(connection, tableName);
+        hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
+        Assert.assertEquals(4, regionLocations.size());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
 
-            String[] argsParam = {"zookeeper", tableName, "St", "--force-proceed"};
-            Args args = new ManagerArgs(argsParam);
-            Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
-            Balance command = new Balance(admin, args);
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "St", "--force-proceed"};
+        Args args = new ManagerArgs(argsParam);
+        Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
+        Balance command = new Balance(admin, args);
 
-            command.run();
+        command.run();
 
-            regionLocations = table.getRegionLocations();
-            hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
-            Map<ServerName, Integer> serverCountMap = new HashMap<>();
-            for (Map.Entry<HRegionInfo, ServerName> entry : hRegionInfoList) {
-                if (serverCountMap.get(entry.getValue()) == null) {
-                    serverCountMap.put(entry.getValue(), 1);
-                } else {
-                    serverCountMap.put(entry.getValue(), serverCountMap.get(entry.getValue()) + 1);
-                }
-            }
-            Assert.assertEquals(Math.min(getServerNameList().size(), regionLocations.size()), serverCountMap.size());
-
-            int regionCount = 0;
-            for (ServerName serverName : getServerNameList()) {
-                List<HRegionInfo> regionInfoList = getRegionInfoList(serverName, tableName);
-                Assert.assertNotEquals(4, regionInfoList.size());
-                regionCount += regionInfoList.size();
-            }
-            Assert.assertEquals(4, regionCount);
+        regionLocations = Util.getRegionLocationsMap(connection, tableName);
+        hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
+        Map<ServerName, Integer> serverCountMap = new HashMap<>();
+        for (Map.Entry<RegionInfo, ServerName> entry : hRegionInfoList) {
+            serverCountMap.merge(entry.getValue(), 1, Integer::sum);
         }
+        Assert.assertEquals(Math.min(getServerNameList().size(), regionLocations.size()), serverCountMap.size());
+
+        int regionCount = 0;
+        for (ServerName serverName : getServerNameList()) {
+            List<RegionInfo> regionInfoList = getRegionInfoList(serverName, tableName);
+            Assert.assertNotEquals(4, regionInfoList.size());
+            regionCount += regionInfoList.size();
+        }
+        Assert.assertEquals(4, regionCount);
     }
 
     @Test
@@ -118,64 +111,56 @@ public class BalanceRuleTest extends TestBase {
         splitTable("b".getBytes());
         splitTable("c".getBytes());
 
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
         splitTable(tableName2, "a".getBytes());
         splitTable(tableName2, "b".getBytes());
         splitTable(tableName2, "c".getBytes());
 
-        NavigableMap<HRegionInfo, ServerName> regionLocations;
-        List<Map.Entry<HRegionInfo, ServerName>> hRegionInfoList;
+        NavigableMap<RegionInfo, ServerName> regionLocations;
+        List<Map.Entry<RegionInfo, ServerName>> hRegionInfoList;
 
-        try (HTable table1 = getTable(tableName);
-             HTable table2 = getTable(tableName2))
-        {
-            // for table1
-            regionLocations = table1.getRegionLocations();
-            hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
-            Assert.assertEquals(4, regionLocations.size());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
+        // for table1
+        regionLocations = Util.getRegionLocationsMap(connection, tableName);
+        hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
+        Assert.assertEquals(4, regionLocations.size());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
 
-            // for table2
-            regionLocations = table2.getRegionLocations();
-            hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
-            Assert.assertEquals(4, regionLocations.size());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
+        // for table2
+        regionLocations = Util.getRegionLocationsMap(connection, tableName2);
+        hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
+        Assert.assertEquals(4, regionLocations.size());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
 
-            // balance with st2
-            String[] argsParam = {"zookeeper", ".*", "St2", "--force-proceed"};
-            Args args = new ManagerArgs(argsParam);
-            Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
-            Balance command = new Balance(admin, args);
-            command.run();
+        // balance with st2
+        String[] argsParam = {"zookeeper", ".*", "St2", "--force-proceed"};
+        Args args = new ManagerArgs(argsParam);
+        Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
+        Balance command = new Balance(admin, args);
+        command.run();
 
-            validateST2(table1);
-            validateST2(table2);
-        }
+        validateST2(tableName);
+        validateST2(tableName2);
     }
 
-    private void validateST2(HTable table1) throws IOException {
-        NavigableMap<HRegionInfo, ServerName> regionLocations;
-        List<Map.Entry<HRegionInfo, ServerName>> hRegionInfoList;
-        regionLocations = table1.getRegionLocations();
+    private void validateST2(TableName table1) throws IOException {
+        NavigableMap<RegionInfo, ServerName> regionLocations;
+        List<Map.Entry<RegionInfo, ServerName>> hRegionInfoList;
+        regionLocations = Util.getRegionLocationsMap(connection, table1);
         hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
         Map<ServerName, Integer> serverCountMap = new HashMap<>();
-        for (Map.Entry<HRegionInfo, ServerName> entry : hRegionInfoList) {
-            if (serverCountMap.get(entry.getValue()) == null) {
-                serverCountMap.put(entry.getValue(), 1);
-            } else {
-                serverCountMap.put(entry.getValue(), serverCountMap.get(entry.getValue()) + 1);
-            }
+        for (Map.Entry<RegionInfo, ServerName> entry : hRegionInfoList) {
+            serverCountMap.merge(entry.getValue(), 1, Integer::sum);
         }
         Assert.assertEquals(Math.min(getServerNameList().size(), regionLocations.size()), serverCountMap.size());
 
         int regionCount;
         regionCount = 0;
         for (ServerName serverName : getServerNameList()) {
-            List<HRegionInfo> regionInfoList = getRegionInfoList(serverName, Bytes.toString(table1.getTableName()));
+            List<RegionInfo> regionInfoList = getRegionInfoList(serverName, table1);
             Assert.assertNotEquals(4, regionInfoList.size());
             Assert.assertEquals(2, regionInfoList.size());
             regionCount += regionInfoList.size();
@@ -189,29 +174,27 @@ public class BalanceRuleTest extends TestBase {
         splitTable("b".getBytes());
         splitTable("c".getBytes());
 
-        NavigableMap<HRegionInfo, ServerName> regionLocations;
-        List<Map.Entry<HRegionInfo, ServerName>> hRegionInfoList;
+        NavigableMap<RegionInfo, ServerName> regionLocations;
+        List<Map.Entry<RegionInfo, ServerName>> hRegionInfoList;
 
-        try (HTable table = getTable(tableName)) {
-            regionLocations = table.getRegionLocations();
-            hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
-            Assert.assertEquals(4, regionLocations.size());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
-            Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
+        regionLocations = Util.getRegionLocationsMap(connection, tableName);
+        hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
+        Assert.assertEquals(4, regionLocations.size());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(2).getValue());
+        Assert.assertEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(3).getValue());
 
-            String[] argsParam = {"zookeeper", tableName, "rR", "--force-proceed"};
-            Args args = new ManagerArgs(argsParam);
-            Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
-            Balance command = new Balance(admin, args);
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "rR", "--force-proceed"};
+        Args args = new ManagerArgs(argsParam);
+        Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
+        Balance command = new Balance(admin, args);
 
-            command.run();
+        command.run();
 
-            regionLocations = table.getRegionLocations();
-            hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
-            Assert.assertNotEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
-            Assert.assertNotEquals(hRegionInfoList.get(2).getValue(), hRegionInfoList.get(3).getValue());
-        }
+        regionLocations = Util.getRegionLocationsMap(connection, tableName);
+        hRegionInfoList = new ArrayList<>(regionLocations.entrySet());
+        Assert.assertNotEquals(hRegionInfoList.get(0).getValue(), hRegionInfoList.get(1).getValue());
+        Assert.assertNotEquals(hRegionInfoList.get(2).getValue(), hRegionInfoList.get(3).getValue());
     }
 
     @Test
@@ -219,7 +202,7 @@ public class BalanceRuleTest extends TestBase {
         Balance.reset();
         BalanceRule rule;
         List<RegionPlan> regionPlanListRR, regionPlanListRD;
-        Set<String> tableNameSet = new HashSet<>();
+        Set<TableName> tableNameSet = new HashSet<>();
         tableNameSet.add(tableName);
 
         splitTable("a".getBytes());
@@ -231,6 +214,7 @@ public class BalanceRuleTest extends TestBase {
         regionPlanListRR = rule.makePlan(admin, tableNameSet, null);
         Assert.assertNotEquals(0, regionPlanListRR.size());
         for (RegionPlan regionPlan : regionPlanListRR) {
+            // fixme
             Assert.assertNotEquals(regionPlan.getSource().getServerName(), regionPlan.getDestination().getServerName());
         }
 
@@ -253,7 +237,7 @@ public class BalanceRuleTest extends TestBase {
 
     @Test
     public void testBalanceRRDisabledTable() throws Exception {
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
         admin.disableTable(tableName2);
         waitForDisabled(tableName2);
 
@@ -262,12 +246,13 @@ public class BalanceRuleTest extends TestBase {
         Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
         Balance command = new Balance(admin, args);
 
+        // fixme
         command.run();
     }
 
     @Test
     public void testBalanceSTDisabledTable() throws Exception {
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
         admin.disableTable(tableName2);
         waitForDisabled(tableName2);
 

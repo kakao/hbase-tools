@@ -22,6 +22,7 @@ import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
@@ -45,7 +46,7 @@ public class ExportKeysTest extends TestBase {
 
             splitTable(splitPoint);
 
-            String[] argsParam = {"zookeeper", tableName, outputFile};
+            String[] argsParam = {"zookeeper", tableName.getNameAsString(), outputFile};
             Args args = new ManagerArgs(argsParam);
             assertEquals("zookeeper", args.getZookeeperQuorum());
             ExportKeys command = new ExportKeys(admin, args);
@@ -62,10 +63,10 @@ public class ExportKeysTest extends TestBase {
             }
             assertEquals(2, i);
 
-            assertEquals(tableName, results.get(0).getLeft().trim());
+            assertEquals(tableName.getNameAsString(), results.get(0).getLeft().trim());
             assertArrayEquals("".getBytes(), Bytes.toBytesBinary(results.get(0).getMiddle().trim()));
             assertArrayEquals(splitPoint, Bytes.toBytesBinary(results.get(0).getRight().trim()));
-            assertEquals(tableName, results.get(1).getLeft().trim());
+            assertEquals(tableName.getNameAsString(), results.get(1).getLeft().trim());
             assertArrayEquals(splitPoint, Bytes.toBytesBinary(results.get(1).getMiddle().trim()));
             assertArrayEquals("".getBytes(), Bytes.toBytesBinary(results.get(1).getRight().trim()));
 
@@ -86,13 +87,13 @@ public class ExportKeysTest extends TestBase {
             }
             assertEquals(3, i);
 
-            assertEquals(tableName, results.get(0).getLeft().trim());
+            assertEquals(tableName.getNameAsString(), results.get(0).getLeft().trim());
             assertArrayEquals("".getBytes(), Bytes.toBytesBinary(results.get(0).getMiddle().trim()));
             assertArrayEquals(splitPoint2, Bytes.toBytesBinary(results.get(0).getRight().trim()));
-            assertEquals(tableName, results.get(1).getLeft().trim());
+            assertEquals(tableName.getNameAsString(), results.get(1).getLeft().trim());
             assertArrayEquals(splitPoint2, Bytes.toBytesBinary(results.get(1).getMiddle().trim()));
             assertArrayEquals(splitPoint, Bytes.toBytesBinary(results.get(1).getRight().trim()));
-            assertEquals(tableName, results.get(2).getLeft().trim());
+            assertEquals(tableName.getNameAsString(), results.get(2).getLeft().trim());
             assertArrayEquals(splitPoint, Bytes.toBytesBinary(results.get(2).getMiddle().trim()));
             assertArrayEquals("".getBytes(), Bytes.toBytesBinary(results.get(2).getRight().trim()));
         } finally {
@@ -109,7 +110,7 @@ public class ExportKeysTest extends TestBase {
 
             splitTable(splitPoint.getBytes());
 
-            String[] argsParam = {"zookeeper", tableName, outputFile, "--optimize=1g"};
+            String[] argsParam = {"zookeeper", tableName.getNameAsString(), outputFile, "--optimize=1g"};
             Args args = new ManagerArgs(argsParam);
             assertEquals("zookeeper", args.getZookeeperQuorum());
             ExportKeys command = new ExportKeys(admin, args);
@@ -136,7 +137,7 @@ public class ExportKeysTest extends TestBase {
         try {
             String splitPoint = "splitpoint";
             splitTable(splitPoint.getBytes());
-            String tableName2 = createAdditionalTable(tableName + "2");
+            TableName tableName2 = createAdditionalTable(tableName + "2");
             splitTable(tableName2, splitPoint.getBytes());
 
             String tableNameRegex = tableName + ".*";
@@ -169,7 +170,7 @@ public class ExportKeysTest extends TestBase {
             try {
                 String splitPoint = "splitpoint";
                 splitTable(splitPoint.getBytes());
-                String tableName2 = createAdditionalTable(tableName + "2");
+                TableName tableName2 = createAdditionalTable(tableName + "2");
                 splitTable(tableName2, splitPoint.getBytes());
 
                 String[] argsParam = {"zookeeper", ".*", outputFile};

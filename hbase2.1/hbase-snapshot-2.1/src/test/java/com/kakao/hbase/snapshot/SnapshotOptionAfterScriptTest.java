@@ -21,8 +21,9 @@ import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.util.AlertSender;
 import com.kakao.hbase.common.util.AlertSenderTest;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -49,9 +50,9 @@ public class SnapshotOptionAfterScriptTest extends TestBase {
                 }
 
                 @Override
-                public Set<String> tableSet(HBaseAdmin admin) throws IOException {
-                    Set<String> set = new TreeSet<>();
-                    set.add("INVALID_TABLE");
+                public Set<TableName> tableSet(Admin admin) throws IOException {
+                    Set<TableName> set = new TreeSet<>();
+                    set.add(TableName.valueOf("INVALID_TABLE"));
                     return set;
                 }
             }
@@ -63,7 +64,7 @@ public class SnapshotOptionAfterScriptTest extends TestBase {
             argsParam = new String[]{"localhost", ".*",
                     "--" + Args.OPTION_AFTER_FAILURE + "=" + AlertSenderTest.ALERT_SCRIPT};
             args = new SnapshotArgsTest(argsParam);
-            app = new Snapshot(admin, args);
+            app = new Snapshot(connection, args);
 
             int sendCountBefore = AlertSender.getSendCount();
             try {
@@ -82,13 +83,13 @@ public class SnapshotOptionAfterScriptTest extends TestBase {
 
     @Test
     public void testAfterSuccess() throws Exception {
-        List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+        List<SnapshotDescription> snapshotDescriptions;
 
         // all tables, keep unlimited
         String[] argsParam = {"localhost", ".*", "--test",
             "--" + Args.OPTION_AFTER_SUCCESS + "=" + AlertSenderTest.ALERT_SCRIPT};
         SnapshotArgs args = new SnapshotArgs(argsParam);
-        Snapshot app = new Snapshot(admin, args);
+        Snapshot app = new Snapshot(connection, args);
 
         int sendCountBefore = AlertSender.getSendCount();
 

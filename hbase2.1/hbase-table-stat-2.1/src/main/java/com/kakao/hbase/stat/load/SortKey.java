@@ -95,15 +95,12 @@ public class SortKey {
 
     private static List<Level> generateSortedLevels(Map<Level, Number> loadMap, final LoadEntry loadEntry) {
         List<Map.Entry<Level, Number>> list = new LinkedList<>(loadMap.entrySet());
-        Collections.sort(list, new Comparator<Map.Entry<Level, Number>>() {
-            @Override
-            public int compare(Map.Entry<Level, Number> o1, Map.Entry<Level, Number> o2) {
-                int compare = loadEntry.compare(o1.getValue(), o2.getValue());
-                if (compare == 0) {
-                    return o1.getKey().toString().compareTo(o2.getKey().toString());
-                } else {
-                    return compare;
-                }
+        list.sort((o1, o2) -> {
+            int compare = loadEntry.compare(o1.getValue(), o2.getValue());
+            if (compare == 0) {
+                return o1.getKey().toString().compareTo(o2.getKey().toString());
+            } else {
+                return compare;
             }
         });
 

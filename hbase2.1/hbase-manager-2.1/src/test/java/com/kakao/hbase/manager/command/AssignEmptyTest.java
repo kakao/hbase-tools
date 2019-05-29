@@ -19,8 +19,8 @@ package com.kakao.hbase.manager.command;
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -37,7 +37,7 @@ public class AssignEmptyTest extends TestBase {
     @Test
     public void testEmpty() throws Exception {
         ArrayList<ServerName> serverNameList;
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         // move all regions to rs1
         splitTable("a".getBytes());
@@ -47,7 +47,7 @@ public class AssignEmptyTest extends TestBase {
         ServerName rs2 = serverNameList.get(1);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(3, regionInfoList.size());
-        for (HRegionInfo hRegionInfo : regionInfoList)
+        for (RegionInfo hRegionInfo : regionInfoList)
             move(hRegionInfo, rs1);
 
         assertEquals(regionInfoList.size(), getRegionInfoList(rs1, tableName).size());
@@ -55,7 +55,7 @@ public class AssignEmptyTest extends TestBase {
         // empty rs1
         boolean balancerRunning = false;
         try {
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
             String[] argsParam = {"zookeeper", "empty", rs1.getServerName(), "--skip-export", "--force-proceed"};
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
@@ -65,13 +65,13 @@ public class AssignEmptyTest extends TestBase {
             assertEquals(0, getRegionInfoList(rs1, tableName).size());
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
 
         // empty rs2 with regex. single RS is emptied.
         balancerRunning = false;
         try {
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
             String serverNameRegex = rs2.getServerName().substring(0, rs2.getServerName().lastIndexOf(',')) + ".*";
             String[] argsParam = {"zookeeper", "empty", serverNameRegex, "--skip-export", "--force-proceed"};
             Args args = new ManagerArgs(argsParam);
@@ -82,7 +82,7 @@ public class AssignEmptyTest extends TestBase {
             assertEquals(0, getRegionInfoList(rs2, tableName).size());
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
     }
 
@@ -92,7 +92,7 @@ public class AssignEmptyTest extends TestBase {
             // empty rs1
             boolean balancerRunning = false;
             try {
-                balancerRunning = admin.setBalancerRunning(false, true);
+                balancerRunning = admin.balancerSwitch(false, true);
                 String serverNameRegex = ".*";
                 String[] argsParam = {"zookeeper", "empty", serverNameRegex, "--skip-export", "--force-proceed"};
                 Args args = new ManagerArgs(argsParam);
@@ -106,7 +106,7 @@ public class AssignEmptyTest extends TestBase {
                 }
             } finally {
                 if (balancerRunning)
-                    admin.setBalancerRunning(true, true);
+                    admin.balancerSwitch(true, true);
             }
         }
     }
@@ -125,7 +125,7 @@ public class AssignEmptyTest extends TestBase {
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
 
-            balancerRunning = admin.setBalancerRunning(true, true);
+            balancerRunning = admin.balancerSwitch(true, true);
             command.run();
             fail();
         } catch (IllegalStateException e) {
@@ -133,7 +133,7 @@ public class AssignEmptyTest extends TestBase {
                 throw e;
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
 
         // valid
@@ -144,18 +144,18 @@ public class AssignEmptyTest extends TestBase {
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
 
-            balancerRunning = admin.setBalancerRunning(true, true);
+            balancerRunning = admin.balancerSwitch(true, true);
             command.run();
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
     }
 
     @Test
     public void testEmptyAsync() throws Exception {
         ArrayList<ServerName> serverNameList;
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         // move all regions to rs1
         splitTable("a".getBytes());
@@ -164,7 +164,7 @@ public class AssignEmptyTest extends TestBase {
         ServerName rs1 = serverNameList.get(0);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(3, regionInfoList.size());
-        for (HRegionInfo hRegionInfo : regionInfoList)
+        for (RegionInfo hRegionInfo : regionInfoList)
             move(hRegionInfo, rs1);
 
         assertEquals(regionInfoList.size(), getRegionInfoList(rs1, tableName).size());
@@ -172,7 +172,7 @@ public class AssignEmptyTest extends TestBase {
         // empty rs1
         boolean balancerRunning = false;
         try {
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
             String[] argsParam = {"zookeeper", "empty", rs1.getServerName(),
                 "--force-proceed", "--move-async", "--skip-export"};
             Args args = new ManagerArgs(argsParam);
@@ -183,14 +183,14 @@ public class AssignEmptyTest extends TestBase {
             assertEquals(0, getRegionInfoList(rs1, tableName).size());
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
     }
 
     @Test
     public void testEmptyWithExport() throws Exception {
         ArrayList<ServerName> serverNameList;
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         // move all regions to rs1
         splitTable("a".getBytes());
@@ -199,7 +199,7 @@ public class AssignEmptyTest extends TestBase {
         ServerName rs1 = serverNameList.get(0);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(3, regionInfoList.size());
-        for (HRegionInfo hRegionInfo : regionInfoList)
+        for (RegionInfo hRegionInfo : regionInfoList)
             move(hRegionInfo, rs1);
 
         assertEquals(regionInfoList.size(), getRegionInfoList(rs1, tableName).size());
@@ -208,7 +208,7 @@ public class AssignEmptyTest extends TestBase {
         // empty rs1 with export
         boolean balancerRunning = false;
         try {
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
             String[] argsParam = {"zookeeper", "empty", rs1.getServerName(), expFileName, "--force-proceed"};
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
@@ -221,7 +221,7 @@ public class AssignEmptyTest extends TestBase {
             List<String> assignmentList = AssignTest.readExportFile(expFileName);
             int actual = 0;
             for (String assignment : assignmentList) {
-                for (HRegionInfo hRegionInfo : regionInfoList) {
+                for (RegionInfo hRegionInfo : regionInfoList) {
                     if (assignment.contains(hRegionInfo.getEncodedName()))
                         actual++;
                 }
@@ -229,14 +229,14 @@ public class AssignEmptyTest extends TestBase {
             assertEquals(regionInfoList.size(), actual);
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
     }
 
     @Test
     public void testEmptySkipExport() throws Exception {
         ArrayList<ServerName> serverNameList;
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         // move all regions to rs1
         splitTable("a".getBytes());
@@ -245,7 +245,7 @@ public class AssignEmptyTest extends TestBase {
         ServerName rs1 = serverNameList.get(0);
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(3, regionInfoList.size());
-        for (HRegionInfo hRegionInfo : regionInfoList)
+        for (RegionInfo hRegionInfo : regionInfoList)
             move(hRegionInfo, rs1);
 
         assertEquals(regionInfoList.size(), getRegionInfoList(rs1, tableName).size());
@@ -253,7 +253,7 @@ public class AssignEmptyTest extends TestBase {
         // empty rs1 with export
         boolean balancerRunning = false;
         try {
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
             String[] argsParam = {"zookeeper", "empty", rs1.getServerName(), "--skip-export", "--force-proceed"};
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
@@ -263,7 +263,7 @@ public class AssignEmptyTest extends TestBase {
             assertEquals(0, getRegionInfoList(rs1, tableName).size());
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
     }
 }

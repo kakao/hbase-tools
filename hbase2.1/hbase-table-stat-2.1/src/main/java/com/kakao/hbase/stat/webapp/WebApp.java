@@ -80,7 +80,7 @@ public class WebApp {
         return port;
     }
 
-    public void startHttpServer() throws IOException {
+    public void startHttpServer() {
         if (isServerRunning)
             return;
 
@@ -101,7 +101,7 @@ public class WebApp {
         private static String html = null;
         private final Args args;
 
-        public RootHandler(Args args) {
+        RootHandler(Args args) {
             this.args = args;
         }
 
@@ -136,7 +136,7 @@ public class WebApp {
     private static class StatHandler implements HttpHandler {
         private final Formatter formatter;
 
-        public StatHandler(Formatter formatter) {
+        StatHandler(Formatter formatter) {
             this.formatter = formatter;
         }
 

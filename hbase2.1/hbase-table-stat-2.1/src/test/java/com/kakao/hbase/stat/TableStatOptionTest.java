@@ -21,9 +21,8 @@ import com.kakao.hbase.common.util.AlertSender;
 import com.kakao.hbase.common.util.AlertSenderTest;
 import com.kakao.hbase.stat.load.Level;
 import com.kakao.hbase.stat.load.SortKey;
-import com.kakao.hbase.stat.load.TableName;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,7 +43,7 @@ public class TableStatOptionTest extends StatTestBase {
         List<ServerName> serverNameList = getServerNameList();
         assertEquals(RS_COUNT, serverNameList.size());
 
-        List<HRegionInfo> regionInfoList = getRegionInfoList(tableName);
+        List<RegionInfo> regionInfoList = getRegionInfoList(tableName);
 
         String[] args = {"zookeeper", tableName + ".*", "--interval=0"};
         TableStat command = new TableStat(admin, new StatArgs(args));
@@ -58,7 +57,7 @@ public class TableStatOptionTest extends StatTestBase {
         waitForWriting(tableName, serverNameList.get(1), 3);
         command.run();
 
-        assertNull(command.getLoad().getLoadMapPrev().get(new Level(new TableName(tableName))));
+        assertNull(command.getLoad().getLoadMapPrev().get(new Level(tableName)));
 
         // resetDiffStartPoint
         command.getLoad().resetDiffStartPoint();
@@ -73,7 +72,7 @@ public class TableStatOptionTest extends StatTestBase {
         waitForWriting(tableName, serverNameList.get(0), 3);
         command.run();
 
-        assertNull(command.getLoad().getLoadMapPrev().get(new Level(new TableName(tableName))));
+        assertNull(command.getLoad().getLoadMapPrev().get(new Level(tableName)));
     }
 
     @Test

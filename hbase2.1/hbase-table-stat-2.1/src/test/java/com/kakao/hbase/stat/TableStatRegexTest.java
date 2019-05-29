@@ -17,6 +17,7 @@
 package com.kakao.hbase.stat;
 
 import com.kakao.hbase.stat.load.Level;
+import org.apache.hadoop.hbase.TableName;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -51,8 +52,8 @@ public class TableStatRegexTest extends StatTestBase {
 
     @Test
     public void testRegexTableName() throws Exception {
-        String tableName2 = createAdditionalTable(tableName + "2");
-        String tableName3 = createAdditionalTable(tableName + "22");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName3 = createAdditionalTable(tableName + "22");
 
         String tableNameRegex = tableName + "2.*";
         String[] args = {"zookeeper", tableNameRegex, "--interval=0"};
@@ -63,8 +64,8 @@ public class TableStatRegexTest extends StatTestBase {
         Assert.assertEquals(2, command.getLoad().getLoadMap().size());
         Set<Level> levelSet = command.getLoad().getLoadMap().keySet();
         Level[] levels = levelSet.toArray(new Level[command.getLoad().getLoadMap().size()]);
-        assertEquals(tableName2, levels[0].toString());
-        assertEquals(tableName3, levels[1].toString());
+        assertEquals(tableName2.getNameAsString(), levels[0].toString());
+        assertEquals(tableName3.getNameAsString(), levels[1].toString());
         Assert.assertEquals(0, command.getLoad().getLoadMapPrev().size());
     }
 }

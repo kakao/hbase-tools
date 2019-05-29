@@ -19,8 +19,12 @@ package com.kakao.hbase.specific;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.LoadEntry;
 import com.kakao.hbase.common.util.Util;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -29,13 +33,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * For HBase 0.98/0.96/1.0
+ * For HBase 2.1
  */
 public class RegionLoadAdapter {
     public static final LoadEntry[] loadEntries = RegionLoadDelegator.loadEntries();
-    private final Map<HRegionInfo, RegionLoadDelegator> regionLoadMap = new HashMap<>();
+    private final Map<RegionInfo, RegionLoadDelegator> regionLoadMap = new HashMap<>();
 
-    public RegionLoadAdapter(HBaseAdmin admin, Map<byte[], HRegionInfo> regionMap, Args args) throws IOException {
+    @SuppressWarnings("deprecation")
+    public RegionLoadAdapter(Admin admin, Map<byte[], RegionInfo> regionMap, Args args) throws IOException {
         long timestamp = System.currentTimeMillis();
 
         ClusterStatus clusterStatus = admin.getClusterStatus();
@@ -55,7 +60,7 @@ public class RegionLoadAdapter {
         return Arrays.asList(loadEntries).indexOf(loadEntry);
     }
 
-    public RegionLoadDelegator get(HRegionInfo hRegionInfo) {
+    public RegionLoadDelegator get(RegionInfo hRegionInfo) {
         return regionLoadMap.get(hRegionInfo);
     }
 }

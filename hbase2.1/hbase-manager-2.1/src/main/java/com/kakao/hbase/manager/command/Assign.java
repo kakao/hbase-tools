@@ -17,13 +17,13 @@
 package com.kakao.hbase.manager.command;
 
 import com.kakao.hbase.common.Args;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 
 public class Assign implements Command {
-    private final HBaseAdmin admin;
+    private final Admin admin;
     private final Args args;
 
-    public Assign(HBaseAdmin admin, Args args) {
+    public Assign(Admin admin, Args args) {
         if (args.getOptionSet().nonOptionArguments().size() < 2) {
             throw new IllegalArgumentException(Args.INVALID_ARGUMENTS);
         }

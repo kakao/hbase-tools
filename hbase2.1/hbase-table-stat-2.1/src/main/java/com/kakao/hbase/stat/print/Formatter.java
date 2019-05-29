@@ -94,7 +94,7 @@ public class Formatter {
     }
 
     @VisibleForTesting
-    public String buildString(boolean withRunInformation, Type formatType) {
+    String buildString(boolean withRunInformation, Type formatType) {
         if (load.isUpdating()) {
             return cache.get(formatType);
         } else {

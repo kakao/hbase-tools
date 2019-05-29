@@ -17,12 +17,13 @@
 package com.kakao.hbase.stat;
 
 import com.kakao.hbase.common.Args;
-import com.kakao.hbase.stat.print.Color;
-import com.kakao.hbase.stat.print.Formatter;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -34,7 +35,7 @@ public class TableStatTest extends StatTestBase {
 
     @Test
     public void testDisableEnableDrop() throws Exception {
-        String[] args = {"zookeeper", tableName, "--interval=0"};
+        String[] args = {"zookeeper", tableName.getNameAsString(), "--interval=0"};
         TableStat command = new TableStat(admin, new StatArgs(args));
 
         // iteration 1
@@ -52,8 +53,12 @@ public class TableStatTest extends StatTestBase {
         Assert.assertEquals(loadEntryLength, command.getLoad().getSummaryPrev().size());
 
         // disable table
+        Admin admin = connection.getAdmin();
+        System.out.println(admin.listTableDescriptors(Pattern.compile(".*")));
         admin.disableTable(tableName);
         waitForDisabled(tableName);
+        System.out.println(admin.isTableDisabled(tableName));
+        System.out.println(admin.listTableDescriptors(Pattern.compile(".*")));
 
         // iteration 3
         command.run();
@@ -109,7 +114,9 @@ public class TableStatTest extends StatTestBase {
         Assert.assertEquals(0, command.getLoad().getSummaryPrev().size());
 
         // disable table
-        admin.disableTable(tableName);
+        try (Admin admin = connection.getAdmin()) {
+            admin.disableTable(tableName);
+        }
         waitForDisabled(tableName);
 
         // iteration 2
@@ -122,7 +129,7 @@ public class TableStatTest extends StatTestBase {
 
     @Test
     public void testTableRegex() throws Exception {
-        createAdditionalTable(tableName + "2");
+        createAdditionalTable(TableName.valueOf(tableName + "2"));
 
         String[] args = {"zookeeper", ".*", "--interval=0", "--test"};
         TableStat command = new TableStat(admin, new StatArgs(args));
@@ -135,7 +142,9 @@ public class TableStatTest extends StatTestBase {
         Assert.assertEquals(0, command.getLoad().getSummaryPrev().size());
 
         // disable table
-        admin.disableTable(tableName);
+        try (Admin admin = connection.getAdmin()) {
+            admin.disableTable(tableName);
+        }
         waitForDisabled(tableName);
 
         // iteration 2
@@ -148,12 +157,12 @@ public class TableStatTest extends StatTestBase {
 
     @Test
     public void testTables() throws Exception {
-        String tableName2 = createAdditionalTable(tableName + "2");
-        String tableName3 = createAdditionalTable(tableName + "22");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName3 = createAdditionalTable(tableName + "22");
 
         String tableNameRegex;
-        Set<String> tableSet;
-        String[] tables;
+        Set<TableName> tableSet;
+        TableName[] tables;
         String[] argsParam;
         StatArgs args;
 
@@ -164,7 +173,7 @@ public class TableStatTest extends StatTestBase {
         tableSet = Args.tables(args, admin);
         assertNotNull(tableSet);
         assertEquals(2, tableSet.size());
-        tables = tableSet.toArray(new String[tableSet.size()]);
+        tables = tableSet.toArray(new TableName[0]);
         assertEquals(tableName2, tables[0]);
         assertEquals(tableName3, tables[1]);
 
@@ -175,7 +184,7 @@ public class TableStatTest extends StatTestBase {
         tableSet = Args.tables(args, admin);
         assertNotNull(tableSet);
         assertEquals(3, tableSet.size());
-        tables = tableSet.toArray(new String[tableSet.size()]);
+        tables = tableSet.toArray(new TableName[0]);
         assertEquals(tableName, tables[0]);
         assertEquals(tableName2, tables[1]);
         assertEquals(tableName3, tables[2]);

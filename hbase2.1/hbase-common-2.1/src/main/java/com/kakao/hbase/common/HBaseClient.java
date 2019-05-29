@@ -16,19 +16,19 @@
 
 package com.kakao.hbase.common;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
-import com.kakao.hbase.specific.HBaseAdminWrapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import sun.security.krb5.Config;
 
-import javax.security.auth.callback.*;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import java.io.*;
@@ -38,7 +38,7 @@ import java.util.Scanner;
 public class HBaseClient {
     private static String principal = null;
     private static String password = null;
-    private static HBaseAdmin admin = null;
+    private static Connection connection = null;
 
     private HBaseClient() {
     }
@@ -71,7 +71,7 @@ public class HBaseClient {
         return authConfFileName;
     }
 
-    private static String kerberosConfigFile(Args args) throws IOException {
+    private static String kerberosConfigFile(Args args) {
         final String fileNameArg;
         if (args.has(Args.OPTION_KERBEROS_CONFIG)) {
             fileNameArg = (String) args.valueOf(Args.OPTION_KERBEROS_CONFIG);
@@ -83,19 +83,16 @@ public class HBaseClient {
     }
 
     private static void loginWithPassword(final Args args, Configuration conf) throws LoginException, IOException {
-        LoginContext loginContext = new LoginContext("Client", new CallbackHandler() {
-            @Override
-            public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
-                for (Callback callback : callbacks) {
-                    if (callback instanceof NameCallback) {
-                        NameCallback nameCallback = (NameCallback) callback;
-                        nameCallback.setName(principal(args));
-                    } else if (callback instanceof PasswordCallback) {
-                        PasswordCallback passwordCallback = (PasswordCallback) callback;
-                        passwordCallback.setPassword(askPassword().toCharArray());
-                    } else {
-                        throw new UnsupportedCallbackException(callback);
-                    }
+        LoginContext loginContext = new LoginContext("Client", callbacks -> {
+            for (Callback callback : callbacks) {
+                if (callback instanceof NameCallback) {
+                    NameCallback nameCallback = (NameCallback) callback;
+                    nameCallback.setName(principal(args));
+                } else if (callback instanceof PasswordCallback) {
+                    PasswordCallback passwordCallback = (PasswordCallback) callback;
+                    passwordCallback.setPassword(askPassword().toCharArray());
+                } else {
+                    throw new UnsupportedCallbackException(callback);
                 }
             }
         });
@@ -104,7 +101,7 @@ public class HBaseClient {
         CommandAdapter.loginUserFromSubject(conf, loginContext.getSubject());
     }
 
-    private static void updateConf(Configuration conf, String realm) throws IOException {
+    private static void updateConf(Configuration conf, String realm) {
         conf.set("hadoop.security.authentication", "Kerberos");
         conf.set("hbase.security.authentication", "Kerberos");
         conf.set("hbase.master.kerberos.principal", "hbase/_HOST@" + realm);
@@ -160,11 +157,11 @@ public class HBaseClient {
         return conf;
     }
 
-    private static void validateAuthentication() throws ZooKeeperConnectionException {
+    private static void validateAuthentication() {
         try {
             // Is there something better?
-            admin.isMasterRunning();
-        } catch (MasterNotRunningException e) {
+            connection.getAdmin().getMaster();
+        } catch (IOException e) {
             System.out.println("Maybe you are connecting to the secured cluster without kerberos config.\n");
         }
     }
@@ -202,29 +199,22 @@ public class HBaseClient {
         System.out.println(currentUser + "\n");
     }
 
-    public static HBaseAdmin getAdmin(Args args) throws Exception {
+    public static Connection getConnection(Args args) throws Exception {
         System.out.println("Connecting to " + args.getZookeeperQuorum());
 
         if (args.has(Args.OPTION_DEBUG)) Util.setLoggingThreshold("WARN");
 
-        if (admin == null) {
+        if (connection == null) {
             Configuration conf = createBaseConfiguration(args);
+            connection = ConnectionFactory.createConnection(conf);
 
             if (isSecuredCluster(args)) {
                 login(args, conf);
-                admin = new HBaseAdminWrapper(conf);
-            } else {
-                admin = new HBaseAdmin(conf);
             }
         }
 
         validateAuthentication();
 
-        return admin;
-    }
-
-    @VisibleForTesting
-    public static void setAdminForTesting(HBaseAdmin admin) {
-        HBaseClient.admin = admin;
+        return connection;
     }
 }

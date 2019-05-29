@@ -18,8 +18,8 @@ package com.kakao.hbase.common;
 
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
 
 import java.io.IOException;
 import java.util.Set;
@@ -28,13 +28,13 @@ import java.util.concurrent.atomic.AtomicLong;
 public class EmptyRegionChecker implements Runnable {
     private static final AtomicLong counter = new AtomicLong();
     public static int THREAD_POOL_SIZE = 10;
-    private final HConnection connection;
+    private final Connection connection;
     private final String tableName;
-    private final HRegionInfo regionInfo;
-    private final Set<HRegionInfo> emptyRegions;
+    private final RegionInfo regionInfo;
+    private final Set<RegionInfo> emptyRegions;
 
-    public EmptyRegionChecker(HConnection connection, String tableName,
-                              HRegionInfo regionInfo, Set<HRegionInfo> emptyRegions) {
+    public EmptyRegionChecker(Connection connection, String tableName,
+                              RegionInfo regionInfo, Set<RegionInfo> emptyRegions) {
         this.connection = connection;
         this.tableName = tableName;
         this.regionInfo = regionInfo;

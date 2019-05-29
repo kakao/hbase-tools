@@ -23,11 +23,8 @@ import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
@@ -36,19 +33,19 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MC implements Command {
-    private final HBaseAdmin admin;
+    private final Admin admin;
     private final Args args;
     private final AtomicInteger mcCounter = new AtomicInteger();
-    private final Map<byte[], String> regionTableMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    private final Map<byte[], TableName> regionTableMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     private final Map<byte[], Integer> regionSizeMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     private final Map<byte[], Float> regionLocalityMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     private final Map<byte[], String> regionRSMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    private Map<String, NavigableMap<HRegionInfo, ServerName>> regionLocations = new HashMap<>();
-    // regions or tables
-    private Set<byte[]> targets = null;
+    private Map<TableName, NavigableMap<RegionInfo, ServerName>> regionLocations = new HashMap<>();
+    private Set<byte[]> targetRegions = null;
+    private Set<TableName> targetTables = null;
     private boolean tableLevel = false;
 
-    public MC(HBaseAdmin admin, Args args) {
+    MC(Admin admin, Args args) {
         if (args.getOptionSet().nonOptionArguments().size() != 2) {
             throw new IllegalArgumentException(Args.INVALID_ARGUMENTS);
         }
@@ -77,8 +74,13 @@ public class MC implements Command {
     }
 
     @VisibleForTesting
-    Set<byte[]> getTargets() {
-        return targets;
+    Set<TableName> getTargetTables() {
+        return targetTables;
+    }
+
+    @VisibleForTesting
+    Set<byte[]> getTargetRegions() {
+        return targetRegions;
     }
 
     @VisibleForTesting
@@ -88,77 +90,106 @@ public class MC implements Command {
 
     @Override
     public void run() throws Exception {
-        targets = Collections.newSetFromMap(new TreeMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR));
+        targetRegions = Collections.newSetFromMap(new TreeMap<>(Bytes.BYTES_COMPARATOR));
+        targetTables = Collections.newSetFromMap(new TreeMap<>());
         tableLevel = false; // or region level
 
-        Set<String> tables = Args.tables(args, admin);
+        Set<TableName> tables = Args.tables(args, admin);
         assert tables != null;
-        for (String table : tables) {
+        for (TableName table : tables) {
             if (args.has(Args.OPTION_REGION_SERVER) || args.has(Args.OPTION_LOCALITY_THRESHOLD)) {
                 // MC at region level
                 tableLevel = false;
 
                 if (args.has(Args.OPTION_REGION_SERVER)) {
-                    filterWithRsAndLocality(targets, table);
+                    filterWithRsAndLocality(targetRegions, table);
                 } else {
                     if (args.has(Args.OPTION_LOCALITY_THRESHOLD)) {
-                        filterWithLocalityOnly(targets, table);
+                        filterWithLocalityOnly(targetRegions, table);
                     }
                 }
             } else {
                 // MC at table level
                 tableLevel = true;
 
-                targets.add(table.getBytes());
+                targetTables.add(table);
             }
         }
 
         // todo check compaction queue before running
 
         if (tableLevel) {
-            System.out.println(targets.size() + " tables will be compacted.");
+            System.out.println(targetTables.size() + " tables will be compacted.");
         } else {
-            System.out.println(targets.size() + " regions will be compacted.");
+            System.out.println(targetRegions.size() + " regions will be compacted.");
         }
-        if (targets.size() == 0) return;
+        if (targetTables.size() == 0 && targetRegions.size() == 0) return;
         if (!args.isForceProceed() && !Util.askProceed()) return;
 
-        mc(tableLevel, targets);
+        mc(tableLevel, targetRegions, targetTables);
 
         if (mcCounter.get() > 0)
             waitUntilFinish(tables);
     }
 
-    private void mc(boolean tableLevel, Set<byte[]> targets) throws InterruptedException, IOException {
+    private void mc(boolean tableLevel, Set<byte[]> targetRegions, Set<TableName> targetTables) throws IOException {
         int i = 1;
-        for (byte[] tableOrRegion : targets) {
-            if (args.has(Args.OPTION_CF)) {
-                String cf = (String) args.valueOf(Args.OPTION_CF);
-                try {
-                    System.out.print(i++ + "/" + targets.size() + " - Major compaction on " + cf + " CF of " +
-                        (tableLevel ? "table " : "region ") + Bytes.toStringBinary(tableOrRegion) +
-                        (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
-                    if (!Util.askProceedInteractively(args, true)) continue;
-                    admin.majorCompact(tableOrRegion, cf.getBytes());
-                    mcCounter.getAndIncrement();
-                } catch (IOException e) {
-                    String message = "column family " + cf + " does not exist";
-                    if (e.getMessage().contains(message)) {
-                        System.out.println("WARNING - " + message + " on " + Bytes.toStringBinary(tableOrRegion));
-                    } else {
-                        throw e;
+        if (tableLevel) {
+            for (TableName tableName : targetTables) {
+                if (args.has(Args.OPTION_CF)) {
+                    String cf = (String) args.valueOf(Args.OPTION_CF);
+                    try {
+                        System.out.print(i++ + "/" + targetTables.size() + " - Major compaction on " + cf + " CF of " +
+                                "table " + tableName.getNameAsString());
+                        if (!Util.askProceedInteractively(args, true)) continue;
+                        admin.majorCompact(tableName, cf.getBytes());
+                        mcCounter.getAndIncrement();
+                    } catch (IOException e) {
+                        String message = "column family " + cf + " does not exist";
+                        if (e.getMessage().contains(message)) {
+                            System.out.println("WARNING - " + message + " on " + tableName.getNameAsString());
+                        } else {
+                            throw e;
+                        }
                     }
+                } else {
+                    System.out.print(i++ + "/" + targetTables.size() + " - Major compaction on " + "table " + tableName.getNameAsString());
+                    if (!Util.askProceedInteractively(args, true)) continue;
+                    try {
+                        admin.majorCompact(tableName);
+                    } catch (NotServingRegionException ignore) {
+                    }
+                    mcCounter.getAndIncrement();
                 }
-            } else {
-                System.out.print(i++ + "/" + targets.size() + " - Major compaction on "
-                    + (tableLevel ? "table " : "region ")
-                    + Bytes.toStringBinary(tableOrRegion) + (tableLevel ? "" : " - " + getRegionInfo(tableOrRegion)));
-                if (!Util.askProceedInteractively(args, true)) continue;
-                try {
-                    admin.majorCompact(tableOrRegion);
-                } catch (NotServingRegionException ignore) {
+            }
+        } else {
+            for (byte[] region : targetRegions) {
+                if (args.has(Args.OPTION_CF)) {
+                    String cf = (String) args.valueOf(Args.OPTION_CF);
+                    try {
+                        System.out.print(i++ + "/" + targetRegions.size() + " - Major compaction on " + cf + " CF of " +
+                                "region " + Bytes.toStringBinary(region) + " - " + getRegionInfo(region));
+                        if (!Util.askProceedInteractively(args, true)) continue;
+                        admin.majorCompactRegion(region, cf.getBytes());
+                        mcCounter.getAndIncrement();
+                    } catch (IOException e) {
+                        String message = "column family " + cf + " does not exist";
+                        if (e.getMessage().contains(message)) {
+                            System.out.println("WARNING - " + message + " on " + Bytes.toStringBinary(region));
+                        } else {
+                            throw e;
+                        }
+                    }
+                } else {
+                    System.out.print(i++ + "/" + targetRegions.size() + " - Major compaction on "
+                            + "region " + Bytes.toStringBinary(region) + " - " + getRegionInfo(region));
+                    if (!Util.askProceedInteractively(args, true)) continue;
+                    try {
+                        admin.majorCompactRegion(region);
+                    } catch (NotServingRegionException ignore) {
+                    }
+                    mcCounter.getAndIncrement();
                 }
-                mcCounter.getAndIncrement();
             }
         }
     }
@@ -171,7 +202,7 @@ public class MC implements Command {
             + ", SizeMB: " + regionSizeMap.get(regionName);
     }
 
-    private void waitUntilFinish(Set<String> tables) throws IOException, InterruptedException {
+    private void waitUntilFinish(Set<TableName> tables) throws IOException, InterruptedException {
         if (args.has(Args.OPTION_WAIT_UNTIL_FINISH)) {
             long sleepDuration = args.has(Args.OPTION_TEST) ?
                 Constant.SMALL_WAIT_INTERVAL_MS : Constant.LARGE_WAIT_INTERVAL_MS;
@@ -187,7 +218,7 @@ public class MC implements Command {
                 }
 
                 int i = 0;
-                for (String table : tables) {
+                for (TableName table : tables) {
                     if (!CommandAdapter.isMajorCompacting(args, admin, table)) {
                         i++;
                     }
@@ -201,12 +232,12 @@ public class MC implements Command {
         }
     }
 
-    private void filterWithLocalityOnly(Set<byte[]> targets, String table) throws IOException {
+    private void filterWithLocalityOnly(Set<byte[]> targetRegions, TableName table) throws IOException {
         long startTimestamp = System.currentTimeMillis();
         Util.printVerboseMessage(args, Util.getMethodName() + " - start");
 
-        Map<byte[], HRegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-        for (Map.Entry<HRegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
+        Map<byte[], RegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+        for (Map.Entry<RegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
             byte[] regionName = entry.getKey().getRegionName();
             String serverName = entry.getValue().getHostname();
             regionMap.put(entry.getKey().getRegionName(), entry.getKey());
@@ -214,18 +245,18 @@ public class MC implements Command {
             regionRSMap.put(regionName, serverName);
         }
 
-        filterWithDataLocality(targets, regionMap);
+        filterWithDataLocality(targetRegions, regionMap);
 
         Util.printVerboseMessage(args, Util.getMethodName() + " - end", startTimestamp);
     }
 
-    private void filterWithRsAndLocality(Set<byte[]> targets, String table) throws IOException {
+    private void filterWithRsAndLocality(Set<byte[]> targets, TableName table) throws IOException {
         long startTimestamp = System.currentTimeMillis();
         Util.printVerboseMessage(args, Util.getMethodName() + " - start");
 
-        Map<byte[], HRegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+        Map<byte[], RegionInfo> regionMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         String regex = (String) args.valueOf(Args.OPTION_REGION_SERVER);
-        for (Map.Entry<HRegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
+        for (Map.Entry<RegionInfo, ServerName> entry : getRegionLocations(table).entrySet()) {
             String serverName = entry.getValue().getHostname() + "," + entry.getValue().getPort();
             if (serverName.matches(regex)) {
                 regionMap.put(entry.getKey().getRegionName(), entry.getKey());
@@ -241,16 +272,14 @@ public class MC implements Command {
         Util.printVerboseMessage(args, Util.getMethodName() + " - end", startTimestamp);
     }
 
-    private NavigableMap<HRegionInfo, ServerName> getRegionLocations(String table) throws IOException {
+    private NavigableMap<RegionInfo, ServerName> getRegionLocations(TableName table) throws IOException {
         long startTimestamp = System.currentTimeMillis();
         Util.printVerboseMessage(args, Util.getMethodName() + " - start");
 
-        NavigableMap<HRegionInfo, ServerName> result = regionLocations.get(table);
+        NavigableMap<RegionInfo, ServerName> result = regionLocations.get(table);
         if (result == null) {
-            try (HTable htable = new HTable(admin.getConfiguration(), table)) {
-                result = htable.getRegionLocations();
-                regionLocations.put(table, result);
-            }
+            result = Util.getRegionLocationsMap(admin.getConnection(), table);
+            regionLocations.put(table, result);
         }
 
         Util.printVerboseMessage(args, Util.getMethodName() +  " - end", startTimestamp);
@@ -258,8 +287,8 @@ public class MC implements Command {
         return result;
     }
 
-    private void filterWithDataLocality(Set<byte[]> targets,
-        Map<byte[], HRegionInfo> regionMap) throws IOException {
+    private void filterWithDataLocality(Set<byte[]> targetRegions,
+        Map<byte[], RegionInfo> regionMap) throws IOException {
         long startTimestamp = System.currentTimeMillis();
         Util.printVerboseMessage(args, Util.getMethodName() + " - start");
 
@@ -273,18 +302,18 @@ public class MC implements Command {
         }
 
         RegionLoadAdapter regionLoadAdapter = new RegionLoadAdapter(admin, regionMap, args);
-        for (HRegionInfo regionInfo : regionMap.values()) {
+        for (RegionInfo regionInfo : regionMap.values()) {
             RegionLoadDelegator regionLoad = regionLoadAdapter.get(regionInfo);
             if (regionLoad == null) continue;
             try {
                 byte[] regionName = regionInfo.getRegionName();
                 regionSizeMap.put(regionName, regionLoad.getStorefileSizeMB());
                 if (dataLocalityThreshold == null) {
-                    targets.add(regionName);
+                    targetRegions.add(regionName);
                 } else {
                     float dataLocality = regionLoad.getDataLocality();
                     regionLocalityMap.put(regionName, dataLocality);
-                    if (dataLocality * 100 < dataLocalityThreshold) targets.add(regionName);
+                    if (dataLocality * 100 < dataLocalityThreshold) targetRegions.add(regionName);
                 }
             } catch (IllegalStateException e) {
                 if (e.getMessage().contains("not implemented")) {

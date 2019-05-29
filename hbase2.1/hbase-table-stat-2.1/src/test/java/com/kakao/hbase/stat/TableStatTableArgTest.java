@@ -18,8 +18,9 @@ package com.kakao.hbase.stat;
 
 import com.kakao.hbase.common.LoadEntry;
 import com.kakao.hbase.stat.load.Level;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,9 +42,9 @@ public class TableStatTableArgTest extends StatTestBase {
         List<ServerName> serverNameList = getServerNameList();
         assertEquals(RS_COUNT, serverNameList.size());
 
-        List<HRegionInfo> regionInfoList = getRegionInfoList(tableName);
+        List<RegionInfo> regionInfoList = getRegionInfoList(tableName);
 
-        String[] args = {"zookeeper", tableName, "--interval=0"};
+        String[] args = {"zookeeper", tableName.getNameAsString(), "--interval=0"};
         TableStat command = new TableStat(admin, new StatArgs(args));
 
         // iteration 1
@@ -103,15 +104,15 @@ public class TableStatTableArgTest extends StatTestBase {
         splitTable("a".getBytes());
         splitTable("b".getBytes());
 
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
 
         List<ServerName> serverNameList = getServerNameList();
         assertEquals(RS_COUNT, serverNameList.size());
 
-        List<HRegionInfo> regionInfoList = getRegionInfoList(tableName);
+        List<RegionInfo> regionInfoList = getRegionInfoList(tableName);
         regionInfoList.addAll(getRegionInfoList(tableName2));
 
-        String[] args = {"zookeeper", tableName, "--interval=0"};
+        String[] args = {"zookeeper", tableName.getNameAsString(), "--interval=0"};
         TableStat command = new TableStat(admin, new StatArgs(args));
 
         command.run();
@@ -143,10 +144,10 @@ public class TableStatTableArgTest extends StatTestBase {
 
     @Test
     public void testTableName() throws Exception {
-        createAdditionalTable(tableName + "2");
-        createAdditionalTable(tableName + "22");
+        createAdditionalTable(TableName.valueOf(tableName + "2"));
+        createAdditionalTable(TableName.valueOf(tableName + "22"));
 
-        String[] args = {"zookeeper", tableName, "--interval=0"};
+        String[] args = {"zookeeper", tableName.getNameAsString(), "--interval=0"};
         TableStat command = new TableStat(admin, new StatArgs(args));
 
         command.run();

@@ -22,8 +22,10 @@ import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.HBaseClient;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.SnapshotAdapter;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.zookeeper.*;
 
@@ -45,13 +47,13 @@ public class Snapshot implements Watcher {
     @VisibleForTesting
     static boolean skipCheckTableExistence = false;
     private final SnapshotArgs args;
-    private final HBaseAdmin admin;
+    private final Connection connection;
 
     // for testing
-    private final Map<String, Integer> tableSnapshotCountMaxMap = new HashMap<>();
+    private final Map<TableName, Integer> tableSnapshotCountMaxMap = new HashMap<>();
 
-    Snapshot(HBaseAdmin admin, SnapshotArgs args) {
-        this.admin = admin;
+    Snapshot(Connection connection, SnapshotArgs args) {
+        this.connection = connection;
         this.args = args;
     }
 
@@ -100,57 +102,60 @@ public class Snapshot implements Watcher {
             throw e;
         }
 
-        HBaseAdmin admin = HBaseClient.getAdmin(args);
+        Connection connection = HBaseClient.getConnection(args);
 
-        Snapshot app = new Snapshot(admin, args);
+        Snapshot app = new Snapshot(connection, args);
         app.run();
     }
 
     @VisibleForTesting
-    int getMaxCount(String tableName) {
+    int getMaxCount(TableName tableName) {
         return tableSnapshotCountMaxMap.get(tableName);
     }
 
-    public void run() throws IOException, KeeperException, InterruptedException {
-        String timestamp = timestamp(TimestampFormat.snapshot);
+    void run() throws IOException, KeeperException, InterruptedException {
+        try (Admin admin = connection.getAdmin()) {
+            String timestamp = timestamp(TimestampFormat.snapshot);
 
-        String connectString = admin.getConfiguration().get("hbase.zookeeper.quorum");
-        ZooKeeper zooKeeper = null;
-        try {
-            Map<String, String> failedSnapshotMap = new TreeMap<>();
+            String connectString = admin.getConfiguration().get("hbase.zookeeper.quorum");
+            ZooKeeper zooKeeper = null;
+            try {
+                // snapshot name, table
+                Map<String, TableName> failedSnapshotMap = new TreeMap<>();
 
-            zooKeeper = new ZooKeeper(connectString, SESSION_TIMEOUT, this);
-            for (String tableName : args.tableSet(admin)) {
-                if (args.isExcluded(tableName)) {
-                    System.out.println(timestamp(TimestampFormat.log)
-                            + " - Table \"" + tableName + "\" - EXCLUDED");
-                    continue;
+                zooKeeper = new ZooKeeper(connectString, SESSION_TIMEOUT, this);
+                for (TableName tableName : args.tableSet(admin)) {
+                    if (args.isExcluded(tableName)) {
+                        System.out.println(timestamp(TimestampFormat.log)
+                                + " - Table \"" + tableName + "\" - EXCLUDED");
+                        continue;
+                    }
+
+                    String snapshotName = getPrefix(tableName) + timestamp;
+                    try {
+                        snapshot(zooKeeper, tableName, snapshotName);
+                    } catch (Throwable e) {
+                        failedSnapshotMap.put(snapshotName, tableName);
+                    }
+
+                    // delete old snapshots after creating new one
+                    deleteOldSnapshots(admin, tableName);
                 }
+                deleteSnapshotsForNotExistingTables();
+                deleteOldAbortZnodes(zooKeeper);
 
-                String snapshotName = getPrefix(tableName) + timestamp;
-                try {
-                    snapshot(zooKeeper, tableName, snapshotName);
-                } catch (Throwable e) {
-                    failedSnapshotMap.put(snapshotName, tableName);
+                retrySnapshot(zooKeeper, failedSnapshotMap);
+                Util.sendAlertAfterSuccess(args, this.getClass());
+            } catch (Throwable e) {
+                String message = "ConnectionString= " + connectString + ", CurrentHost= "
+                        + InetAddress.getLocalHost().getHostName() + ", Message= " + errorMessage(e);
+                System.out.println("\n" + timestamp(TimestampFormat.log) + " - " + message);
+                Util.sendAlertAfterFailed(args, this.getClass(), message);
+                throw e;
+            } finally {
+                if (zooKeeper != null && zooKeeper.getState().isConnected()) {
+                    zooKeeper.close();
                 }
-
-                // delete old snapshots after creating new one
-                deleteOldSnapshots(admin, tableName);
-            }
-            deleteSnapshotsForNotExistingTables();
-            deleteOldAbortZnodes(zooKeeper);
-
-            retrySnapshot(zooKeeper, failedSnapshotMap);
-            Util.sendAlertAfterSuccess(args, this.getClass());
-        } catch (Throwable e) {
-            String message = "ConnectionString= " + connectString + ", CurrentHost= "
-                    + InetAddress.getLocalHost().getHostName() + ", Message= " + errorMessage(e);
-            System.out.println("\n" + timestamp(TimestampFormat.log) + " - " + message);
-            Util.sendAlertAfterFailed(args, this.getClass(), message);
-            throw e;
-        } finally {
-            if (zooKeeper != null && zooKeeper.getState().isConnected()) {
-                zooKeeper.close();
             }
         }
     }
@@ -170,44 +175,48 @@ public class Snapshot implements Watcher {
     /**
      * Retry failed snapshots
      */
-    private void retrySnapshot(ZooKeeper zooKeeper, Map<String, String> failedSnapshotMap)
+    private void retrySnapshot(ZooKeeper zooKeeper, Map<String, TableName> failedSnapshotMap)
             throws IOException, KeeperException, InterruptedException {
-        if (!failedSnapshotMap.isEmpty()) {
-            System.out.println();
-            Util.printMessage("--------------------- Retrying failed snapshots -----------------------------");
-            for (Map.Entry<String, String> entry : failedSnapshotMap.entrySet()) {
-                Util.printMessage("Table: " + entry.getValue() + ", Snapshot: " + entry.getKey());
-            }
-
-            for (Map.Entry<String, String> entry : failedSnapshotMap.entrySet()) {
-                String snapshotName = entry.getKey();
-                String tableName = entry.getValue();
-                if (exists(admin, tableName) || skipCheckTableExistence) {
-                    snapshot(zooKeeper, tableName, snapshotName);
-                } else {
-                    Util.printMessage("Table does not exist - " + tableName + " - SKIPPED");
+        try (Admin admin = connection.getAdmin()) {
+            if (!failedSnapshotMap.isEmpty()) {
+                System.out.println();
+                Util.printMessage("--------------------- Retrying failed snapshots -----------------------------");
+                for (Map.Entry<String, TableName> entry : failedSnapshotMap.entrySet()) {
+                    Util.printMessage("Table: " + entry.getValue() + ", Snapshot: " + entry.getKey());
                 }
+
+                for (Map.Entry<String, TableName> entry : failedSnapshotMap.entrySet()) {
+                    String snapshotName = entry.getKey();
+                    TableName tableName = entry.getValue();
+                    if (exists(admin, snapshotName) || skipCheckTableExistence) {
+                        snapshot(zooKeeper, tableName, snapshotName);
+                    } else {
+                        Util.printMessage("Table does not exist - " + tableName + " - SKIPPED");
+                    }
+                }
+                deleteSnapshotsForNotExistingTables();
             }
-            deleteSnapshotsForNotExistingTables();
         }
     }
 
     private void deleteSnapshotsForNotExistingTables() throws IOException {
-        if (args.has(Args.OPTION_DELETE_SNAPSHOT_FOR_NOT_EXISTING_TABLE)) {
-            List<SnapshotDescription> snapshots = admin.listSnapshots();
-            for (SnapshotDescription snapshot : snapshots) {
-                String tableName = snapshot.getTable();
-                String snapshotName = snapshot.getName();
-                if (snapshotName.startsWith(getPrefix(tableName))) {
-                    if (!admin.tableExists(tableName)) {
-                        System.out.print(timestamp(TimestampFormat.log) + " - Table \"" + tableName
-                                + "\" - Delete snapshot - Not existing table - \"" + snapshotName + "\"");
-                        admin.deleteSnapshot(snapshotName);
-                        System.out.println(" - OK");
+        try (Admin admin = connection.getAdmin()) {
+            if (args.has(Args.OPTION_DELETE_SNAPSHOT_FOR_NOT_EXISTING_TABLE)) {
+                List<SnapshotDescription> snapshots = admin.listSnapshots();
+                for (SnapshotDescription snapshot : snapshots) {
+                    TableName tableName = snapshot.getTableName();
+                    String snapshotName = snapshot.getName();
+                    if (snapshotName.startsWith(getPrefix(tableName))) {
+                        if (!admin.tableExists(tableName)) {
+                            System.out.print(timestamp(TimestampFormat.log) + " - Table \"" + tableName
+                                    + "\" - Delete snapshot - Not existing table - \"" + snapshotName + "\"");
+                            admin.deleteSnapshot(snapshotName);
+                            System.out.println(" - OK");
+                        }
+                    } else {
+                        System.out.println(timestamp(TimestampFormat.log) + " - Table \"" + tableName
+                                + "\" - Delete snapshot - \"" + snapshotName + "\" - SKIPPED");
                     }
-                } else {
-                    System.out.println(timestamp(TimestampFormat.log) + " - Table \"" + tableName
-                            + "\" - Delete snapshot - \"" + snapshotName + "\" - SKIPPED");
                 }
             }
         }
@@ -217,15 +226,15 @@ public class Snapshot implements Watcher {
         return "Snapshot Failed - " + e.getMessage();
     }
 
-    String getPrefix(String tableName) {
-        return tableName.replace(":", "_") + TIMESTAMP_PREFIX;
+    String getPrefix(TableName tableName) {
+        return tableName.getNameAsString().replace(":", "_") + TIMESTAMP_PREFIX;
     }
 
     @VisibleForTesting
-    void snapshot(ZooKeeper zooKeeper, String tableName, String snapshotName)
+    void snapshot(ZooKeeper zooKeeper, TableName tableName, String snapshotName)
             throws IOException, KeeperException, InterruptedException {
-        try {
-            if (args.has(Args.OPTION_TEST) && !tableName.startsWith("UNIT_TEST_")) return;
+        try (Admin admin = connection.getAdmin()) {
+            if (args.has(Args.OPTION_TEST) && !tableName.getNameAsString().startsWith("UNIT_TEST_")) return;
 
             System.out.print(timestamp(TimestampFormat.log) + " - Table \"" + tableName
                     + "\" - Create Snapshot - \"" + snapshotName + "\" - ");
@@ -290,9 +299,9 @@ public class Snapshot implements Watcher {
         }
     }
 
-    private void deleteOldSnapshots(HBaseAdmin admin, String tableName) throws IOException {
+    private void deleteOldSnapshots(Admin admin, TableName tableName) throws IOException {
         if (args.keepCount(tableName) == SnapshotArgs.KEEP_UNLIMITED
-                || args.has(Args.OPTION_TEST) && !tableName.startsWith("UNIT_TEST_")) {
+                || args.has(Args.OPTION_TEST) && !tableName.getNameAsString().startsWith("UNIT_TEST_")) {
             System.out.println(timestamp(TimestampFormat.log)
                     + " - Table \"" + tableName + "\" - Delete Snapshot - Keep Unlimited - SKIPPED");
             return;
@@ -313,7 +322,7 @@ public class Snapshot implements Watcher {
         }
     }
 
-    private boolean exists(HBaseAdmin admin, String targetSnapshotName) throws IOException {
+    private boolean exists(Admin admin, String targetSnapshotName) throws IOException {
         List<SnapshotDescription> sd = SnapshotAdapter.getSnapshotDescriptions(admin, targetSnapshotName);
         return sd.size() > 0;
     }

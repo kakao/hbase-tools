@@ -20,9 +20,9 @@ import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.stat.load.TableInfo;
-import org.apache.commons.codec.DecoderException;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.PrintWriter;
@@ -31,16 +31,16 @@ import java.util.Set;
 @SuppressWarnings("unused")
 public class ExportKeys implements Command {
     static final String DELIMITER = "-";
-    private final HBaseAdmin admin;
+    private final Admin admin;
     private final Args args;
     private final String outputFileName;
     private final int exportThreshold;
 
-    public ExportKeys(HBaseAdmin admin, Args args) {
+    ExportKeys(Admin admin, Args args) {
         this.admin = admin;
         this.args = args;
 
-        if (args.getTableName().equals(Args.ALL_TABLES))
+        if (args.getTableNamePattern().equals(Args.ALL_TABLES))
             throw new IllegalArgumentException(Args.INVALID_ARGUMENTS);
 
         if (args.getOptionSet().nonOptionArguments().size() != 3)
@@ -70,12 +70,12 @@ public class ExportKeys implements Command {
         try (PrintWriter writer = new PrintWriter(outputFileName, Constant.CHARSET.name())) {
             writer.print("");
 
-            TableInfo tableInfo = new TableInfo(admin, args.getTableName(), args);
+            TableInfo tableInfo = new TableInfo(admin, args.getTableNamePattern(), args);
             tableInfo.refresh();
-            Set<HRegionInfo> regions = tableInfo.getRegionInfoSet();
+            Set<RegionInfo> regions = tableInfo.getRegionInfoSet();
 
             int exported = 0, storeFileSizeMBSum = 0;
-            for (HRegionInfo regionInfo : regions) {
+            for (RegionInfo regionInfo : regions) {
                 System.out.println(regionInfo.toString());
 
                 if (args.getOptionSet().has(Args.OPTION_OPTIMIZE)) {
@@ -105,8 +105,8 @@ public class ExportKeys implements Command {
         }
     }
 
-    private boolean export(PrintWriter writer, HRegionInfo regionInfo) throws DecoderException {
-        String tableName = CommandAdapter.getTableName(regionInfo);
+    private boolean export(PrintWriter writer, RegionInfo regionInfo) {
+        TableName tableName = CommandAdapter.getTableName(regionInfo);
         String startKeyHexStr = Bytes.toStringBinary(regionInfo.getStartKey());
         String endKeyHexStr = Bytes.toStringBinary(regionInfo.getEndKey());
 

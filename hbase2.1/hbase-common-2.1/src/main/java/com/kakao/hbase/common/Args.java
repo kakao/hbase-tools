@@ -22,7 +22,8 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 
 import java.io.IOException;
 import java.util.*;
@@ -32,14 +33,14 @@ public abstract class Args {
     public static final String OPTION_OUTPUT = "output";
     public static final String OPTION_SKIP_EXPORT = "skip-export";
     public static final String OPTION_VERBOSE = "verbose";
-    public static final String OPTION_DEBUG = "debug";
-    public static final String OPTION_KERBEROS_CONFIG = "krbconf";
+    static final String OPTION_DEBUG = "debug";
+    static final String OPTION_KERBEROS_CONFIG = "krbconf";
     public static final String OPTION_KEY_TAB = "keytab";
     public static final String OPTION_KEY_TAB_SHORT = "k";
     public static final String OPTION_REGION_SERVER = "rs";
     public static final String OPTION_PRINCIPAL = "principal";
     public static final String OPTION_PRINCIPAL_SHORT = "p";
-    public static final String OPTION_REALM = "realm";
+    static final String OPTION_REALM = "realm";
     public static final String OPTION_FORCE_PROCEED = "force-proceed";
     public static final String OPTION_KEEP = "keep";
     public static final String OPTION_DELETE_SNAPSHOT_FOR_NOT_EXISTING_TABLE = "delete-snapshot-for-not-existing-table";
@@ -62,14 +63,14 @@ public abstract class Args {
     public static final String OPTION_CF = "cf";
     public static final String OPTION_WAIT_UNTIL_FINISH = "wait";
     public static final String OPTION_INTERACTIVE = "interactive";
-    public static final String OPTION_CONF = "conf";
-    public static final String OPTION_CONF_SHORT = "c";
+    private static final String OPTION_CONF = "conf";
+    private static final String OPTION_CONF_SHORT = "c";
     public static final String OPTION_PHOENIX = "phoenix-salting-table";
 
     public static final String INVALID_ARGUMENTS = "Invalid arguments";
     public static final String ALL_TABLES = "";
     private static final int INTERVAL_DEFAULT_MS = 10 * 1000;
-    protected final String zookeeperQuorum;
+    private final String zookeeperQuorum;
     protected final OptionSet optionSet;
 
     public Args(String[] args) throws IOException {
@@ -121,7 +122,7 @@ public abstract class Args {
                 + "        Kerberos config file. Use absolute path.\n";
     }
 
-    public static String[] parseArgsFile(String fileName) throws IOException {
+    private static String[] parseArgsFile(String fileName) throws IOException {
         return parseArgsFile(fileName, false);
     }
 
@@ -135,19 +136,20 @@ public abstract class Args {
         return string.split("[ \n]");
     }
 
-    public static Set<String> tables(Args args, HBaseAdmin admin) throws IOException {
-        return tables(args, admin, args.getTableName());
+    public static Set<TableName> tables(Args args, Admin admin) throws IOException {
+        return tables(args, admin, args.getTableNamePattern());
     }
 
-    public static Set<String> tables(Args args, HBaseAdmin admin, String tableName) throws IOException {
+    @SuppressWarnings("deprecation")
+    public static Set<TableName> tables(Args args, Admin admin, String tableNamePattern) throws IOException {
         long startTimestamp = System.currentTimeMillis();
         Util.printVerboseMessage(args, Util.getMethodName() + " - start");
-        if (tableName.equals(ALL_TABLES)) {
+        if (tableNamePattern.equals(ALL_TABLES)) {
             Util.printVerboseMessage(args, Util.getMethodName() + " - end", startTimestamp);
-            return null;
+            return Collections.emptySet();
         } else {
-            Set<String> tables = new TreeSet<>();
-            HTableDescriptor[] hTableDescriptors = admin.listTables(tableName);
+            Set<TableName> tables = new TreeSet<>();
+            HTableDescriptor[] hTableDescriptors = admin.listTables(tableNamePattern);
             if (hTableDescriptors == null) {
                 return tables;
             } else {
@@ -157,8 +159,8 @@ public abstract class Args {
                     // admin.listTables(tableName) always returns all tables.
                     // This is a workaround.
                     String nameAsString = hTableDescriptor.getNameAsString();
-                    if (nameAsString.matches(tableName))
-                        tables.add(nameAsString);
+                    if (nameAsString.matches(tableNamePattern))
+                        tables.add(hTableDescriptor.getTableName());
                 }
             }
 
@@ -171,23 +173,23 @@ public abstract class Args {
     public String toString() {
         if (optionSet == null) return "";
 
-        String nonOptionArgs = "";
+        StringBuilder nonOptionArgs = new StringBuilder();
         if (optionSet.nonOptionArguments() != null) {
             int i = 0;
             for (Object object : optionSet.nonOptionArguments()) {
-                if (i > 0) nonOptionArgs += " ";
-                nonOptionArgs += "\"" + object.toString() + "\"";
+                if (i > 0) nonOptionArgs.append(" ");
+                nonOptionArgs.append("\"").append(object.toString()).append("\"");
                 i++;
             }
         }
 
-        String optionArgs = "";
+        StringBuilder optionArgs = new StringBuilder();
         if (optionSet.asMap() != null) {
             int i = 0;
             for (Map.Entry<OptionSpec<?>, List<?>> entry : optionSet.asMap().entrySet()) {
                 if (entry.getValue().size() > 0) {
-                    if (i > 0) optionArgs += " ";
-                    optionArgs += "--" + entry.getKey().options().get(0) + "=\"" + entry.getValue().get(0) + "\"";
+                    if (i > 0) optionArgs.append(" ");
+                    optionArgs.append("--").append(entry.getKey().options().get(0)).append("=\"").append(entry.getValue().get(0)).append("\"");
                     i++;
                 }
             }
@@ -197,7 +199,7 @@ public abstract class Args {
         return nonOptionArgs + " " + optionArgs;
     }
 
-    public String getTableName() {
+    public String getTableNamePattern() {
         if (optionSet.nonOptionArguments().size() > 1) {
             return (String) optionSet.nonOptionArguments().get(1);
         } else {
@@ -211,6 +213,7 @@ public abstract class Args {
 
     protected abstract OptionParser createOptionParser();
 
+    @SuppressWarnings("Duplicates")
     protected OptionParser createCommonOptionParser() {
         OptionParser optionParser = new OptionParser();
         optionParser.accepts(OPTION_FORCE_PROCEED);
@@ -295,7 +298,7 @@ public abstract class Args {
 
     public Object valueOf(String optionName) {
         Object arg = optionSet.valueOf(optionName);
-        if (arg != null && arg instanceof String) {
+        if (arg instanceof String) {
             String argString = ((String) arg).trim();
             return argString.length() == 0 ? null : argString;
         } else {
@@ -305,7 +308,7 @@ public abstract class Args {
 
     public Object valueOf(String optionLongName, String optionShortName) {
         Object arg = optionSet.valueOf(optionName(optionLongName, optionShortName));
-        if (arg != null && arg instanceof String) {
+        if (arg instanceof String) {
             String argString = ((String) arg).trim();
             return argString.length() == 0 ? null : argString;
         } else {

@@ -17,12 +17,9 @@
 package com.kakao.hbase.manager.command;
 
 import com.kakao.hbase.ManagerArgs;
-import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.junit.Test;
 
 import java.util.List;
@@ -39,10 +36,10 @@ public class MergeEmptyFastTest extends MergeTestBase {
     public void testMergeEmptyFast1() throws Exception {
         makeTestData1();
 
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "empty-FAST", "--force-proceed", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "empty-FAST", "--force-proceed", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.run();
@@ -57,10 +54,10 @@ public class MergeEmptyFastTest extends MergeTestBase {
     public void testMergeEmptyFast2() throws Exception {
         makeTestData2();
 
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "empty-FAST", "--force-proceed", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "empty-FAST", "--force-proceed", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.run();
@@ -77,10 +74,10 @@ public class MergeEmptyFastTest extends MergeTestBase {
     public void testMergeEmptyFast3() throws Exception {
         makeTestData3();
 
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "empty-FAST", "--force-proceed", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "empty-FAST", "--force-proceed", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.run();

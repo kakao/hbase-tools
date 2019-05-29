@@ -23,7 +23,8 @@ import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.stat.load.*;
 import com.kakao.hbase.stat.print.Formatter;
 import com.kakao.hbase.stat.webapp.WebApp;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,21 +37,22 @@ public class TableStat {
     private final WebApp webApp;
     private boolean paused = false;
 
-    public TableStat(HBaseAdmin admin, Args args) throws Exception {
+    public TableStat(Admin admin, Args args) throws Exception {
         intervalMS = args.getIntervalMS();
-        tableInfo = new TableInfo(admin, args.getTableName(), args);
-        formatter = new Formatter(args.getTableName(), tableInfo.getLoad());
+        tableInfo = new TableInfo(admin, args.getTableNamePattern(), args);
+        formatter = new Formatter(args.getTableNamePattern(), tableInfo.getLoad());
         this.args = args;
 
         webApp = WebApp.getInstance(args, this);
         webApp.startHttpServer();
     }
 
-    public static void main(String[] argsParam) throws Exception {
+    public static void main(String[] argsParam) {
         try {
             Args args = new StatArgs(argsParam);
 
-            try (HBaseAdmin admin = HBaseClient.getAdmin(args)) {
+            try (Connection connection = HBaseClient.getConnection(args);
+                 Admin admin = connection.getAdmin()) {
                 TableStat tableStat = new TableStat(admin, args);
                 tableStat.run();
                 tableStat.exit(0, null);
@@ -78,7 +80,7 @@ public class TableStat {
             + Args.commonUsage();
     }
 
-    public static String dynamicOptions() {
+    static String dynamicOptions() {
         return "  dynamic options:\n"
             + "    h - show this help message\n"
             + "    q - quit this app\n"
@@ -126,7 +128,7 @@ public class TableStat {
         executorService.execute(keyInputListener);
     }
 
-    private void runInternal() throws Exception {
+    private void runInternal() {
         try {
             synchronized (this) {
                 tableInfo.refresh();
@@ -162,33 +164,33 @@ public class TableStat {
         return intervalMS;
     }
 
-    public String toggleDiffFromStart() {
+    String toggleDiffFromStart() {
         synchronized (this) {
             boolean diffFromStart = formatter.toggleDiffFromStart();
             return "Toggle DiffFromStart to " + diffFromStart + "\n";
         }
     }
 
-    public String toggleShowChangedOnly() {
+    String toggleShowChangedOnly() {
         synchronized (this) {
             boolean showChangedOnly = formatter.toggleShowChangedOnly();
             return "Toggle ShowChangedOnly to " + showChangedOnly + "\n";
         }
     }
 
-    public void pause() {
+    void pause() {
         synchronized (this) {
             paused = true;
         }
     }
 
-    public void resume() {
+    void resume() {
         synchronized (this) {
             paused = false;
         }
     }
 
-    public String togglePause() {
+    String togglePause() {
         synchronized (this) {
             paused = !paused;
 
@@ -199,25 +201,25 @@ public class TableStat {
         }
     }
 
-    public String resetDiffStartPoint() {
+    String resetDiffStartPoint() {
         synchronized (this) {
             getLoad().resetDiffStartPoint();
             return "Reset DiffStartPoint\n";
         }
     }
 
-    public String toggleShowRate() {
+    String toggleShowRate() {
         synchronized (this) {
             boolean showRate = getLoad().toggleShowRate();
             return "Toggle ShowRate to " + showRate + "\n";
         }
     }
 
-    public String showConnectionInfo() {
+    String showConnectionInfo() {
         return "Connected to " + args.getZookeeperQuorum() + "\n" + webApp.printInetAddresses();
     }
 
-    public String setSort(String sortKeyString) {
+    String setSort(String sortKeyString) {
         synchronized (this) {
             try {
                 tableInfo.getLoad().setSortKey(new SortKey(sortKeyString));
@@ -228,13 +230,13 @@ public class TableStat {
         }
     }
 
-    public String save() {
+    String save() {
         synchronized (this) {
             return getLoad().save(args);
         }
     }
 
-    public String showFiles() {
+    String showFiles() {
         synchronized (this) {
             return getLoad().showFiles(args);
         }

@@ -17,8 +17,9 @@
 package com.kakao.hbase.stat;
 
 import com.kakao.hbase.common.LoadEntry;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,10 +41,10 @@ public class TableStatRsRegexTest extends StatTestBase {
         List<ServerName> serverNameList = getServerNameList();
         assertEquals(RS_COUNT, serverNameList.size());
         String rsRegex = serverNameList.get(0).getServerName() + ".*";
-        String[] args = {"zookeeper", tableName, "--rs=" + rsRegex, "--interval=0"};
+        String[] args = {"zookeeper", tableName.getNameAsString(), "--rs=" + rsRegex, "--interval=0"};
         TableStat command = new TableStat(admin, new StatArgs(args));
 
-        ArrayList<HRegionInfo> regionInfoList;
+        ArrayList<RegionInfo> regionInfoList;
 
         // move regions to second RS for checking server index
         regionInfoList = getRegionInfoList(tableName);
@@ -87,7 +88,7 @@ public class TableStatRsRegexTest extends StatTestBase {
 
         splitTable("a".getBytes());
 
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
 
         List<ServerName> serverNameList = getServerNameList();
         assertEquals(RS_COUNT, serverNameList.size());
@@ -95,7 +96,7 @@ public class TableStatRsRegexTest extends StatTestBase {
         String[] args = {"zookeeper", "--rs=" + rsRegex, "--interval=0", "--test"};
         TableStat command = new TableStat(admin, new StatArgs(args));
 
-        ArrayList<HRegionInfo> regionInfoList;
+        ArrayList<RegionInfo> regionInfoList;
 
         // move regions to second RS for checking server index
         regionInfoList = getRegionInfoList(tableName);
@@ -140,7 +141,7 @@ public class TableStatRsRegexTest extends StatTestBase {
 
         splitTable("a".getBytes());
 
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
 
         List<ServerName> serverNameList = getServerNameList();
         assertEquals(RS_COUNT, serverNameList.size());
@@ -148,7 +149,7 @@ public class TableStatRsRegexTest extends StatTestBase {
         String[] args = {"zookeeper", "--rs=" + rsRegex, "--interval=0", "--test"};
         TableStat command = new TableStat(admin, new StatArgs(args));
 
-        ArrayList<HRegionInfo> regionInfoList;
+        ArrayList<RegionInfo> regionInfoList;
 
         // move regions to second RS for checking server index
         regionInfoList = getRegionInfoList(tableName);

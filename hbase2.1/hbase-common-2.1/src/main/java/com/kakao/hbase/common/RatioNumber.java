@@ -19,12 +19,12 @@ package com.kakao.hbase.common;
 import java.util.Objects;
 
 public class RatioNumber extends Number implements Comparable<RatioNumber> {
-    public static final RatioNumber ZERO = new RatioNumber(0, 0);
+    static final RatioNumber ZERO = new RatioNumber(0, 0);
 
     private final double ratio;
     private final double value;
 
-    public RatioNumber(double value, double ratio) {
+    RatioNumber(double value, double ratio) {
         this.value = value;
         this.ratio = ratio;
     }
@@ -61,6 +61,7 @@ public class RatioNumber extends Number implements Comparable<RatioNumber> {
         return ratio;
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public int compareTo(RatioNumber other) {
         if (Objects.equals(this, other)) {
@@ -73,13 +74,7 @@ public class RatioNumber extends Number implements Comparable<RatioNumber> {
         // otherwise see which is less
         final double first = ratio * value;
         final double second = other.ratio * other.value;
-        if (first == second) {
-            return 0;
-        } else if (first < second) {
-            return -1;
-        } else {
-            return 1;
-        }
+        return Double.compare(first, second);
     }
 
     public RatioNumber add(RatioNumber other) {

@@ -24,7 +24,7 @@ import java.util.Date;
 
 public class UtilTest {
     @Test
-    public void testParseTimestamp() throws Exception {
+    public void testParseTimestamp() {
         try {
             Util.parseTimestamp("0");
             Assert.fail();

@@ -23,11 +23,10 @@ import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
 import com.kakao.hbase.stat.load.TableInfo;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionException;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
@@ -37,16 +36,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class Merge implements Command {
-    private final HBaseAdmin admin;
+    private final Admin admin;
     private final Args args;
     private final String actionParam;
-    private final Set<String> tableNameSet;
-    private final HConnection connection;
+    private final Set<TableName> tableNameSet;
     private boolean proceed = false;
     private boolean test = false;
     private boolean isPhoenixSaltingTable;
 
-    public Merge(HBaseAdmin admin, Args args) throws IOException {
+    Merge(Admin admin, Args args) throws IOException {
         if (args.getOptionSet().nonOptionArguments().size() < 2
                 || args.getOptionSet().nonOptionArguments().size() > 3) { // todo refactoring
             throw new RuntimeException(Args.INVALID_ARGUMENTS);
@@ -56,7 +54,6 @@ public class Merge implements Command {
         this.args = args;
         if (args.has(Args.OPTION_TEST)) this.test = true;
         actionParam = (String) args.getOptionSet().nonOptionArguments().get(2);
-        this.connection = HConnectionManager.createConnection(admin.getConfiguration());
 
         tableNameSet = Util.parseTableSet(admin, args);
 
@@ -94,16 +91,16 @@ public class Merge implements Command {
         long timestampPrev;
         // todo refactoring
         if (actionParam.toLowerCase().equals("empty-fast")) {
-            for (String tableName : tableNameSet) {
+            for (TableName tableName : tableNameSet) {
                 timestampPrev = System.currentTimeMillis();
-                TableInfo tableInfo = new TableInfo(admin, tableName, args);
+                TableInfo tableInfo = new TableInfo(admin, tableName.getNameAsString(), args);
                 timestampPrev = Util.printVerboseMessage(args, "Merge.run.new TableInfo", timestampPrev);
                 emptyFast(tableInfo);
                 Util.printVerboseMessage(args, "Merge.run.emptyFast", timestampPrev);
             }
         } else if (actionParam.toLowerCase().equals("empty")) {
-            for (String tableName : tableNameSet) {
-                TableInfo tableInfo = new TableInfo(admin, tableName, args);
+            for (TableName tableName : tableNameSet) {
+                TableInfo tableInfo = new TableInfo(admin, tableName.getNameAsString(), args);
 
                 Util.printMessage("Table - " + tableName + " - empty-fast - Start");
                 emptyFast(tableInfo);
@@ -153,27 +150,25 @@ public class Merge implements Command {
     }
 
     /**
-     * @param tableInfo
      * @return true: stop iteration, false: continue iteration
-     * @throws Exception
      */
     private boolean emptyInternal(TableInfo tableInfo) throws Exception {
         tableInfo.refresh();
 
-        Set<HRegionInfo> mergedRegions = new HashSet<>();
-        List<HRegionInfo> allTableRegions = new ArrayList<>(tableInfo.getRegionInfoSet());
+        Set<RegionInfo> mergedRegions = new HashSet<>();
+        List<RegionInfo> allTableRegions = new ArrayList<>(tableInfo.getRegionInfoSet());
         for (int i = 0; i < allTableRegions.size(); i++) {
-            HRegionInfo region = allTableRegions.get(i);
+            RegionInfo region = allTableRegions.get(i);
             if (mergedRegions.contains(region)) continue;
 
             RegionLoadDelegator regionLoad = tableInfo.getRegionLoad(region);
             if (regionLoad == null) throw new IllegalStateException(Constant.MESSAGE_NEED_REFRESH);
 
-            HRegionInfo targetRegion = getTargetRegion(tableInfo, allTableRegions, i, mergedRegions);
+            RegionInfo targetRegion = getTargetRegion(tableInfo, allTableRegions, i, mergedRegions);
             if (mergedRegions.contains(targetRegion)) continue;
 
             if (regionLoad.getStorefileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
-                if (CommandAdapter.isReallyEmptyRegion(connection, tableInfo.getTableName(), region)) {
+                if (CommandAdapter.isReallyEmptyRegion(admin.getConnection(), tableInfo.getTableNamePattern(), region)) {
                     try {
                         if (targetRegion != null) {
                             printMergeInfo(region, targetRegion);
@@ -193,11 +188,11 @@ public class Merge implements Command {
         return mergedRegions.size() <= 1;
     }
 
-    private HRegionInfo getTargetRegion(TableInfo tableInfo, List<HRegionInfo> allTableRegions,
-                                        int i, Set<HRegionInfo> mergedRegions) {
-        HRegionInfo regionPrev = i > 0 ? allTableRegions.get(i - 1) : null;
+    private RegionInfo getTargetRegion(TableInfo tableInfo, List<RegionInfo> allTableRegions,
+                                        int i, Set<RegionInfo> mergedRegions) {
+        RegionInfo regionPrev = i > 0 ? allTableRegions.get(i - 1) : null;
         if (mergedRegions.contains(regionPrev)) regionPrev = null;
-        HRegionInfo regionNext = i == allTableRegions.size() - 1 ? null : allTableRegions.get(i + 1);
+        RegionInfo regionNext = i == allTableRegions.size() - 1 ? null : allTableRegions.get(i + 1);
 
         int sizePrev = getSize(tableInfo, regionPrev);
         int sizeNext = getSize(tableInfo, regionNext);
@@ -207,7 +202,7 @@ public class Merge implements Command {
             return regionNext;
     }
 
-    private int getSize(TableInfo tableInfo, HRegionInfo region) {
+    private int getSize(TableInfo tableInfo, RegionInfo region) {
         if (region != null) {
             RegionLoadDelegator regionLoad = tableInfo.getRegionLoad(region);
             if (regionLoad != null) {
@@ -218,7 +213,7 @@ public class Merge implements Command {
         return Integer.MAX_VALUE;
     }
 
-    private boolean isRegionBoundaryOfPhoenixSaltingTable(HRegionInfo regionInfo) {
+    private boolean isRegionBoundaryOfPhoenixSaltingTable(RegionInfo regionInfo) {
         byte[] endKey = regionInfo.getEndKey();
         boolean boundaryRegionForPhoenix = true;
 
@@ -246,10 +241,10 @@ public class Merge implements Command {
             merged = false;
 
             timestampPrev = System.currentTimeMillis();
-            List<HRegionInfo> emptyRegions = findEmptyRegions(tableInfo);
+            List<RegionInfo> emptyRegions = findEmptyRegions(tableInfo);
             timestampPrev = Util.printVerboseMessage(args, "Merge.emptyFast.findEmptyRegions", timestampPrev);
             if (emptyRegions.size() > 1) {
-                List<HRegionInfo> adjacentEmptyRegions = CommandAdapter.adjacentEmptyRegions(emptyRegions);
+                List<RegionInfo> adjacentEmptyRegions = CommandAdapter.adjacentEmptyRegions(emptyRegions);
                 Util.printVerboseMessage(args, "Merge.emptyFast.adjacentEmptyRegions", timestampPrev);
                 System.out.println();
                 Util.printMessage("Iteration " + j + "/" + getMaxMaxIteration() + " - "
@@ -268,14 +263,14 @@ public class Merge implements Command {
             }
 
             for (int i = 0; i < emptyRegions.size(); i++) {
-                HRegionInfo regionA = emptyRegions.get(i);
+                RegionInfo regionA = emptyRegions.get(i);
                 // 첫번째 리전의 endKey가 피닉스 솔팅 테이블의 리전 바운더리가 아니여야 한다.
                 if (isPhoenixSaltingTable && isRegionBoundaryOfPhoenixSaltingTable(regionA)) {
                     continue;
                 }
 
                 if (i != emptyRegions.size() - 1) {
-                    HRegionInfo regionB = emptyRegions.get(i + 1);
+                    RegionInfo regionB = emptyRegions.get(i + 1);
 
                     boolean mergeRegions = false;
                     for (int k = 0; k < Constant.TRY_MAX_SMALL; k++) {
@@ -308,13 +303,13 @@ public class Merge implements Command {
         }
     }
 
-    private void printMergeInfo(HRegionInfo regionA, HRegionInfo regionB) {
+    private void printMergeInfo(RegionInfo regionA, RegionInfo regionB) {
         Util.printMessage("Merge regions");
         System.out.println("  - " + Util.getRegionInfoString(regionA));
         System.out.println("  L " + Util.getRegionInfoString(regionB));
     }
 
-    private List<HRegionInfo> findEmptyRegions(TableInfo tableInfo) throws Exception {
+    private List<RegionInfo> findEmptyRegions(TableInfo tableInfo) throws Exception {
         for (int i = 0; i < Constant.TRY_MAX; i++) {
             try {
                 return findEmptyRegionsInternal(tableInfo);
@@ -330,11 +325,11 @@ public class Merge implements Command {
         throw new IllegalStateException("findEmptyRegions failed");
     }
 
-    private List<HRegionInfo> findEmptyRegionsInternal(TableInfo tableInfo) throws Exception {
+    private List<RegionInfo> findEmptyRegionsInternal(TableInfo tableInfo) throws Exception {
         long timestamp = System.currentTimeMillis();
 
-        Set<HRegionInfo> emptyRegions =
-                Collections.synchronizedSet(Collections.newSetFromMap(new TreeMap<HRegionInfo, Boolean>()));
+        Set<RegionInfo> emptyRegions =
+                Collections.synchronizedSet(Collections.newSetFromMap(new TreeMap<RegionInfo, Boolean>()));
 
         tableInfo.refresh();
 
@@ -342,8 +337,8 @@ public class Merge implements Command {
         try {
             EmptyRegionChecker.resetCounter();
 
-            Set<HRegionInfo> allTableRegions = tableInfo.getRegionInfoSet();
-            for (HRegionInfo regionInfo : allTableRegions) {
+            Set<RegionInfo> allTableRegions = tableInfo.getRegionInfoSet();
+            for (RegionInfo regionInfo : allTableRegions) {
                 RegionLoadDelegator regionLoad = tableInfo.getRegionLoad(regionInfo);
                 if (regionLoad == null) {
                     Util.printMessage("RegionLoad is empty - " + regionInfo);
@@ -352,7 +347,7 @@ public class Merge implements Command {
 
                 if (regionLoad.getStorefileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
                     executorService.execute(
-                            new EmptyRegionChecker(connection, tableInfo.getTableName(), regionInfo, emptyRegions));
+                            new EmptyRegionChecker(admin.getConnection(), tableInfo.getTableNamePattern(), regionInfo, emptyRegions));
                 }
             }
         } finally {

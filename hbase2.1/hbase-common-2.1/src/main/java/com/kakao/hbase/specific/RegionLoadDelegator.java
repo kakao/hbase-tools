@@ -19,12 +19,13 @@ package com.kakao.hbase.specific;
 import com.kakao.hbase.common.LoadEntry;
 
 /**
- * For HBase 0.98/0.96
+ * For HBase 2.1
  */
+@SuppressWarnings("deprecation")
 public class RegionLoadDelegator {
     private final org.apache.hadoop.hbase.RegionLoad regionLoad;
 
-    public RegionLoadDelegator(org.apache.hadoop.hbase.RegionLoad regionLoad) {
+    RegionLoadDelegator(org.apache.hadoop.hbase.RegionLoad regionLoad) {
         this.regionLoad = regionLoad;
     }
 
@@ -64,7 +65,7 @@ public class RegionLoadDelegator {
         throw new IllegalStateException("not implemented");
     }
 
-    public static LoadEntry[] loadEntries() {
+    static LoadEntry[] loadEntries() {
         final LoadEntry[] loadEntries = new LoadEntry[LoadEntry.values().length - 1];
         int i = 0;
         for (LoadEntry loadEntry : LoadEntry.values()) {

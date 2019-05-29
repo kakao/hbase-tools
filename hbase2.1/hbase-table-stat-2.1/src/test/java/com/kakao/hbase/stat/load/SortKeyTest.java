@@ -25,7 +25,7 @@ import static org.junit.Assert.fail;
 
 public class SortKeyTest {
     @Test
-    public void testSort() throws Exception {
+    public void testSort() {
         SortKey sortKey;
 
         try {

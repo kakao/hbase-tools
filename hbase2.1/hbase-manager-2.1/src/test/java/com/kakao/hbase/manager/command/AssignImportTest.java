@@ -19,8 +19,8 @@ package com.kakao.hbase.manager.command;
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.junit.Test;
 
 import java.nio.file.Files;
@@ -38,7 +38,7 @@ public class AssignImportTest extends TestBase {
     @Test
     public void testImportAsync() throws Exception {
         ArrayList<ServerName> serverNameList;
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
         ServerName rs1, rs2;
         List<String> assignmentList;
 
@@ -53,7 +53,7 @@ public class AssignImportTest extends TestBase {
 
         // move all regions to rs1
         regionInfoList = getRegionInfoList(tableName);
-        for (HRegionInfo hRegionInfo : regionInfoList)
+        for (RegionInfo hRegionInfo : regionInfoList)
             move(hRegionInfo, rs1);
         assertEquals(regionInfoList.size(), getRegionInfoList(rs1, tableName).size());
 
@@ -64,7 +64,7 @@ public class AssignImportTest extends TestBase {
             Assign command;
 
             // export
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
             argsParam = new String[]{"zookeeper", "export", expFileName};
             args = new ManagerArgs(argsParam);
             command = new Assign(admin, args);
@@ -78,13 +78,13 @@ public class AssignImportTest extends TestBase {
 
             // move all regions to rs2
             regionInfoList = getRegionInfoList(tableName);
-            for (HRegionInfo hRegionInfo : regionInfoList)
+            for (RegionInfo hRegionInfo : regionInfoList)
                 move(hRegionInfo, rs2);
             assertEquals(0, getRegionInfoList(rs1, tableName).size());
             assertEquals(regionInfoList.size(), getRegionInfoList(rs2, tableName).size());
 
             // import
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
             argsParam = new String[]{"zookeeper", "import", expFileName, "--force-proceed", "--move-async"};
             args = new ManagerArgs(argsParam);
             command = new Assign(admin, args);
@@ -95,7 +95,7 @@ public class AssignImportTest extends TestBase {
             assertEquals(regionInfoList.size(), getRegionInfoList(tableName).size());
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
             Files.delete(Paths.get(expFileName));
         }
     }
@@ -103,7 +103,7 @@ public class AssignImportTest extends TestBase {
     @Test
     public void testImportWithRS() throws Exception {
         ArrayList<ServerName> serverNameList;
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
         ServerName rs1, rs2;
 
         String expFileName = "export_test.exp";
@@ -117,11 +117,11 @@ public class AssignImportTest extends TestBase {
 
         // move all regions to rs1 except 1
         regionInfoList = getRegionInfoList(tableName);
-        for (HRegionInfo hRegionInfo : regionInfoList)
+        for (RegionInfo hRegionInfo : regionInfoList)
             move(hRegionInfo, rs1);
-        HRegionInfo region1 = regionInfoList.get(0);
-        HRegionInfo region2 = regionInfoList.get(1);
-        HRegionInfo region3 = regionInfoList.get(2);
+        RegionInfo region1 = regionInfoList.get(0);
+        RegionInfo region2 = regionInfoList.get(1);
+        RegionInfo region3 = regionInfoList.get(2);
         move(region1, rs2);
         assertEquals(region1, getRegionInfoList(rs2, tableName).get(0));
         assertEquals(region2, getRegionInfoList(rs1, tableName).get(0));
@@ -133,7 +133,7 @@ public class AssignImportTest extends TestBase {
             Args args;
             Assign command;
 
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
 
             // export all RSs
             argsParam = new String[]{"zookeeper", "export", expFileName};
@@ -164,7 +164,7 @@ public class AssignImportTest extends TestBase {
             assertEquals(region3, getRegionInfoList(rs1, tableName).get(0));
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
             Files.delete(Paths.get(expFileName));
         }
     }

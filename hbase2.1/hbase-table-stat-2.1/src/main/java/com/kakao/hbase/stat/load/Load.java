@@ -24,7 +24,7 @@ import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.specific.CommandAdapter;
 import com.kakao.hbase.specific.RegionLoadAdapter;
 import com.kakao.hbase.specific.RegionLoadDelegator;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 
 import java.util.*;
 
@@ -51,7 +51,7 @@ public class Load {
     private boolean showRate = false;
     private boolean isUpdating = false;
 
-    public Load(LevelClass levelClass, Args args) {
+    Load(LevelClass levelClass, Args args) {
         this.levelClass = levelClass;
         this.args = args;
     }
@@ -65,7 +65,7 @@ public class Load {
         return isUpdating;
     }
 
-    public void setIsUpdating(boolean isUpdating) {
+    void setIsUpdating(boolean isUpdating) {
         this.isUpdating = isUpdating;
     }
 
@@ -138,14 +138,14 @@ public class Load {
         }
     }
 
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isRecordChanged(Level level) {
         Boolean changed = recordChangeMap.get(level);
         return changed == null ? true : changed;
     }
 
     public boolean isSummaryChanged(LoadEntry loadEntry) {
-        return summaryChangeMap.get(loadEntry) == ChangeState.changed.ordinal();
+        Number number = summaryChangeMap.get(loadEntry);
+        return number != null && number.equals(ChangeState.changed.ordinal());
     }
 
     public boolean isDiffFromStart() {
@@ -221,7 +221,7 @@ public class Load {
         }
     }
 
-    public void summary(LoadEntry loadEntry, Number value) {
+    private void summary(LoadEntry loadEntry, Number value) {
         Number prev = getSummary().get(loadEntry);
         getSummary().put(loadEntry, loadEntry.add(prev, value));
     }
@@ -230,9 +230,9 @@ public class Load {
         long timestamp = System.currentTimeMillis();
 
         if (tableInfo != null) {
-            for (HRegionInfo hRegionInfo : tableInfo.getRegionInfoSet()) {
+            for (RegionInfo hRegionInfo : tableInfo.getRegionInfoSet()) {
                 if (args.has(Args.OPTION_TEST)
-                        && !CommandAdapter.getTableName(hRegionInfo).startsWith(Constant.UNIT_TEST_TABLE_PREFIX))
+                        && !CommandAdapter.getTableName(hRegionInfo).getNameAsString().startsWith(Constant.UNIT_TEST_TABLE_PREFIX))
                     continue;
 
                 if (tableInfo.getServerIndexes(args).size() > 0) {
@@ -342,7 +342,7 @@ public class Load {
         }
     }
 
-    public Number getValueDiff(Level level, LoadEntry loadEntry) {
+    Number getValueDiff(Level level, LoadEntry loadEntry) {
         Map<Level, LoadRecord> loadMapPrev = getLoadMapPrev();
         LoadRecord loadRecordPrev = loadMapPrev == null ? null : loadMapPrev.get(level);
         if (loadRecordPrev == null) {

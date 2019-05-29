@@ -19,8 +19,8 @@ package com.kakao.hbase.stat;
 import com.kakao.hbase.common.LoadEntry;
 import com.kakao.hbase.stat.load.Level;
 import com.kakao.hbase.stat.load.RegionName;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,10 +41,10 @@ public class TableStatRegionOptionTest extends StatTestBase {
 
         List<ServerName> serverNameList = getServerNameList();
         assertEquals(RS_COUNT, serverNameList.size());
-        String[] args = {"zookeeper", tableName, "--region", "--interval=0"};
+        String[] args = {"zookeeper", tableName.getNameAsString(), "--region", "--interval=0"};
         TableStat command = new TableStat(admin, new StatArgs(args));
 
-        ArrayList<HRegionInfo> regionInfoList;
+        ArrayList<RegionInfo> regionInfoList;
 
         // move regions to second RS for checking server index
         regionInfoList = getRegionInfoList(tableName);

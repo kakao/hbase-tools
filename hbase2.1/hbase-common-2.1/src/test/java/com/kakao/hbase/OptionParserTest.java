@@ -24,7 +24,7 @@ import java.util.List;
 
 public class OptionParserTest {
     @Test
-    public void testOptionParser() throws Exception {
+    public void testOptionParser() {
         OptionParser optionParser = new OptionParser();
 
         String[] args = {"command", "--option2=1", "zookeeper", "--option1", "tablename", "--option3"};

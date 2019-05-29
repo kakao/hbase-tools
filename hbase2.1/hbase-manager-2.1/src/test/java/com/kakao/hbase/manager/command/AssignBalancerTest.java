@@ -19,20 +19,11 @@ package com.kakao.hbase.manager.command;
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
-import com.kakao.hbase.common.Constant;
 import com.kakao.hbase.specific.CommandAdapter;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class AssignBalancerTest extends TestBase {
     public AssignBalancerTest() {
@@ -43,13 +34,13 @@ public class AssignBalancerTest extends TestBase {
     public void testIsBalancerRunning() throws Exception {
         boolean balancerRunning = false;
         try {
-            balancerRunning = admin.setBalancerRunning(true, true);
+            balancerRunning = admin.balancerSwitch(true, true);
             assertTrue(CommandAdapter.isBalancerRunning(admin));
-            admin.setBalancerRunning(false, true);
+            admin.balancerSwitch(false, true);
             assertFalse(CommandAdapter.isBalancerRunning(admin));
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
     }
 
@@ -57,7 +48,7 @@ public class AssignBalancerTest extends TestBase {
     public void testBalancer() throws Exception {
         boolean balancerRunning = false;
         try {
-            balancerRunning = admin.setBalancerRunning(true, true);
+            balancerRunning = admin.balancerSwitch(true, true);
 
             String[] argsParam;
             Args args;
@@ -76,7 +67,7 @@ public class AssignBalancerTest extends TestBase {
             assertTrue(CommandAdapter.isBalancerRunning(admin));
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
     }
 }

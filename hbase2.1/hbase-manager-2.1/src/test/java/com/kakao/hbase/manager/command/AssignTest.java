@@ -20,8 +20,8 @@ import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class AssignTest extends TestBase {
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
 
-            balancerRunning = admin.setBalancerRunning(true, true);
+            balancerRunning = admin.balancerSwitch(true, true);
             command.run();
             fail();
         } catch (IllegalStateException e) {
@@ -58,7 +58,7 @@ public class AssignTest extends TestBase {
                 throw e;
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
 
         // valid export
@@ -69,11 +69,11 @@ public class AssignTest extends TestBase {
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
 
-            balancerRunning = admin.setBalancerRunning(true, true);
+            balancerRunning = admin.balancerSwitch(true, true);
             command.run();
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
 
         // invalid import
@@ -83,7 +83,7 @@ public class AssignTest extends TestBase {
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
 
-            balancerRunning = admin.setBalancerRunning(true, true);
+            balancerRunning = admin.balancerSwitch(true, true);
             command.run();
             fail();
         } catch (IllegalStateException e) {
@@ -91,7 +91,7 @@ public class AssignTest extends TestBase {
                 throw e;
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
 
         // valid import
@@ -102,18 +102,18 @@ public class AssignTest extends TestBase {
             Args args = new ManagerArgs(argsParam);
             Assign command = new Assign(admin, args);
 
-            balancerRunning = admin.setBalancerRunning(true, true);
+            balancerRunning = admin.balancerSwitch(true, true);
             command.run();
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
         }
     }
 
     @Test
     public void testExportImport() throws Exception {
         ArrayList<ServerName> serverNameList;
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
         ServerName rs1, rs2;
         List<String> assignmentList;
 
@@ -128,7 +128,7 @@ public class AssignTest extends TestBase {
 
         // move all regions to rs1
         regionInfoList = getRegionInfoList(tableName);
-        for (HRegionInfo hRegionInfo : regionInfoList)
+        for (RegionInfo hRegionInfo : regionInfoList)
             move(hRegionInfo, rs1);
         assertEquals(regionInfoList.size(), getRegionInfoList(rs1, tableName).size());
 
@@ -139,7 +139,7 @@ public class AssignTest extends TestBase {
             Assign command;
 
             // export
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
             argsParam = new String[]{"zookeeper", "export", expFileName};
             args = new ManagerArgs(argsParam);
             command = new Assign(admin, args);
@@ -158,7 +158,7 @@ public class AssignTest extends TestBase {
                     }
 
                     // add a not existing table
-                    if (j == 0 && assignment.endsWith(tableName)) {
+                    if (j == 0 && assignment.endsWith(tableName.getNameAsString())) {
                         writer.println(assignment.replaceAll("/" + tableName, "/" + tableName + "_INVALID"));
                         j++;
                     }
@@ -186,13 +186,13 @@ public class AssignTest extends TestBase {
 
             // move all regions to rs2
             regionInfoList = getRegionInfoList(tableName);
-            for (HRegionInfo hRegionInfo : regionInfoList)
+            for (RegionInfo hRegionInfo : regionInfoList)
                 move(hRegionInfo, rs2);
             assertEquals(0, getRegionInfoList(rs1, tableName).size());
             assertEquals(regionInfoList.size(), getRegionInfoList(rs2, tableName).size());
 
             // import
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
             argsParam = new String[]{"zookeeper", "import", expFileName, "--force-proceed"};
             args = new ManagerArgs(argsParam);
             command = new Assign(admin, args);
@@ -203,7 +203,7 @@ public class AssignTest extends TestBase {
             assertEquals(regionInfoList.size(), getRegionInfoList(tableName).size());
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
             Files.delete(Paths.get(expFileName));
         }
     }
@@ -211,7 +211,7 @@ public class AssignTest extends TestBase {
     @Test
     public void testExportWithRS() throws Exception {
         ArrayList<ServerName> serverNameList;
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
         ServerName rs1, rs2;
         List<String> assignmentList;
 
@@ -226,9 +226,9 @@ public class AssignTest extends TestBase {
 
         // move all regions to rs1 except 1
         regionInfoList = getRegionInfoList(tableName);
-        for (HRegionInfo hRegionInfo : regionInfoList)
+        for (RegionInfo hRegionInfo : regionInfoList)
             move(hRegionInfo, rs1);
-        HRegionInfo firstRegion = regionInfoList.get(0);
+        RegionInfo firstRegion = regionInfoList.get(0);
         move(firstRegion, rs2);
         assertEquals(regionInfoList.size() - 1, getRegionInfoList(rs1, tableName).size());
         assertEquals(1, getRegionInfoList(rs2, tableName).size());
@@ -239,7 +239,7 @@ public class AssignTest extends TestBase {
             Args args;
             Assign command;
 
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
 
             // export with full RS name
             argsParam = new String[]{"zookeeper", "export", expFileName, "--rs=" + rs1.getServerName()};
@@ -271,7 +271,7 @@ public class AssignTest extends TestBase {
             assertEquals(firstRegion.getEncodedName() + " must be exported.", 1, actual);
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
             Files.delete(Paths.get(expFileName));
         }
     }
@@ -279,7 +279,7 @@ public class AssignTest extends TestBase {
     @Test
     public void testExportRS1ImportRS2() throws Exception {
         ArrayList<ServerName> serverNameList;
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
         ServerName rs1, rs2;
 
         String expFileName = "export_test.exp";
@@ -293,11 +293,11 @@ public class AssignTest extends TestBase {
 
         // move all regions to rs1 except 1
         regionInfoList = getRegionInfoList(tableName);
-        for (HRegionInfo hRegionInfo : regionInfoList)
+        for (RegionInfo hRegionInfo : regionInfoList)
             move(hRegionInfo, rs1);
-        HRegionInfo region1 = regionInfoList.get(0);
-        HRegionInfo region2 = regionInfoList.get(1);
-        HRegionInfo region3 = regionInfoList.get(2);
+        RegionInfo region1 = regionInfoList.get(0);
+        RegionInfo region2 = regionInfoList.get(1);
+        RegionInfo region3 = regionInfoList.get(2);
         move(region1, rs2);
         assertEquals(region1, getRegionInfoList(rs2, tableName).get(0));
         assertEquals(region2, getRegionInfoList(rs1, tableName).get(0));
@@ -309,7 +309,7 @@ public class AssignTest extends TestBase {
             Args args;
             Assign command;
 
-            balancerRunning = admin.setBalancerRunning(false, true);
+            balancerRunning = admin.balancerSwitch(false, true);
 
             // export RS1
             argsParam = new String[]{"zookeeper", "export", expFileName, "--rs=" + rs1.getServerName()};
@@ -338,29 +338,27 @@ public class AssignTest extends TestBase {
             assertEquals(region3, getRegionInfoList(rs1, tableName).get(1));
         } finally {
             if (balancerRunning)
-                admin.setBalancerRunning(true, true);
+                admin.balancerSwitch(true, true);
             Files.delete(Paths.get(expFileName));
         }
     }
 
     static List<String> readExportFile(String expFileName) throws IOException {
         List<String> assignmentList;
-        assignmentList = new ArrayList<>();
-        for (String assignment : Files.readAllLines(Paths.get(expFileName), Constant.CHARSET)) {
-            assignmentList.add(assignment);
-        }
+        assignmentList = new ArrayList<>(Files.readAllLines(Paths.get(expFileName), Constant.CHARSET));
         return assignmentList;
     }
 
     @Test
     public void testMove() throws Exception {
         ArrayList<ServerName> serverNameList = getServerNameList();
-        ArrayList<HRegionInfo> regionInfoList = getRegionInfoList(tableName);
+        ArrayList<RegionInfo> regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
 
         // move region to rs0
         move(regionInfoList.get(0), serverNameList.get(0));
 
+        // fixme
         // split and move
         splitTable("a".getBytes());
         Common.move(null, admin, tableName, serverNameList.get(1).getServerName(),

@@ -18,13 +18,11 @@ package com.kakao.hbase.manager;
 
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
-import com.kakao.hbase.common.HBaseClient;
 import com.kakao.hbase.common.InvalidTableException;
 import com.kakao.hbase.common.util.AlertSender;
 import com.kakao.hbase.common.util.AlertSenderTest;
 import com.kakao.hbase.common.util.Util;
 import com.kakao.hbase.manager.command.Command;
-import com.kakao.hbase.specific.HBaseAdminWrapper;
 import joptsimple.OptionException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -41,7 +39,7 @@ public class ManagerTest extends TestBase {
     public void testDisabledTable() throws Exception {
         admin.disableTable(tableName);
         try {
-            Util.validateTable(admin, tableName);
+            Util.validateTable(admin, tableName.getNameAsString());
         } catch (InvalidTableException e) {
             if (!e.getMessage().contains("Table is not enabled")) {
                 throw e;
@@ -51,7 +49,7 @@ public class ManagerTest extends TestBase {
 
     @Test
     public void testExistingTable() throws Exception {
-        Util.validateTable(admin, tableName);
+        Util.validateTable(admin, tableName.getNameAsString());
     }
 
     @Test
@@ -102,7 +100,7 @@ public class ManagerTest extends TestBase {
 
     @Test
     public void testTableList() throws Exception {
-        String tableName2 = tableName + "2";
+        TableName tableName2 = TableName.valueOf(tableName + "2");
         try {
             createTable(tableName2);
             Util.validateTable(admin, tableName + "," + tableName2);
@@ -123,7 +121,7 @@ public class ManagerTest extends TestBase {
 
     @Test
     public void testNamespace() throws Exception {
-        TableName tn = TableName.valueOf(TEST_NAMESPACE, tableName);
+        TableName tn = TableName.valueOf(TEST_NAMESPACE, tableName.getNameAsString());
 
         HTableDescriptor td = new HTableDescriptor(tn);
         HColumnDescriptor cd = new HColumnDescriptor(TEST_TABLE_CF);
@@ -142,18 +140,16 @@ public class ManagerTest extends TestBase {
         String commandName = "assign";
         String[] args = {commandName, "zookeeper", "table"};
         Args argsObject = Manager.parseArgs(args);
-        new Manager(argsObject, commandName);
+        new Manager(connection, argsObject, commandName);
     }
 
     @Test
     public void testAfterFailure() throws Exception {
-        HBaseClient.setAdminForTesting(admin);
-
         String commandName = "assign";
         String[] args = {commandName, "localhost", "balancer", "invalid",
                 "--" + Args.OPTION_AFTER_FAILURE + "=" + AlertSenderTest.ALERT_SCRIPT};
         Args argsObject = Manager.parseArgs(args);
-        Manager manager = new Manager(argsObject, commandName);
+        Manager manager = new Manager(connection, argsObject, commandName);
 
         int sendCountBefore = AlertSender.getSendCount();
 
@@ -164,40 +160,30 @@ public class ManagerTest extends TestBase {
         }
 
         Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
-
-        // recreate admin because it is closed in Manager
-        admin = new HBaseAdminWrapper(conf);
     }
 
     @Test
     public void testAfterSuccess() throws Exception {
-        HBaseClient.setAdminForTesting(admin);
-
         String commandName = "assign";
         String[] args = {commandName, "localhost", "balancer", "on",
                 "--" + Args.OPTION_AFTER_SUCCESS + "=" + AlertSenderTest.ALERT_SCRIPT};
         Args argsObject = Manager.parseArgs(args);
-        Manager manager = new Manager(argsObject, commandName);
+        Manager manager = new Manager(connection, argsObject, commandName);
 
         int sendCountBefore = AlertSender.getSendCount();
 
         manager.run();
 
         Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
-
-        // recreate admin because it is closed in Manager
-        admin = new HBaseAdminWrapper(conf);
     }
 
     @Test
     public void testAfterFinishFailure() throws Exception {
-        HBaseClient.setAdminForTesting(admin);
-
         String commandName = "assign";
         String[] args = {commandName, "localhost", "balancer", "invalid",
                 "--" + Args.OPTION_AFTER_FINISH + "=" + AlertSenderTest.ALERT_SCRIPT};
         Args argsObject = Manager.parseArgs(args);
-        Manager manager = new Manager(argsObject, commandName);
+        Manager manager = new Manager(connection, argsObject, commandName);
 
         int sendCountBefore = AlertSender.getSendCount();
 
@@ -208,28 +194,20 @@ public class ManagerTest extends TestBase {
         }
 
         Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
-
-        // recreate admin because it is closed in Manager
-        admin = new HBaseAdminWrapper(conf);
     }
 
     @Test
     public void testAfterFinishSuccess() throws Exception {
-        HBaseClient.setAdminForTesting(admin);
-
         String commandName = "assign";
         String[] args = {commandName, "localhost", "balancer", "on",
                 "--" + Args.OPTION_AFTER_FINISH + "=" + AlertSenderTest.ALERT_SCRIPT};
         Args argsObject = Manager.parseArgs(args);
-        Manager manager = new Manager(argsObject, commandName);
+        Manager manager = new Manager(connection, argsObject, commandName);
 
         int sendCountBefore = AlertSender.getSendCount();
 
         manager.run();
 
         Assert.assertEquals(sendCountBefore + 1, AlertSender.getSendCount());
-
-        // recreate admin because it is closed in Manager
-        admin = new HBaseAdminWrapper(conf);
     }
 }

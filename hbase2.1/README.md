@@ -1,7 +1,7 @@
 hbase-tools
 ===
 
-Collection of command-line tools for HBase. This is developed and tested with CDH.
+Collection of command-line tools for HBase.
 
 Usage
 ===

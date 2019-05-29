@@ -19,6 +19,7 @@ package com.kakao.hbase.stat.load;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.LoadEntry;
 import com.kakao.hbase.stat.StatArgs;
+import org.apache.hadoop.hbase.TableName;
 import org.junit.Test;
 
 import java.nio.charset.Charset;

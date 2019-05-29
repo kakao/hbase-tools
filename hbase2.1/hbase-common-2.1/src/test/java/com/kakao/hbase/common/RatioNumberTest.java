@@ -23,7 +23,7 @@ import static org.junit.Assert.assertEquals;
 
 public class RatioNumberTest {
     @Test
-    public void testIntValue() throws Exception {
+    public void testIntValue() {
         Assert.assertEquals(1, new RatioNumber(1.0, 1.0).intValue());
         assertEquals(0, new RatioNumber(1.0, 0.1).intValue());
         assertEquals(0, new RatioNumber(1.0, 0.0).intValue());
@@ -33,7 +33,7 @@ public class RatioNumberTest {
     }
 
     @Test
-    public void testLongValue() throws Exception {
+    public void testLongValue() {
         assertEquals(1L, new RatioNumber(1.0, 1.0).longValue());
         assertEquals(0L, new RatioNumber(1.0, 0.1).longValue());
         assertEquals(0L, new RatioNumber(1.0, 0.0).longValue());
@@ -44,7 +44,7 @@ public class RatioNumberTest {
     }
 
     @Test
-    public void testFloatValue() throws Exception {
+    public void testFloatValue() {
         assertEquals(1.0f, new RatioNumber(1.0, 1.0).floatValue(), 0.0f);
         assertEquals(0.1f, new RatioNumber(1.0, 0.1).floatValue(), 0.0f);
         assertEquals(1.0f, new RatioNumber(0.0, 1.0).floatValue(), 0.0f);
@@ -54,7 +54,7 @@ public class RatioNumberTest {
     }
 
     @Test
-    public void testDoubleValue() throws Exception {
+    public void testDoubleValue() {
         assertEquals(0.1, new RatioNumber(10, 0.1).doubleValue(), 0.0);
         assertEquals(0.1, new RatioNumber(1, 0.1).doubleValue(), 0.0);
         assertEquals(0.0, new RatioNumber(10, 0).doubleValue(), 0.0);
@@ -64,7 +64,7 @@ public class RatioNumberTest {
     }
 
     @Test
-    public void testAdd() throws Exception {
+    public void testAdd() {
         RatioNumber r1;
         RatioNumber r2;
 
@@ -105,7 +105,7 @@ public class RatioNumberTest {
     }
 
     @Test
-    public void testAddZero() throws Exception {
+    public void testAddZero() {
         Number ratioNumber = new RatioNumber(10, 0.1);
         Number zero = 0;
 
@@ -115,13 +115,13 @@ public class RatioNumberTest {
     }
 
     @Test
-    public void testValueOf() throws Exception {
+    public void testValueOf() {
         assertEquals(new RatioNumber(3, 4), RatioNumber.valueOf("3:4"));
         assertEquals(new RatioNumber(0, 0), RatioNumber.valueOf("0:0"));
     }
 
     @Test
-    public void testToString() throws Exception {
+    public void testToString() {
         assertEquals("0.0:0.0", RatioNumber.ZERO.toString());
         assertEquals("3.0:4.0", new RatioNumber(3, 4).toString());
     }

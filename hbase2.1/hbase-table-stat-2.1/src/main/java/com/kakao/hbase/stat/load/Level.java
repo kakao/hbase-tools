@@ -17,6 +17,7 @@
 package com.kakao.hbase.stat.load;
 
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 
 public class Level implements Comparable<Level> {
     private final Object level;
@@ -32,7 +33,7 @@ public class Level implements Comparable<Level> {
         } else if (level instanceof ServerName) {
             return ((ServerName) level).getServerName();
         } else if (level instanceof TableName) {
-            return ((TableName) level).getTableName();
+            return ((TableName) level).getNameAsString();
         } else {
             return level.toString();
         }
@@ -64,7 +65,7 @@ public class Level implements Comparable<Level> {
         } else if (level instanceof ServerName) {
             return ((ServerName) level).getServerName().equals(name);
         } else if (level instanceof TableName) {
-            return ((TableName) level).getTableName().equals(name);
+            return ((TableName) level).getNameAsString().equals(name);
         } else if (level instanceof String) {
             return level.equals(name);
         } else

@@ -19,7 +19,7 @@ package com.kakao.hbase.manager.command;
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.junit.Test;
 
 import java.util.List;
@@ -36,10 +36,10 @@ public class MergeEmptyTest2 extends MergeTestBase {
     public void testMergeEmpty4() throws Exception {
         makeTestData4();
 
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "empty", "--force-proceed", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "empty", "--force-proceed", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.setTest(true);
@@ -57,10 +57,10 @@ public class MergeEmptyTest2 extends MergeTestBase {
     public void testMergeEmpty5() throws Exception {
         makeTestData5();
 
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "emptY", "--force-proceed", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "emptY", "--force-proceed", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.setTest(true);
@@ -70,6 +70,7 @@ public class MergeEmptyTest2 extends MergeTestBase {
         // check
         Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
+        // fixme
         assertEquals(2, regionInfoList.size());
         assertArrayEquals("".getBytes(), regionInfoList.get(0).getStartKey());
         assertArrayEquals("b".getBytes(), regionInfoList.get(1).getStartKey());
@@ -79,10 +80,10 @@ public class MergeEmptyTest2 extends MergeTestBase {
     public void testMergeEmpty6() throws Exception {
         makeTestData6();
 
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         // merge
-        String[] argsParam = {"zookeeper", tableName, "empty", "--force-proceed", "--max-iteration=4", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "empty", "--force-proceed", "--max-iteration=4", "--test"};
         Args args = new ManagerArgs(argsParam);
         Merge command = new Merge(admin, args);
         command.run();

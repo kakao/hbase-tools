@@ -19,7 +19,8 @@ package com.kakao.hbase.manager.command;
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,7 +42,7 @@ public class SplitTest extends TestBase {
     public void testSplitWithFile() throws Exception {
         final String keyFileName = "exportkeys_test.keys";
 
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
         try {
             {
                 // export
@@ -49,7 +50,7 @@ public class SplitTest extends TestBase {
                 splitTable("b".getBytes());
                 waitForSplitting(3);
 
-                String[] argsParam = {"zookeeper", tableName, keyFileName, "--force-proceed"};
+                String[] argsParam = {"zookeeper", tableName.getNameAsString(), keyFileName, "--force-proceed"};
                 Args args = new ManagerArgs(argsParam);
                 assertEquals("zookeeper", args.getZookeeperQuorum());
                 ExportKeys command = new ExportKeys(admin, args);
@@ -63,7 +64,7 @@ public class SplitTest extends TestBase {
                 assertEquals(1, getRegionInfoList(tableName).size());
             }
 
-            String[] argsParam = {"zookeeper", tableName, "filE", keyFileName, "--force-proceed"};
+            String[] argsParam = {"zookeeper", tableName.getNameAsString(), "filE", keyFileName, "--force-proceed"};
             Args args = new ManagerArgs(argsParam);
             assertEquals("zookeeper", args.getZookeeperQuorum());
             Split command = new Split(admin, args);
@@ -80,12 +81,12 @@ public class SplitTest extends TestBase {
 
     @Test
     public void testSplitWithDecimalString() throws Exception {
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
 
-        String[] argsParam = {"zookeeper", tableName, "Rule", "decimalString", "3", "10", "--force-proceed"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "Rule", "decimalString", "3", "10", "--force-proceed"};
         Args args = new ManagerArgs(argsParam);
         assertEquals("zookeeper", args.getZookeeperQuorum());
         Split command = new Split(admin, args);
@@ -95,7 +96,7 @@ public class SplitTest extends TestBase {
 
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(3, regionInfoList.size());
-        for (HRegionInfo hRegionInfo : regionInfoList) {
+        for (RegionInfo hRegionInfo : regionInfoList) {
             byte[] startKey = hRegionInfo.getStartKey();
             if (startKey.length > 0) {
                 assertTrue(Bytes.toString(startKey).matches("[0-9]*"));
@@ -108,16 +109,16 @@ public class SplitTest extends TestBase {
     public void testSplitFileRegex() throws Exception {
         String keyFileName = "exportkeys_test.keys";
 
-        List<HRegionInfo> regionInfoList;
+        List<RegionInfo> regionInfoList;
 
         byte[] splitPoint = "splitpoint".getBytes();
         splitTable(splitPoint);
         byte[] splitPoint2 = "splitpoint2".getBytes();
-        String tableName2 = createAdditionalTable(tableName + "2");
+        TableName tableName2 = createAdditionalTable(tableName + "2");
         splitTable(tableName2, splitPoint2);
         byte[] splitPoint31 = Bytes.toBytes(3100L);
         byte[] splitPoint32 = Bytes.toBytes(3200L);
-        String tableName3 = createAdditionalTable(tableName + "22");
+        TableName tableName3 = createAdditionalTable(tableName + "22");
         splitTable(tableName3, splitPoint31);
         splitTable(tableName3, splitPoint32);
 
@@ -158,9 +159,9 @@ public class SplitTest extends TestBase {
             waitForSplitting(tableName2, 2);
             waitForSplitting(tableName3, 3);
 
-            ArrayList<HRegionInfo> regionInfoList1 = getRegionInfoList(tableName);
-            ArrayList<HRegionInfo> regionInfoList2 = getRegionInfoList(tableName2);
-            ArrayList<HRegionInfo> regionInfoList3 = getRegionInfoList(tableName3);
+            ArrayList<RegionInfo> regionInfoList1 = getRegionInfoList(tableName);
+            ArrayList<RegionInfo> regionInfoList2 = getRegionInfoList(tableName2);
+            ArrayList<RegionInfo> regionInfoList3 = getRegionInfoList(tableName3);
             assertEquals(1, regionInfoList1.size());
             assertEquals(2, regionInfoList2.size());
             assertArrayEquals(splitPoint2, regionInfoList2.get(1).getStartKey());

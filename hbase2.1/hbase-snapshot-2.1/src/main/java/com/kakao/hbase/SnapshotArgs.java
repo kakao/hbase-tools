@@ -20,8 +20,11 @@ import com.kakao.hbase.common.Args;
 import com.kakao.hbase.specific.SnapshotAdapter;
 import joptsimple.OptionParser;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 import java.io.IOException;
 import java.util.*;
@@ -32,10 +35,10 @@ public class SnapshotArgs extends Args {
     static final int KEEP_DEFAULT = KEEP_UNLIMITED;
     static final String ENTRY_DELIMITER = "/";
 
-    private final Map<String, Boolean> tableFlushMap = new HashMap<>();
-    private final Map<String, Integer> tableKeepMap = new HashMap<>();
+    private final Map<TableName, Boolean> tableFlushMap = new HashMap<>();
+    private final Map<TableName, Integer> tableKeepMap = new HashMap<>();
 
-    private final Set<String> excludedSet = new HashSet<>();
+    private final Set<TableName> excludedSet = new HashSet<>();
 
     public SnapshotArgs(String[] args) throws IOException {
         super(args);
@@ -46,7 +49,7 @@ public class SnapshotArgs extends Args {
         }
     }
 
-    public boolean isExcluded(String tableName) {
+    public boolean isExcluded(TableName tableName) {
         return excludedSet.contains(tableName);
     }
 
@@ -73,13 +76,13 @@ public class SnapshotArgs extends Args {
             for (String table : tables) {
                 String[] parts = table.split(ENTRY_DELIMITER);
                 String tableName = parts[0];
-                tableKeepMap.put(tableName, Integer.valueOf(parts[1]));
-                tableFlushMap.put(tableName, Boolean.valueOf(parts[2]));
+                tableKeepMap.put(TableName.valueOf(tableName), Integer.valueOf(parts[1]));
+                tableFlushMap.put(TableName.valueOf(tableName), Boolean.valueOf(parts[2]));
             }
         }
     }
 
-    public HBaseProtos.SnapshotDescription.Type flushType(String tableName) {
+    public SnapshotType flushType(TableName tableName) {
         if (tableFlushMap.get(tableName) == null) {
             return SnapshotAdapter.getType(optionSet);
         } else {
@@ -87,7 +90,7 @@ public class SnapshotArgs extends Args {
         }
     }
 
-    public int keepCount(String tableName) {
+    public int keepCount(TableName tableName) {
         if (tableKeepMap.get(tableName) == null) {
             if (optionSet.has(SnapshotArgs.OPTION_KEEP)) {
                 int keepCount = Integer.valueOf((String) optionSet.valueOf(SnapshotArgs.OPTION_KEEP));
@@ -102,8 +105,8 @@ public class SnapshotArgs extends Args {
         }
     }
 
-    public Set<String> tableSet(HBaseAdmin admin) throws IOException {
-        Set<String> tableSet = new TreeSet<>();
+    public Set<TableName> tableSet(Admin admin) throws IOException {
+        Set<TableName> tableSet = new TreeSet<>();
         String[] tables = ((String) optionSet.nonOptionArguments().get(1)).replaceAll(" ", "").split(COMMA);
         parseTables(admin, tables, tableSet);
 
@@ -114,7 +117,7 @@ public class SnapshotArgs extends Args {
         return tableSet;
     }
 
-    private void parseExclude(HBaseAdmin admin) throws IOException {
+    private void parseExclude(Admin admin) throws IOException {
         if (optionSet.has(OPTION_EXCLUDE)) {
             excludedSet.clear();
 
@@ -123,20 +126,20 @@ public class SnapshotArgs extends Args {
         }
     }
 
-    private void parseTables(HBaseAdmin admin, String[] tables, Set<String> tableSet) throws IOException {
+    private void parseTables(Admin admin, String[] tables, Set<TableName> tableSet) throws IOException {
         for (String table : tables) {
             final String tableName;
             if (table.contains(ENTRY_DELIMITER)) {
                 String[] parts = table.split(ENTRY_DELIMITER);
                 tableName = parts[0];
-                tableKeepMap.put(tableName, Integer.valueOf(parts[1]));
-                tableFlushMap.put(tableName, Boolean.valueOf(parts[2]));
+                tableKeepMap.put(TableName.valueOf(tableName), Integer.valueOf(parts[1]));
+                tableFlushMap.put(TableName.valueOf(tableName), Boolean.valueOf(parts[2]));
             } else {
                 tableName = table;
             }
 
             for (HTableDescriptor hTableDescriptor : admin.listTables(tableName)) {
-                tableSet.add(hTableDescriptor.getNameAsString());
+                tableSet.add(hTableDescriptor.getTableName());
             }
         }
     }

@@ -20,10 +20,10 @@ import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.Table;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,23 +34,24 @@ import java.util.Set;
 
 import static org.junit.Assert.*;
 
+// fixme
 public class MCTest extends TestBase {
-    private HTableInterface table = null;
+    private Table table = null;
 
     public MCTest() {
         super(MCTest.class);
     }
 
-    private void putData(HTableInterface table, byte[] rowkey) throws IOException {
+    private void putData(Table table, byte[] rowkey) throws IOException {
         Put put = new Put(rowkey);
-        put.add(TEST_TABLE_CF.getBytes(), "c1".getBytes(), rowkey);
+        put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), rowkey);
         table.put(put);
     }
 
-    private void putData2(HTableInterface table, byte[] rowkey) throws IOException {
+    private void putData2(Table table, byte[] rowkey) throws IOException {
         Put put = new Put(rowkey);
-        put.add(TEST_TABLE_CF.getBytes(), "c1".getBytes(), rowkey);
-        put.add(TEST_TABLE_CF2.getBytes(), "c1".getBytes(), rowkey);
+        put.addColumn(TEST_TABLE_CF.getBytes(), "c1".getBytes(), rowkey);
+        put.addColumn(TEST_TABLE_CF2.getBytes(), "c1".getBytes(), rowkey);
         table.put(put);
     }
 
@@ -74,9 +75,9 @@ public class MCTest extends TestBase {
         // move a region to the first RS
         ArrayList<ServerName> serverNameList = getServerNameList();
         assertTrue(serverNameList.size() >= 2);
-        ArrayList<HRegionInfo> regionInfoList = getRegionInfoList(tableName);
+        ArrayList<RegionInfo> regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
-        HRegionInfo regionInfo = regionInfoList.get(0);
+        RegionInfo regionInfo = regionInfoList.get(0);
         ServerName serverName = serverNameList.get(0);
         move(regionInfo, serverName);
 
@@ -89,7 +90,7 @@ public class MCTest extends TestBase {
         assertEquals(2, getRegionLoad(regionInfo, serverName).getStorefiles());
 
         // run MC
-        String[] argsParam = {"zookeeper", tableName, "--force-proceed", "--wait", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--force-proceed", "--wait", "--test"};
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
@@ -104,7 +105,7 @@ public class MCTest extends TestBase {
         createAdditionalTable(tableName + "2");
 
         // run MC
-        String[] argsParam = {"zookeeper", tableName, "--force-proceed", "--wait", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--force-proceed", "--wait", "--test"};
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
@@ -123,9 +124,9 @@ public class MCTest extends TestBase {
         // move a region to the first RS
         ArrayList<ServerName> serverNameList = getServerNameList();
         assertTrue(serverNameList.size() >= 2);
-        ArrayList<HRegionInfo> regionInfoList = getRegionInfoList(tableName);
+        ArrayList<RegionInfo> regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
-        HRegionInfo regionInfo = regionInfoList.get(0);
+        RegionInfo regionInfo = regionInfoList.get(0);
         ServerName serverName = serverNameList.get(0);
         move(regionInfo, serverName);
 
@@ -138,7 +139,7 @@ public class MCTest extends TestBase {
         assertEquals(2 + 2, getRegionLoad(regionInfo, serverName).getStorefiles());
 
         // run MC
-        String[] argsParam = {"zookeeper", tableName, "--cf=d", "--force-proceed", "--wait", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--cf=d", "--force-proceed", "--wait", "--test"};
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
@@ -153,9 +154,9 @@ public class MCTest extends TestBase {
         // move a region to the first RS
         ArrayList<ServerName> serverNameList = getServerNameList();
         assertTrue(serverNameList.size() >= 2);
-        ArrayList<HRegionInfo> regionInfoList = getRegionInfoList(tableName);
+        ArrayList<RegionInfo> regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
-        HRegionInfo regionInfo = regionInfoList.get(0);
+        RegionInfo regionInfo = regionInfoList.get(0);
         ServerName serverName = serverNameList.get(0);
         move(regionInfo, serverName);
 
@@ -168,7 +169,7 @@ public class MCTest extends TestBase {
         assertEquals(2, getRegionLoad(regionInfo, serverName).getStorefiles());
 
         // run MC
-        String[] argsParam = {"zookeeper", tableName, "--cf=e", "--force-proceed", "--wait", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--cf=e", "--force-proceed", "--wait", "--test"};
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
@@ -184,10 +185,10 @@ public class MCTest extends TestBase {
         splitTable("c".getBytes());
         ArrayList<ServerName> serverNameList = getServerNameList();
         assertTrue(serverNameList.size() >= 2);
-        ArrayList<HRegionInfo> regionInfoList = getRegionInfoList(tableName);
+        ArrayList<RegionInfo> regionInfoList = getRegionInfoList(tableName);
         assertEquals(2, regionInfoList.size());
-        HRegionInfo regionInfo1 = regionInfoList.get(0);
-        HRegionInfo regionInfo2 = regionInfoList.get(1);
+        RegionInfo regionInfo1 = regionInfoList.get(0);
+        RegionInfo regionInfo2 = regionInfoList.get(1);
         ServerName serverName1 = serverNameList.get(0);
         ServerName serverName2 = serverNameList.get(1);
         move(regionInfo1, serverName1);
@@ -207,7 +208,7 @@ public class MCTest extends TestBase {
         assertEquals(2, getRegionLoad(regionInfo2, serverName2).getStorefiles());
 
         // run MC
-        String[] argsParam = {"zookeeper", tableName, "--force-proceed", "--wait", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--force-proceed", "--wait", "--test"};
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
@@ -224,10 +225,10 @@ public class MCTest extends TestBase {
         splitTable("c".getBytes());
         ArrayList<ServerName> serverNameList = getServerNameList();
         assertTrue(serverNameList.size() >= 2);
-        ArrayList<HRegionInfo> regionInfoList = getRegionInfoList(tableName);
+        ArrayList<RegionInfo> regionInfoList = getRegionInfoList(tableName);
         assertEquals(2, regionInfoList.size());
-        HRegionInfo regionInfo1 = regionInfoList.get(0);
-        HRegionInfo regionInfo2 = regionInfoList.get(1);
+        RegionInfo regionInfo1 = regionInfoList.get(0);
+        RegionInfo regionInfo2 = regionInfoList.get(1);
         ServerName serverName1 = serverNameList.get(0);
         ServerName serverName2 = serverNameList.get(1);
         move(regionInfo1, serverName1);
@@ -248,7 +249,7 @@ public class MCTest extends TestBase {
 
         // run MC
         String regex = serverName1.getHostname() + "," + serverName1.getPort() + ".*";
-        String[] argsParam = {"zookeeper", tableName, "--rs=" + regex, "--force-proceed", "--wait", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--rs=" + regex, "--force-proceed", "--wait", "--test"};
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
@@ -269,7 +270,7 @@ public class MCTest extends TestBase {
         Thread.sleep(3000);
 
         // run MC
-        String[] argsParam = {"zookeeper", tableName, "--locality=100", "--force-proceed"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--locality=100", "--force-proceed"};
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         try {
@@ -286,9 +287,9 @@ public class MCTest extends TestBase {
         // move a region to the first RS
         ArrayList<ServerName> serverNameList = getServerNameList();
         assertTrue(serverNameList.size() >= 2);
-        ArrayList<HRegionInfo> regionInfoList = getRegionInfoList(tableName);
+        ArrayList<RegionInfo> regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
-        HRegionInfo regionInfo = regionInfoList.get(0);
+        RegionInfo regionInfo = regionInfoList.get(0);
         ServerName serverName = serverNameList.get(0);
         move(regionInfo, serverName);
 
@@ -301,7 +302,7 @@ public class MCTest extends TestBase {
         assertEquals(2, getRegionLoad(regionInfo, serverName).getStorefiles());
 
         // run MC
-        String[] argsParam = {"zookeeper", tableName, "--force-proceed", "--wait", "--test"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--force-proceed", "--wait", "--test"};
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
         command.run();
@@ -314,9 +315,9 @@ public class MCTest extends TestBase {
     private void assertRegionName(MC command) throws IOException {
         if (command.isTableLevel()) return;
 
-        Set<byte[]> targets = command.getTargets();
+        Set<byte[]> targets = command.getTargetRegions();
         for (byte[] region : targets) {
-            HRegionInfo.parseRegionName(region);
+            RegionInfo.parseRegionName(region);
         }
     }
 }

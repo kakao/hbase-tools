@@ -18,34 +18,36 @@ package com.kakao.hbase.specific;
 
 import com.kakao.hbase.common.Args;
 import joptsimple.OptionSet;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.client.SnapshotType;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 /**
- * For HBase 0.98/1.0
+ * For HBase 2.1
  */
 public class SnapshotAdapter {
-    public static HBaseProtos.SnapshotDescription.Type getType(String tableName, Map<String, Boolean> tableFlushMap) {
+    public static SnapshotType getType(TableName tableName, Map<TableName, Boolean> tableFlushMap) {
         if (tableFlushMap.get(tableName)) {
-            return HBaseProtos.SnapshotDescription.Type.SKIPFLUSH;
+            return SnapshotType.SKIPFLUSH;
         } else {
-            return HBaseProtos.SnapshotDescription.Type.FLUSH;
+            return SnapshotType.FLUSH;
         }
     }
 
-    public static HBaseProtos.SnapshotDescription.Type getType(OptionSet optionSet) {
+    public static SnapshotType getType(OptionSet optionSet) {
         if (optionSet.has(Args.OPTION_SKIP_FLUSH)) {
-            return HBaseProtos.SnapshotDescription.Type.SKIPFLUSH;
+            return SnapshotType.SKIPFLUSH;
         } else {
-            return HBaseProtos.SnapshotDescription.Type.FLUSH;
+            return SnapshotType.FLUSH;
         }
     }
 
-    public static List<HBaseProtos.SnapshotDescription> getSnapshotDescriptions(HBaseAdmin admin, String targetSnapshotName) throws IOException {
+    public static List<SnapshotDescription> getSnapshotDescriptions(Admin admin, String targetSnapshotName) throws IOException {
         return admin.listSnapshots(targetSnapshotName);
     }
 }

@@ -19,7 +19,7 @@ package com.kakao.hbase.common.util;
 import com.google.common.annotations.VisibleForTesting;
 
 public class DecimalStringSplit implements org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm {
-    static final int MAX_NUM_REGIONS = 10000;
+    private static final int MAX_NUM_REGIONS = 10000;
     private final int cardinality;
 
     public DecimalStringSplit(int cardinality) {
@@ -58,6 +58,11 @@ public class DecimalStringSplit implements org.apache.hadoop.hbase.util.RegionSp
         }
 
         return splits;
+    }
+
+    @Override
+    public byte[][] split(byte[] start, byte[] end, int numSplits, boolean inclusive) {
+        throw new IllegalStateException("Not implemented yet");
     }
 
     @Override

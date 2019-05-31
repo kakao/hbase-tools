@@ -70,7 +70,6 @@ public class MergeEmptyTest2 extends MergeTestBase {
         // check
         Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
-        // fixme
         assertEquals(2, regionInfoList.size());
         assertArrayEquals("".getBytes(), regionInfoList.get(0).getStartKey());
         assertArrayEquals("b".getBytes(), regionInfoList.get(1).getStartKey());

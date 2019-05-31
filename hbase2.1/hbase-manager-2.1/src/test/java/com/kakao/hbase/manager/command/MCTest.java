@@ -299,7 +299,7 @@ public class MCTest extends TestBase {
         putData(table, "b".getBytes());
         admin.flush(tableName);
         Thread.sleep(3000);
-        assertEquals(2, getRegionLoad(regionInfo, serverName).getStorefiles());
+        assertEquals(2, getRegionLoad(regionInfo, serverName).getStoreFileCount());
 
         // run MC
         String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--force-proceed", "--wait", "--test"};
@@ -309,7 +309,7 @@ public class MCTest extends TestBase {
         assertRegionName(command);
 
         // should be 1 store file
-        assertEquals(1, getRegionLoad(regionInfo, serverName).getStorefiles());
+        assertEquals(1, getRegionLoad(regionInfo, serverName).getStoreFileCount());
     }
 
     private void assertRegionName(MC command) throws IOException {

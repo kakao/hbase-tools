@@ -40,9 +40,11 @@ public class Merge implements Command {
     private final Args args;
     private final String actionParam;
     private final Set<TableName> tableNameSet;
+    private final Set<RegionInfo> mergedRegionsOuter = new HashSet<>();
     private boolean proceed = false;
     private boolean test = false;
     private boolean isPhoenixSaltingTable;
+    private int failedCnt = 0;
 
     Merge(Admin admin, Args args) throws IOException {
         if (args.getOptionSet().nonOptionArguments().size() < 2
@@ -90,36 +92,40 @@ public class Merge implements Command {
     public void run() throws Exception {
         long timestampPrev;
         // todo refactoring
-        if (actionParam.toLowerCase().equals("empty-fast")) {
-            for (TableName tableName : tableNameSet) {
-                timestampPrev = System.currentTimeMillis();
-                TableInfo tableInfo = new TableInfo(admin, tableName.getNameAsString(), args);
-                timestampPrev = Util.printVerboseMessage(args, "Merge.run.new TableInfo", timestampPrev);
-                emptyFast(tableInfo);
-                Util.printVerboseMessage(args, "Merge.run.emptyFast", timestampPrev);
-            }
-        } else if (actionParam.toLowerCase().equals("empty")) {
-            for (TableName tableName : tableNameSet) {
-                TableInfo tableInfo = new TableInfo(admin, tableName.getNameAsString(), args);
+        switch (actionParam.toLowerCase()) {
+            case "empty-fast":
+                for (TableName tableName : tableNameSet) {
+                    timestampPrev = System.currentTimeMillis();
+                    TableInfo tableInfo = new TableInfo(admin, tableName.getNameAsString(), args);
+                    timestampPrev = Util.printVerboseMessage(args, "Merge.run.new TableInfo", timestampPrev);
+                    emptyFast(tableInfo);
+                    Util.printVerboseMessage(args, "Merge.run.emptyFast", timestampPrev);
+                }
+                break;
+            case "empty":
+                for (TableName tableName : tableNameSet) {
+                    TableInfo tableInfo = new TableInfo(admin, tableName.getNameAsString(), args);
 
-                Util.printMessage("Table - " + tableName + " - empty-fast - Start");
-                emptyFast(tableInfo);
-                Util.printMessage("Table - " + tableName + " - empty-fast - End\n");
+                    Util.printMessage("Table - " + tableName + " - empty-fast - Start");
+                    emptyFast(tableInfo);
+                    Util.printMessage("Table - " + tableName + " - empty-fast - End\n");
 
-                Util.printMessage("Table - " + tableName + " - empty - Start");
-                empty(tableInfo);
-                Util.printMessage("Table - " + tableName + " - empty - End");
-            }
-        } else if (actionParam.toLowerCase().equals("size")) {
-            throw new IllegalStateException("Not implemented yet"); //todo
-        } else {
-            throw new IllegalArgumentException("Invalid merge action - " + actionParam);
+                    Util.printMessage("Table - " + tableName + " - empty - Start");
+                    empty(tableInfo);
+                    Util.printMessage("Table - " + tableName + " - empty - End");
+                }
+                break;
+            case "size":
+                throw new IllegalStateException("Not implemented yet"); //todo
+
+            default:
+                throw new IllegalArgumentException("Invalid merge action - " + actionParam);
         }
     }
 
     private long getMergeWaitIntervalMs() {
         if (test)
-            return Constant.WAIT_INTERVAL_MS;
+            return Math.min(Constant.WAIT_INTERVAL_MS * (long) Math.pow(2, failedCnt), Constant.LARGE_WAIT_INTERVAL_MS);
         else
             return Constant.LARGE_WAIT_INTERVAL_MS;
     }
@@ -174,6 +180,12 @@ public class Merge implements Command {
                             printMergeInfo(region, targetRegion);
                             mergedRegions.add(region);
                             mergedRegions.add(targetRegion);
+                            if (mergedRegionsOuter.contains(region) || mergedRegionsOuter.contains(targetRegion)) {
+                                failedCnt++;
+                            } else {
+                                mergedRegionsOuter.add(region);
+                                mergedRegionsOuter.add(targetRegion);
+                            }
                             CommandAdapter.mergeRegions(args, admin, region, targetRegion);
                             i++;
                         }
@@ -189,7 +201,7 @@ public class Merge implements Command {
     }
 
     private RegionInfo getTargetRegion(TableInfo tableInfo, List<RegionInfo> allTableRegions,
-                                        int i, Set<RegionInfo> mergedRegions) {
+                                       int i, Set<RegionInfo> mergedRegions) {
         RegionInfo regionPrev = i > 0 ? allTableRegions.get(i - 1) : null;
         if (mergedRegions.contains(regionPrev)) regionPrev = null;
         RegionInfo regionNext = i == allTableRegions.size() - 1 ? null : allTableRegions.get(i + 1);
@@ -325,11 +337,12 @@ public class Merge implements Command {
         throw new IllegalStateException("findEmptyRegions failed");
     }
 
+    @SuppressWarnings("SortedCollectionWithNonComparableKeys")
     private List<RegionInfo> findEmptyRegionsInternal(TableInfo tableInfo) throws Exception {
         long timestamp = System.currentTimeMillis();
 
         Set<RegionInfo> emptyRegions =
-                Collections.synchronizedSet(Collections.newSetFromMap(new TreeMap<RegionInfo, Boolean>()));
+                Collections.synchronizedSet(Collections.newSetFromMap(new TreeMap<>()));
 
         tableInfo.refresh();
 

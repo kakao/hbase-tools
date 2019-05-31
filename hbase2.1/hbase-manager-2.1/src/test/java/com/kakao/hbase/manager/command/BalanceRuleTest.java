@@ -56,7 +56,6 @@ public class BalanceRuleTest extends TestBase {
         Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
         Balance command = new Balance(admin, args);
 
-        // fixme
         command.run();
 
         regionLocations = Util.getRegionLocationsMap(connection, tableName);
@@ -214,7 +213,6 @@ public class BalanceRuleTest extends TestBase {
         regionPlanListRR = rule.makePlan(admin, tableNameSet, null);
         Assert.assertNotEquals(0, regionPlanListRR.size());
         for (RegionPlan regionPlan : regionPlanListRR) {
-            // fixme
             Assert.assertNotEquals(regionPlan.getSource().getServerName(), regionPlan.getDestination().getServerName());
         }
 
@@ -261,6 +259,7 @@ public class BalanceRuleTest extends TestBase {
         Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
         Balance command = new Balance(admin, args);
 
+        // fixme
         command.run();
     }
 }

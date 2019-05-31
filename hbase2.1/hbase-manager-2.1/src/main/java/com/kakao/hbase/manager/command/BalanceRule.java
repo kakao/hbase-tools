@@ -40,7 +40,7 @@ enum BalanceRule {
             int i = 0;
             List<RegionPlan> regionPlanList = new ArrayList<>();
             for (TableName tableName : tableNameSet) {
-                for (RegionInfo hRegionInfo : admin.getTableRegions(tableName)) {
+                for (RegionInfo hRegionInfo : admin.getRegions(tableName)) {
                     ServerName source = regionLocations.get(hRegionInfo);
                     ServerName dest = serverNames.get((i++) % serverNames.size());
                     if (source == null || !source.equals(dest))
@@ -59,7 +59,7 @@ enum BalanceRule {
 
             List<RegionPlan> regionPlanList = new ArrayList<>();
             for (TableName tableName : tableNameSet) {
-                for (RegionInfo hRegionInfo : admin.getTableRegions(tableName)) {
+                for (RegionInfo hRegionInfo : admin.getRegions(tableName)) {
                     if (serverNamesToMove.size() == 0)
                         serverNamesToMove = new ArrayList<>(serverNames);
 

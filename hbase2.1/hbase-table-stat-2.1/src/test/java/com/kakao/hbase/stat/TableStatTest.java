@@ -23,7 +23,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -53,15 +52,11 @@ public class TableStatTest extends StatTestBase {
         Assert.assertEquals(loadEntryLength, command.getLoad().getSummaryPrev().size());
 
         // disable table
-        System.out.println(admin.listTableDescriptors(Pattern.compile(".*")));
         admin.disableTable(tableName);
         waitForDisabled(tableName);
-        System.out.println(admin.isTableDisabled(tableName));
-        System.out.println(admin.listTableDescriptors(Pattern.compile(".*")));
 
         // iteration 3
         command.run();
-        //fixme
         Assert.assertEquals(0, command.getLoad().getLoadMap().size());
         Assert.assertEquals(1, command.getLoad().getLoadMapPrev().size());
         Assert.assertEquals(0, command.getLoad().getSummary().size());
@@ -107,7 +102,6 @@ public class TableStatTest extends StatTestBase {
         TableStat command = new TableStat(admin, new StatArgs(args));
 
         // iteration 1
-        //fixme
         command.run();
         Assert.assertEquals(1, command.getLoad().getLoadMap().size());
         Assert.assertEquals(0, command.getLoad().getLoadMapPrev().size());
@@ -149,7 +143,6 @@ public class TableStatTest extends StatTestBase {
         waitForDisabled(tableName);
 
         // iteration 2
-        //fixme
         command.run();
         Assert.assertEquals(1, command.getLoad().getLoadMap().size());
         Assert.assertEquals(2, command.getLoad().getLoadMapPrev().size());

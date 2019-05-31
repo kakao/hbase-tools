@@ -113,9 +113,9 @@ public class TableInfo {
 
         Set<TableName> tables = Args.tables(args, admin);
         if (tables.isEmpty()) {
-            regionServerMap = CommandAdapter.regionServerMap(args, admin, false);
+            regionServerMap = CommandAdapter.regionServerMap(args, admin);
         } else {
-            regionServerMap = CommandAdapter.regionServerMap(args, admin, tables, false);
+            regionServerMap = CommandAdapter.regionServerMap(args, admin, tables);
         }
         clean(regionServerMap);
 

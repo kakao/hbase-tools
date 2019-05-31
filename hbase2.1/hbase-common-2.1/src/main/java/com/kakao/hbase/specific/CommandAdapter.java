@@ -119,8 +119,22 @@ public class CommandAdapter {
     }
 
     @SuppressWarnings("SortedCollectionWithNonComparableKeys")
-    public static NavigableMap<RegionInfo, ServerName> regionServerMap(Args args, Admin admin, final boolean offlined) throws IOException {
+    public static NavigableMap<RegionInfo, ServerName> regionServerMap(Args args, Admin admin) throws IOException {
         long timestamp = System.currentTimeMillis();
+
+        final Set<TableName> disabledTables = new HashSet<>();
+        Set<TableName> tables = Args.tables(args, admin);
+        if (tables.size() == 0) {
+            for (TableDescriptor td : admin.listTableDescriptors()) {
+                if (admin.isTableDisabled(td.getTableName()))
+                    disabledTables.add(td.getTableName());
+            }
+        } else {
+            for (TableName table : Args.tables(args, admin)) {
+                if (admin.isTableDisabled(table))
+                    disabledTables.add(table);
+            }
+        }
 
         final NavigableMap<RegionInfo, ServerName> regions = new TreeMap<>();
         MetaTableAccessor.Visitor visitor = new MetaTableAccessor.DefaultVisitorBase() {
@@ -131,8 +145,9 @@ public class CommandAdapter {
                 for (HRegionLocation loc : locations.getRegionLocations()) {
                     if (loc != null) {
                         RegionInfo regionInfo = loc.getRegion();
-                        if (regionInfo.getTable().getNameAsString().startsWith("hbase:")) return true;
-                        if (regionInfo.isOffline() && !offlined) return true;
+                        TableName table = regionInfo.getTable();
+                        if (table.getNameAsString().startsWith("hbase:")) return true;
+                        if (disabledTables.contains(table)) return true;
                         regions.put(regionInfo, loc.getServerName());
                     }
                 }
@@ -147,13 +162,19 @@ public class CommandAdapter {
 
     @SuppressWarnings("SortedCollectionWithNonComparableKeys")
     public static NavigableMap<RegionInfo, ServerName> regionServerMap(Args args,
-                                                                       Admin admin, final Set<TableName> tableNames, final boolean offlined) throws IOException {
+                                                                       Admin admin, final Set<TableName> tableNames) throws IOException {
         long timestamp = System.currentTimeMillis();
 
         final NavigableMap<RegionInfo, ServerName> regions = new TreeMap<>();
         if (tableNames.size() == 1) {
-            return regionServerMap(args, admin, tableNames.toArray(new TableName[1])[0], offlined);
+            return regionServerMap(args, admin, tableNames.toArray(new TableName[1])[0]);
         } else if (tableNames.size() > 1) {
+            final Set<TableName> disableTables = new HashSet<>();
+            for (TableName tableName : tableNames) {
+                if (admin.isTableDisabled(tableName))
+                    disableTables.add(tableName);
+            }
+
             MetaTableAccessor.Visitor visitor = new MetaTableAccessor.DefaultVisitorBase() {
                 @Override
                 public boolean visitInternal(Result result) {
@@ -164,7 +185,7 @@ public class CommandAdapter {
                             RegionInfo regionInfo = loc.getRegion();
                             TableName table = regionInfo.getTable();
                             if (table.getNameAsString().startsWith("hbase:")) return true;
-                            if (regionInfo.isOffline() && !offlined) return true;
+                            if (disableTables.contains(table)) return true;
                             if (tableNames.contains(table))
                                 regions.put(regionInfo, loc.getServerName());
                         }
@@ -181,9 +202,10 @@ public class CommandAdapter {
 
     @SuppressWarnings("SortedCollectionWithNonComparableKeys")
     private static NavigableMap<RegionInfo, ServerName> regionServerMap(Args args,
-                                                                        Admin admin, final TableName tableName, final boolean offlined) throws IOException {
+                                                                        Admin admin, final TableName tableName) throws IOException {
         long timestamp = System.currentTimeMillis();
 
+        final boolean tableDisabled = admin.isTableDisabled(tableName);
         final NavigableMap<RegionInfo, ServerName> regions = new TreeMap<>();
         MetaTableAccessor.Visitor visitor = new MetaTableAccessor.TableVisitorBase(tableName) {
             @Override
@@ -193,7 +215,7 @@ public class CommandAdapter {
                 for (HRegionLocation loc : locations.getRegionLocations()) {
                     if (loc != null) {
                         RegionInfo regionInfo = loc.getRegion();
-                        if (regionInfo.isOffline() && !offlined) return true;
+                        if (tableDisabled) return true;
                         regions.put(regionInfo, loc.getServerName());
                     }
                 }

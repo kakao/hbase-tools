@@ -19,11 +19,8 @@ package com.kakao.hbase.manager.command;
 import com.kakao.hbase.ManagerArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -87,7 +84,7 @@ public class MCTest extends TestBase {
         putData(table, "b".getBytes());
         admin.flush(tableName);
         Thread.sleep(3000);
-        assertEquals(2, getRegionLoad(regionInfo, serverName).getStorefiles());
+        assertEquals(2, getRegionMetrics(regionInfo, serverName).getStoreFileCount());
 
         // run MC
         String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--force-proceed", "--wait", "--test"};
@@ -97,7 +94,7 @@ public class MCTest extends TestBase {
         assertRegionName(command);
 
         // should be 1 store file
-        assertEquals(1, getRegionLoad(regionInfo, serverName).getStorefiles());
+        assertEquals(1, getRegionMetrics(regionInfo, serverName).getStoreFileCount());
     }
 
     @Test
@@ -118,8 +115,8 @@ public class MCTest extends TestBase {
     @Test
     public void testMC_CF() throws Exception {
         // add CF
-        HColumnDescriptor cd = new HColumnDescriptor(TEST_TABLE_CF2);
-        admin.addColumn(tableName, cd);
+        ColumnFamilyDescriptor cd = ColumnFamilyDescriptorBuilder.newBuilder(TEST_TABLE_CF2).build();
+        admin.addColumnFamily(tableName, cd);
 
         // move a region to the first RS
         ArrayList<ServerName> serverNameList = getServerNameList();
@@ -136,7 +133,7 @@ public class MCTest extends TestBase {
         putData2(table, "b".getBytes());
         admin.flush(tableName);
         Thread.sleep(3000);
-        assertEquals(2 + 2, getRegionLoad(regionInfo, serverName).getStorefiles());
+        assertEquals(2 + 2, getRegionMetrics(regionInfo, serverName).getStoreFileCount());
 
         // run MC
         String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--cf=d", "--force-proceed", "--wait", "--test"};
@@ -146,7 +143,7 @@ public class MCTest extends TestBase {
         assertRegionName(command);
 
         // should be 2 + 1 store files
-        assertEquals(2 + 1, getRegionLoad(regionInfo, serverName).getStorefiles());
+        assertEquals(2 + 1, getRegionMetrics(regionInfo, serverName).getStoreFileCount());
     }
 
     @Test
@@ -166,7 +163,7 @@ public class MCTest extends TestBase {
         putData(table, "b".getBytes());
         admin.flush(tableName);
         Thread.sleep(3000);
-        assertEquals(2, getRegionLoad(regionInfo, serverName).getStorefiles());
+        assertEquals(2, getRegionMetrics(regionInfo, serverName).getStoreFileCount());
 
         // run MC
         String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--cf=e", "--force-proceed", "--wait", "--test"};
@@ -176,7 +173,7 @@ public class MCTest extends TestBase {
         assertRegionName(command);
 
         // should be 1 store file
-        assertEquals(2, getRegionLoad(regionInfo, serverName).getStorefiles());
+        assertEquals(2, getRegionMetrics(regionInfo, serverName).getStoreFileCount());
     }
 
     @Test
@@ -204,8 +201,8 @@ public class MCTest extends TestBase {
         putData(table, "d".getBytes());
         admin.flush(tableName);
         Thread.sleep(3000);
-        assertEquals(2, getRegionLoad(regionInfo1, serverName1).getStorefiles());
-        assertEquals(2, getRegionLoad(regionInfo2, serverName2).getStorefiles());
+        assertEquals(2, getRegionMetrics(regionInfo1, serverName1).getStoreFileCount());
+        assertEquals(2, getRegionMetrics(regionInfo2, serverName2).getStoreFileCount());
 
         // run MC
         String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--force-proceed", "--wait", "--test"};
@@ -215,8 +212,8 @@ public class MCTest extends TestBase {
         assertRegionName(command);
 
         // should be 1 store file
-        assertEquals(1, getRegionLoad(regionInfo1, serverName1).getStorefiles());
-        assertEquals(1, getRegionLoad(regionInfo2, serverName2).getStorefiles());
+        assertEquals(1, getRegionMetrics(regionInfo1, serverName1).getStoreFileCount());
+        assertEquals(1, getRegionMetrics(regionInfo2, serverName2).getStoreFileCount());
     }
 
     @Test
@@ -244,8 +241,8 @@ public class MCTest extends TestBase {
         putData(table, "d".getBytes());
         admin.flush(tableName);
         Thread.sleep(3000);
-        assertEquals(2, getRegionLoad(regionInfo1, serverName1).getStorefiles());
-        assertEquals(2, getRegionLoad(regionInfo2, serverName2).getStorefiles());
+        assertEquals(2, getRegionMetrics(regionInfo1, serverName1).getStoreFileCount());
+        assertEquals(2, getRegionMetrics(regionInfo2, serverName2).getStoreFileCount());
 
         // run MC
         String regex = serverName1.getHostname() + "," + serverName1.getPort() + ".*";
@@ -256,8 +253,8 @@ public class MCTest extends TestBase {
         assertRegionName(command);
 
         // should be 1 store file
-        assertEquals(1, getRegionLoad(regionInfo1, serverName1).getStorefiles());
-        assertEquals(2, getRegionLoad(regionInfo2, serverName2).getStorefiles());
+        assertEquals(1, getRegionMetrics(regionInfo1, serverName1).getStoreFileCount());
+        assertEquals(2, getRegionMetrics(regionInfo2, serverName2).getStoreFileCount());
     }
 
     @Test
@@ -299,7 +296,7 @@ public class MCTest extends TestBase {
         putData(table, "b".getBytes());
         admin.flush(tableName);
         Thread.sleep(3000);
-        assertEquals(2, getRegionLoad(regionInfo, serverName).getStoreFileCount());
+        assertEquals(2, getRegionMetrics(regionInfo, serverName).getStoreFileCount());
 
         // run MC
         String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--force-proceed", "--wait", "--test"};
@@ -309,9 +306,10 @@ public class MCTest extends TestBase {
         assertRegionName(command);
 
         // should be 1 store file
-        assertEquals(1, getRegionLoad(regionInfo, serverName).getStoreFileCount());
+        assertEquals(1, getRegionMetrics(regionInfo, serverName).getStoreFileCount());
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private void assertRegionName(MC command) throws IOException {
         if (command.isTableLevel()) return;
 

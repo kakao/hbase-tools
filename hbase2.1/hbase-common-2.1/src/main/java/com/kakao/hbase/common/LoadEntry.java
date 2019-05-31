@@ -17,13 +17,14 @@
 package com.kakao.hbase.common;
 
 import com.kakao.hbase.specific.RegionLoadDelegator;
+import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.util.StringUtils;
 
 public enum LoadEntry {
     Reads {
         @Override
         public Number getValue(RegionLoadDelegator regionLoad) {
-            return regionLoad.getReadRequestsCount();
+            return regionLoad.getReadRequestCount();
         }
 
         @Override
@@ -60,7 +61,7 @@ public enum LoadEntry {
     Writes {
         @Override
         public Number getValue(RegionLoadDelegator regionLoad) {
-            return regionLoad.getWriteRequestsCount();
+            return regionLoad.getWriteRequestCount();
         }
 
         @Override
@@ -134,7 +135,7 @@ public enum LoadEntry {
     Files {
         @Override
         public Number getValue(RegionLoadDelegator regionLoad) {
-            return regionLoad.getStorefiles();
+            return regionLoad.getStoreFileCount();
         }
 
         @Override
@@ -171,7 +172,7 @@ public enum LoadEntry {
     FileSize {
         @Override
         public Number getValue(RegionLoadDelegator regionLoad) {
-            return regionLoad.getStorefileSizeMB();
+            return regionLoad.getStoreFileSizeMB();
         }
 
         @Override
@@ -213,7 +214,7 @@ public enum LoadEntry {
     FileSizeUncomp {
         @Override
         public Number getValue(RegionLoadDelegator regionLoad) {
-            return regionLoad.getStoreUncompressedSizeMB();
+            return regionLoad.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE);
         }
 
         @Override
@@ -255,7 +256,7 @@ public enum LoadEntry {
     DataLocality {
         @Override
         public Number getValue(RegionLoadDelegator regionLoad) {
-            return new RatioNumber(regionLoad.getStorefileSizeMB(), regionLoad.getDataLocality());
+            return new RatioNumber(regionLoad.getStoreFileSizeMB(), regionLoad.getDataLocality());
         }
 
         @Override
@@ -339,7 +340,7 @@ public enum LoadEntry {
     CompactedKVs {
         @Override
         public Number getValue(RegionLoadDelegator regionLoad) {
-            return regionLoad.getCurrentCompactedKVs();
+            return regionLoad.getCompactedCellCount();
         }
 
         @Override

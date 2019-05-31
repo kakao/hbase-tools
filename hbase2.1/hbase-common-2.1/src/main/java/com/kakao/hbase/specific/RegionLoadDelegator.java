@@ -17,44 +17,44 @@
 package com.kakao.hbase.specific;
 
 import com.kakao.hbase.common.LoadEntry;
+import org.apache.hadoop.hbase.Size;
 
 /**
  * For HBase 2.1
  */
-@SuppressWarnings("deprecation")
 public class RegionLoadDelegator {
-    private final org.apache.hadoop.hbase.RegionLoad regionLoad;
+    private final org.apache.hadoop.hbase.RegionMetrics regionMetrics;
 
-    RegionLoadDelegator(org.apache.hadoop.hbase.RegionLoad regionLoad) {
-        this.regionLoad = regionLoad;
+    RegionLoadDelegator(org.apache.hadoop.hbase.RegionMetrics regionMetrics) {
+        this.regionMetrics = regionMetrics;
     }
 
-    public int getStorefiles() {
-        return regionLoad.getStorefiles();
+    public int getStoreFileCount() {
+        return regionMetrics.getStoreFileCount();
     }
 
-    public int getStoreUncompressedSizeMB() {
-        return regionLoad.getStoreUncompressedSizeMB();
+    public Size getUncompressedStoreFileSize() {
+        return regionMetrics.getUncompressedStoreFileSize();
     }
 
-    public int getStorefileSizeMB() {
-        return regionLoad.getStorefileSizeMB();
+    public int getStoreFileSizeMB() {
+        return (int) regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
     }
 
-    public long getReadRequestsCount() {
-        return regionLoad.getReadRequestsCount();
+    public long getReadRequestCount() {
+        return regionMetrics.getReadRequestCount();
     }
 
-    public long getWriteRequestsCount() {
-        return regionLoad.getWriteRequestsCount();
+    public long getWriteRequestCount() {
+        return regionMetrics.getWriteRequestCount();
     }
 
     public int getMemStoreSizeMB() {
-        return regionLoad.getMemStoreSizeMB();
+        return (int) regionMetrics.getMemStoreSize().get(Size.Unit.MEGABYTE);
     }
 
-    public long getCurrentCompactedKVs() {
-        return regionLoad.getCurrentCompactedKVs();
+    public long getCompactedCellCount() {
+        return regionMetrics.getCompactedCellCount();
     }
 
     public int getRegions() {
@@ -62,7 +62,7 @@ public class RegionLoadDelegator {
     }
 
     public float getDataLocality() {
-        throw new IllegalStateException("not implemented");
+        return regionMetrics.getDataLocality();
     }
 
     static LoadEntry[] loadEntries() {

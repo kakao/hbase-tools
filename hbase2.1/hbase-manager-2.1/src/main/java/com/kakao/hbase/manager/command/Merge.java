@@ -173,7 +173,7 @@ public class Merge implements Command {
             RegionInfo targetRegion = getTargetRegion(tableInfo, allTableRegions, i, mergedRegions);
             if (mergedRegions.contains(targetRegion)) continue;
 
-            if (regionLoad.getStorefileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
+            if (regionLoad.getStoreFileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
                 if (CommandAdapter.isReallyEmptyRegion(admin.getConnection(), tableInfo.getTableNamePattern(), region)) {
                     try {
                         if (targetRegion != null) {
@@ -218,7 +218,7 @@ public class Merge implements Command {
         if (region != null) {
             RegionLoadDelegator regionLoad = tableInfo.getRegionLoad(region);
             if (regionLoad != null) {
-                return regionLoad.getMemStoreSizeMB() + regionLoad.getStorefileSizeMB();
+                return regionLoad.getMemStoreSizeMB() + regionLoad.getStoreFileSizeMB();
             }
         }
 
@@ -358,7 +358,7 @@ public class Merge implements Command {
                     throw new IllegalStateException(Constant.MESSAGE_NEED_REFRESH);
                 }
 
-                if (regionLoad.getStorefileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
+                if (regionLoad.getStoreFileSizeMB() == 0 && regionLoad.getMemStoreSizeMB() == 0) {
                     executorService.execute(
                             new EmptyRegionChecker(admin.getConnection(), tableInfo.getTableNamePattern(), regionInfo, emptyRegions));
                 }

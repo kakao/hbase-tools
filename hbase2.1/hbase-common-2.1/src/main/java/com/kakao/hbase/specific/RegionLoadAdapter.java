@@ -39,7 +39,6 @@ public class RegionLoadAdapter {
     public static final LoadEntry[] loadEntries = RegionLoadDelegator.loadEntries();
     private final Map<RegionInfo, RegionLoadDelegator> regionLoadMap = new HashMap<>();
 
-    @SuppressWarnings("deprecation")
     public RegionLoadAdapter(Admin admin, Map<byte[], RegionInfo> regionMap, Args args) throws IOException {
         long timestamp = System.currentTimeMillis();
 

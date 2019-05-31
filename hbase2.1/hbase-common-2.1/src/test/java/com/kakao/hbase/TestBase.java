@@ -451,11 +451,10 @@ public class TestBase extends SecureTestUtil {
         waitForSplitting(tableName, size - 1);
     }
 
-    @SuppressWarnings("deprecation")
-    protected RegionLoad getRegionLoad(RegionInfo regionInfo, ServerName serverName) throws IOException {
-        ServerLoad serverLoad = admin.getClusterStatus().getLoad(serverName);
-        Map<byte[], RegionLoad> regionsLoad = serverLoad.getRegionsLoad();
-        for (Map.Entry<byte[], RegionLoad> entry : regionsLoad.entrySet()) {
+    protected RegionMetrics getRegionMetrics(RegionInfo regionInfo, ServerName serverName) throws IOException {
+        ServerMetrics serverMetrics = admin.getClusterMetrics().getLiveServerMetrics().get(serverName);
+        Map<byte[], RegionMetrics> regionMetricsMap = serverMetrics.getRegionMetrics();
+        for (Map.Entry<byte[], RegionMetrics> entry : regionMetricsMap.entrySet()) {
             if (Arrays.equals(entry.getKey(), regionInfo.getRegionName())) {
                 return entry.getValue();
             }

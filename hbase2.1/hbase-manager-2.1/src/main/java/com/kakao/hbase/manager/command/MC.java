@@ -307,7 +307,7 @@ public class MC implements Command {
             if (regionLoad == null) continue;
             try {
                 byte[] regionName = regionInfo.getRegionName();
-                regionSizeMap.put(regionName, regionLoad.getStorefileSizeMB());
+                regionSizeMap.put(regionName, regionLoad.getStoreFileSizeMB());
                 if (dataLocalityThreshold == null) {
                     targetRegions.add(regionName);
                 } else {

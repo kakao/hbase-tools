@@ -79,7 +79,7 @@ public class ExportKeys implements Command {
                 System.out.println(regionInfo.toString());
 
                 if (args.getOptionSet().has(Args.OPTION_OPTIMIZE)) {
-                    storeFileSizeMBSum += tableInfo.getRegionLoad(regionInfo).getStorefileSizeMB();
+                    storeFileSizeMBSum += tableInfo.getRegionLoad(regionInfo).getStoreFileSizeMB();
                     if (storeFileSizeMBSum < exportThreshold) {
                         continue;
                     }

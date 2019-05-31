@@ -244,7 +244,6 @@ public class BalanceRuleTest extends TestBase {
         Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
         Balance command = new Balance(admin, args);
 
-        // fixme
         command.run();
     }
 
@@ -259,7 +258,6 @@ public class BalanceRuleTest extends TestBase {
         Assert.assertEquals("zookeeper", args.getZookeeperQuorum());
         Balance command = new Balance(admin, args);
 
-        // fixme
         command.run();
     }
 }

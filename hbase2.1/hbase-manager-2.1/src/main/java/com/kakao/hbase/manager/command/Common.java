@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Admin;
 
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,7 +43,7 @@ class Common {
         for (i = 0; i < Constant.TRY_MAX; i++) {
             try {
                 admin.move(encodedRegionName.getBytes(), targetServerName.getBytes());
-            } catch (java.lang.reflect.UndeclaredThrowableException ignore) {
+            } catch (UndeclaredThrowableException | TableNotEnabledException ignore) {
             } catch (DoNotRetryIOException e) {
                 if (!e.getMessage().contains("is not OPEN"))
                     throw e;

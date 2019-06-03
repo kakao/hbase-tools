@@ -453,13 +453,7 @@ public class TestBase extends SecureTestUtil {
 
     protected RegionMetrics getRegionMetrics(RegionInfo regionInfo, ServerName serverName) throws IOException {
         ServerMetrics serverMetrics = admin.getClusterMetrics().getLiveServerMetrics().get(serverName);
-        Map<byte[], RegionMetrics> regionMetricsMap = serverMetrics.getRegionMetrics();
-        for (Map.Entry<byte[], RegionMetrics> entry : regionMetricsMap.entrySet()) {
-            if (Arrays.equals(entry.getKey(), regionInfo.getRegionName())) {
-                return entry.getValue();
-            }
-        }
-        return null;
+        return serverMetrics.getRegionMetrics().get(regionInfo.getRegionName());
     }
 
     protected Table getTable(TableName tableName) throws IOException {

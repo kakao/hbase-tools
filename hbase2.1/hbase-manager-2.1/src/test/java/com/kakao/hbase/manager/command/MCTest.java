@@ -29,9 +29,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-// fixme
 public class MCTest extends TestBase {
     private Table table = null;
 
@@ -71,7 +71,6 @@ public class MCTest extends TestBase {
     public void testMC() throws Exception {
         // move a region to the first RS
         ArrayList<ServerName> serverNameList = getServerNameList();
-        assertTrue(serverNameList.size() >= 2);
         ArrayList<RegionInfo> regionInfoList = getRegionInfoList(tableName);
         assertEquals(1, regionInfoList.size());
         RegionInfo regionInfo = regionInfoList.get(0);
@@ -259,24 +258,104 @@ public class MCTest extends TestBase {
 
     @Test
     public void testMC_Locality() throws Exception {
-        // make 2 store files
+        // fixme Data locality is not correct in HBaseTestingUtility
+        if (miniCluster) return;
+
+        // move regions for each RS to have one region
+        splitTable("c".getBytes());
+        ArrayList<ServerName> serverNameList = getServerNameList();
+        assertTrue(serverNameList.size() >= 2);
+        ArrayList<RegionInfo> regionInfoList = getRegionInfoList(tableName);
+        assertEquals(2, regionInfoList.size());
+        RegionInfo regionInfo1 = regionInfoList.get(0);
+        RegionInfo regionInfo2 = regionInfoList.get(1);
+        ServerName serverName1 = serverNameList.get(0);
+        ServerName serverName2 = serverNameList.get(1);
+        move(regionInfo1, serverName1);
+        move(regionInfo2, serverName1);
+
+        // make 2 + 2 store files
         putData(table, "a".getBytes());
         admin.flush(tableName);
         putData(table, "b".getBytes());
         admin.flush(tableName);
+        putData(table, "c".getBytes());
+        admin.flush(tableName);
+        putData(table, "d".getBytes());
+        admin.flush(tableName);
         Thread.sleep(3000);
+        assertEquals(2, getRegionMetrics(regionInfo1, serverName1).getStoreFileCount());
+        assertEquals(1.0, getRegionMetrics(regionInfo2, serverName1).getDataLocality(), 0.0);
+        assertEquals(2, getRegionMetrics(regionInfo1, serverName1).getStoreFileCount());
+        assertEquals(1.0, getRegionMetrics(regionInfo2, serverName1).getDataLocality(), 0.0);
+
+        // Data locality of regionInfo1 is 100%, data locality of regionInfo2 is 0%
+        move(regionInfo2, serverName2);
+        assertEquals(2, getRegionMetrics(regionInfo1, serverName1).getStoreFileCount());
+        assertEquals(2, getRegionMetrics(regionInfo2, serverName2).getStoreFileCount());
 
         // run MC
-        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--locality=100", "--force-proceed"};
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--locality=100", "--force-proceed", "--wait", "--test"};
         Args args = new ManagerArgs(argsParam);
         MC command = new MC(admin, args);
-        try {
-            command.run();
-            fail();
-        } catch (IllegalStateException e) {
-            if (!e.getMessage().contains("Option locality is not supported in this HBase version"))
-                throw e;
-        }
+        command.run();
+
+        // should not be major-compacted
+        assertEquals(2, getRegionMetrics(regionInfo1, serverName1).getStoreFileCount());
+        assertEquals(1, getRegionMetrics(regionInfo2, serverName2).getStoreFileCount());
+    }
+
+    @Test
+    public void testMC_LocalityMultipleRSs() throws Exception {
+        // fixme Data locality is not correct in HBaseTestingUtility
+        if (miniCluster) return;
+
+        // move regions for each RS to have one region
+        splitTable("c".getBytes());
+        ArrayList<ServerName> serverNameList = getServerNameList();
+        assertTrue(serverNameList.size() >= 2);
+        ArrayList<RegionInfo> regionInfoList = getRegionInfoList(tableName);
+        assertEquals(2, regionInfoList.size());
+        RegionInfo regionInfo1 = regionInfoList.get(0);
+        RegionInfo regionInfo2 = regionInfoList.get(1);
+        ServerName serverName1 = serverNameList.get(0);
+        ServerName serverName2 = serverNameList.get(1);
+        move(regionInfo1, serverName1);
+        move(regionInfo2, serverName2);
+
+        // make 2 + 2 store files
+        putData(table, "a".getBytes());
+        admin.flush(tableName);
+        putData(table, "b".getBytes());
+        admin.flush(tableName);
+        putData(table, "c".getBytes());
+        admin.flush(tableName);
+        putData(table, "d".getBytes());
+        admin.flush(tableName);
+        Thread.sleep(3000);
+        assertEquals(2, getRegionMetrics(regionInfo1, serverName1).getStoreFileCount());
+        assertEquals(0.0, getRegionMetrics(regionInfo2, serverName1).getDataLocality(), 0.0);
+        assertEquals(2, getRegionMetrics(regionInfo2, serverName2).getStoreFileCount());
+        assertEquals(0.0, getRegionMetrics(regionInfo2, serverName1).getDataLocality(), 0.0);
+
+        // Data locality of regionInfo1 is 0%, data locality of regionInfo2 is 0%
+        move(regionInfo1, serverName2);
+        move(regionInfo2, serverName1);
+        assertEquals(2, getRegionMetrics(regionInfo1, serverName2).getStoreFileCount());
+        assertEquals(2, getRegionMetrics(regionInfo2, serverName1).getStoreFileCount());
+
+        // run MC
+        String regex;
+        if (miniCluster) regex = serverName1.getHostname() + "," + serverName1.getPort() + ".*";
+        else regex = serverName1.getHostname() + ".*";
+        String[] argsParam = {"zookeeper", tableName.getNameAsString(), "--locality=100", "--rs=" + regex,
+                "--force-proceed", "--wait", "--test"};
+        Args args = new ManagerArgs(argsParam);
+        MC command = new MC(admin, args);
+        command.run();
+
+        assertEquals(1, getRegionMetrics(regionInfo2, serverName1).getStoreFileCount());
+        assertEquals(2, getRegionMetrics(regionInfo1, serverName2).getStoreFileCount());
     }
 
     @Test

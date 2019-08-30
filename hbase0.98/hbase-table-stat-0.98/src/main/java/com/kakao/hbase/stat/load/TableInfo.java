@@ -114,8 +114,13 @@ public class TableInfo {
             regionServerMap = CommandAdapter.regionServerMap(args, admin.getConfiguration()
                 , admin.getConnection(), false);
         } else {
-            regionServerMap = CommandAdapter.regionServerMap(args, admin.getConfiguration()
-                , admin.getConnection(), tables, false);
+            if (isMultiTable()) {
+                regionServerMap = CommandAdapter.regionServerMap(args, admin.getConfiguration(),
+                        admin.getConnection(), tables, false);
+            } else {
+                regionServerMap = CommandAdapter.regionServerMap(args, admin.getConfiguration(),
+                        admin.getConnection(), new TreeSet<>(Collections.singletonList(tableName)), false);
+            }
         }
         clean(regionServerMap);
 

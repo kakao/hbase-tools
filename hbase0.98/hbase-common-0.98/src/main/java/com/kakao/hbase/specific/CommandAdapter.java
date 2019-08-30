@@ -212,6 +212,8 @@ public class CommandAdapter {
         HRegionInfo regionA, HRegionInfo regionB) throws IOException {
         long timestamp = System.currentTimeMillis();
 
+        assert regionA.getTable().equals(regionB.getTable());
+
         if (HRegionInfo.areAdjacent(regionA, regionB)) {
             admin.mergeRegions(regionA.getEncodedNameAsBytes(), regionB.getEncodedNameAsBytes(), false);
             Util.printVerboseMessage(args, "CommandAdapter.mergeRegions", timestamp);

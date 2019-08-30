@@ -17,6 +17,7 @@
 package com.kakao.hbase.manager.command;
 
 import com.kakao.hbase.ManagerArgs;
+import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
 import com.kakao.hbase.common.Constant;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -91,6 +92,34 @@ public class MergeEmptyTest2 extends MergeTestBase {
         // check
         Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
         regionInfoList = getRegionInfoList(tableName);
+        assertEquals(1, regionInfoList.size());
+    }
+
+    @Test
+    public void testMergeMultipleTables() throws Exception {
+        makeTestData7();
+
+        String tableName2 = TestBase.tableName + "2";
+        String tableName3 = TestBase.tableName + "3";
+
+        List<HRegionInfo> regionInfoList;
+
+        // merge
+        String[] argsParam = {"zookeeper", ".*", "empty", "--force-proceed"
+                , "--test", "--verbose", "--debug", "--max-iteration", "2"};
+        Args args = new ManagerArgs(argsParam);
+        Merge command = new Merge(admin, args);
+        command.run();
+
+        // check
+        Thread.sleep(Constant.SMALL_WAIT_INTERVAL_MS);
+        regionInfoList = getRegionInfoList(tableName);
+        assertEquals(1, regionInfoList.size());
+
+        regionInfoList = getRegionInfoList(tableName2);
+        assertEquals(1, regionInfoList.size());
+
+        regionInfoList = getRegionInfoList(tableName3);
         assertEquals(1, regionInfoList.size());
     }
 }

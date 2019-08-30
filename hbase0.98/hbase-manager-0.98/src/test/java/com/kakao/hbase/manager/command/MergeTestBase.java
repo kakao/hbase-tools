@@ -122,4 +122,28 @@ public class MergeTestBase extends TestBase {
         regionInfoList = getRegionInfoList(tableName);
         assertEquals(11, regionInfoList.size());
     }
+
+    protected void makeTestData7() throws Exception {
+        List<HRegionInfo> regionInfoList;
+
+        // create tables
+        String tableName2 = createAdditionalTable(TestBase.tableName + "2");
+        String tableName3 = createAdditionalTable(TestBase.tableName + "3");
+
+        // split tables
+        splitTable(tableName, "a".getBytes());
+        splitTable(tableName, "b".getBytes());
+        regionInfoList = getRegionInfoList(tableName);
+        assertEquals(3, regionInfoList.size());
+
+        splitTable(tableName2, "a".getBytes());
+        splitTable(tableName2, "b".getBytes());
+        regionInfoList = getRegionInfoList(tableName2);
+        assertEquals(3, regionInfoList.size());
+
+        splitTable(tableName3, "a".getBytes());
+        splitTable(tableName3, "b".getBytes());
+        regionInfoList = getRegionInfoList(tableName3);
+        assertEquals(3, regionInfoList.size());
+    }
 }

@@ -92,26 +92,29 @@ public class Merge implements Command {
     @Override
     public void run() throws Exception {
         long timestampPrev;
+        int i = 1;
         // todo refactoring
         if (actionParam.toLowerCase().equals("empty-fast")) {
             for (String tableName : tableNameSet) {
                 timestampPrev = System.currentTimeMillis();
                 TableInfo tableInfo = new TableInfo(admin, tableName, args);
+                Util.printMessage(i + "/" + tableNameSet.size() + " - Table - " + tableName + " - empty-fast - Start");
                 timestampPrev = Util.printVerboseMessage(args, "Merge.run.new TableInfo", timestampPrev);
                 emptyFast(tableInfo);
                 Util.printVerboseMessage(args, "Merge.run.emptyFast", timestampPrev);
+                Util.printMessage(i++ + "/" + tableNameSet.size() + " - Table - " + tableName + " - empty-fast - End\n");
             }
         } else if (actionParam.toLowerCase().equals("empty")) {
             for (String tableName : tableNameSet) {
                 TableInfo tableInfo = new TableInfo(admin, tableName, args);
 
-                Util.printMessage("Table - " + tableName + " - empty-fast - Start");
+                Util.printMessage(i + "/" + tableNameSet.size() + " - Table - " + tableName + " - empty-fast - Start");
                 emptyFast(tableInfo);
-                Util.printMessage("Table - " + tableName + " - empty-fast - End\n");
+                Util.printMessage(i + "/" + tableNameSet.size() + " - Table - " + tableName + " - empty-fast - End\n");
 
-                Util.printMessage("Table - " + tableName + " - empty - Start");
+                Util.printMessage(i + "/" + tableNameSet.size() + " - Table - " + tableName + " - empty - Start");
                 empty(tableInfo);
-                Util.printMessage("Table - " + tableName + " - empty - End");
+                Util.printMessage(i++ + "/" + tableNameSet.size() + " - Table - " + tableName + " - empty - End");
             }
         } else if (actionParam.toLowerCase().equals("size")) {
             throw new IllegalStateException("Not implemented yet"); //todo
@@ -311,7 +314,7 @@ public class Merge implements Command {
     private void printMergeInfo(HRegionInfo regionA, HRegionInfo regionB) {
         Util.printMessage("Merge regions");
         System.out.println("  - " + Util.getRegionInfoString(regionA));
-        System.out.println("  L " + Util.getRegionInfoString(regionB));
+        System.out.println("  └ " + Util.getRegionInfoString(regionB));
     }
 
     private List<HRegionInfo> findEmptyRegions(TableInfo tableInfo) throws Exception {

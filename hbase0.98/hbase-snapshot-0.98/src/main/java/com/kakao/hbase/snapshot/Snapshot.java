@@ -131,6 +131,7 @@ public class Snapshot implements Watcher {
                 try {
                     snapshot(zooKeeper, tableName, snapshotName);
                 } catch (Throwable e) {
+                    System.out.println(timestamp(TimestampFormat.log) + " - " + errorMessage(e));
                     failedSnapshotMap.put(snapshotName, tableName);
                 }
 
@@ -182,7 +183,7 @@ public class Snapshot implements Watcher {
             for (Map.Entry<String, String> entry : failedSnapshotMap.entrySet()) {
                 String snapshotName = entry.getKey();
                 String tableName = entry.getValue();
-                if (exists(admin, tableName) || skipCheckTableExistence) {
+                if (admin.tableExists(tableName) || skipCheckTableExistence) {
                     snapshot(zooKeeper, tableName, snapshotName);
                 } else {
                     Util.printMessage("Table does not exist - " + tableName + " - SKIPPED");

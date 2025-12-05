@@ -400,7 +400,7 @@ public enum LoadEntry {
         if (one == null) {
             if (two == null) return null;
             else {
-                if (two == 0) {
+                if (two.doubleValue() == 0) {
                     return RatioNumber.ZERO.doubleValue();
                 } else {
                     return -two.doubleValue();
@@ -409,7 +409,7 @@ public enum LoadEntry {
         } else {
             if (two == null) return one.doubleValue();
             else {
-                if (two == 0) {
+                if (two.doubleValue() == 0) {
                     return one.doubleValue();
                 } else {
                     return one.doubleValue() - two.doubleValue();
@@ -432,7 +432,7 @@ public enum LoadEntry {
         if (one == null) {
             if (two == null) return null;
             else {
-                if (two == 0) {
+                if (two.doubleValue() == 0) {
                     return RatioNumber.ZERO;
                 } else {
                     return two;
@@ -441,9 +441,9 @@ public enum LoadEntry {
         } else {
             if (two == null) return one;
             else {
-                if (one == 0) {
+                if (one.doubleValue() == 0) {
                     return two;
-                } else if (two == 0) {
+                } else if (two.doubleValue() == 0) {
                     return one;
                 } else {
                     return ((RatioNumber) one).add((RatioNumber) two);

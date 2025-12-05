@@ -145,7 +145,8 @@ public class Load {
     }
 
     public boolean isSummaryChanged(LoadEntry loadEntry) {
-        return summaryChangeMap.get(loadEntry) == ChangeState.changed.ordinal();
+      Number number = summaryChangeMap.get(loadEntry);
+      return number != null && number.intValue() == ChangeState.changed.ordinal();
     }
 
     public boolean isDiffFromStart() {

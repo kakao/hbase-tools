@@ -35,7 +35,7 @@ public class UtilTest {
         }
 
         try {
-            Util.parseTimestamp("20200101000000");
+            Util.parseTimestamp("20400101000000");
             Assert.fail();
         } catch (IllegalArgumentException e) {
             if (!e.getMessage().contains(Constant.MESSAGE_INVALID_DATE_FORMAT)) {

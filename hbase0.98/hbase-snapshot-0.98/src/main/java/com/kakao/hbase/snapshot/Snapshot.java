@@ -218,7 +218,7 @@ public class Snapshot implements Watcher {
         return "Snapshot Failed - " + e.getMessage();
     }
 
-    String getPrefix(String tableName) {
+    static String getPrefix(String tableName) {
         return tableName.replace(":", "_") + TIMESTAMP_PREFIX;
     }
 
@@ -299,7 +299,7 @@ public class Snapshot implements Watcher {
             return;
         }
 
-        List<SnapshotDescription> sd = SnapshotAdapter.getSnapshotDescriptions(admin, getPrefix(tableName) + ".*");
+        List<SnapshotDescription> sd = SnapshotAdapter.getSnapshotDescriptions(admin, getPrefix(tableName) + "\\d{14}$");
         int snapshotCounter = sd.size();
         tableSnapshotCountMaxMap.put(tableName, snapshotCounter);
         for (SnapshotDescription d : sd) {

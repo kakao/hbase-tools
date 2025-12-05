@@ -19,11 +19,9 @@ package com.kakao.hbase.snapshot;
 import com.kakao.hbase.SnapshotArgs;
 import com.kakao.hbase.TestBase;
 import com.kakao.hbase.common.Args;
-import com.kakao.hbase.common.util.AlertSender;
 import com.kakao.hbase.common.util.AlertSenderTest;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -86,7 +84,7 @@ public class SnapshotTest extends TestBase {
         args = new SnapshotArgs(argsParam);
         app = new Snapshot(admin, args);
 
-        String snapshotName = app.getPrefix(tableName) + "test";
+        String snapshotName = Snapshot.getPrefix(tableName) + "test";
         // create snapshot first
         app.snapshot(null, tableName, snapshotName);
         snapshotDescriptions = listSnapshots(tableName + ".*");
@@ -144,7 +142,7 @@ public class SnapshotTest extends TestBase {
 
             // create snapshot
             app.run();
-            snapshotDescriptions = admin.listSnapshots(app.getPrefix(fullTableName) + ".*");
+            snapshotDescriptions = admin.listSnapshots(Snapshot.getPrefix(fullTableName) + ".*");
             assertEquals(1, snapshotDescriptions.size());
         } finally {
             dropTable(fullTableName);

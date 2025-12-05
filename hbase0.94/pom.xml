@@ -55,8 +55,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java.version>1.7</java.version>
-        <version.unified>1.5.8</version.unified>
+        <java.version>1.8</java.version>
+        <version.unified>1.6.0</version.unified>
         <cluster.secured>false</cluster.secured>
         <cluster.type>mini</cluster.type>
         <hadoop.version>2.0.0-cdh4.4.1</hadoop.version>

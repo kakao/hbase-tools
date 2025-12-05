@@ -293,4 +293,29 @@ public class SnapshotOptionTest extends TestBase {
         assertEquals(shouldNotBeDeleted, snapshotDescriptions.get(0).getName());
         assertEquals(tableName, snapshotDescriptions.get(1).getTable());
     }
+
+  @Test
+  public void testGetPrefix() throws Exception {
+    List<HBaseProtos.SnapshotDescription> snapshotDescriptions;
+
+    // create tables with same prefix
+    createAdditionalTable(Snapshot.getPrefix(tableName) + "1");
+    createAdditionalTable(Snapshot.getPrefix(tableName) + "2");
+
+    // all tables, keep unlimited
+    String[] argsParam = {"localhost", ".*", "--test", "--keep=1"};
+    SnapshotArgs args = new SnapshotArgs(argsParam);
+    Snapshot app = new Snapshot(admin, args);
+
+    // create snapshot 1
+    app.run();
+    snapshotDescriptions = listSnapshots(tableName + ".*");
+    assertEquals(3, snapshotDescriptions.size());
+
+    // create snapshot 2
+    Thread.sleep(1000);
+    app.run();
+    snapshotDescriptions = listSnapshots(tableName + ".*");
+    assertEquals(3, snapshotDescriptions.size());
+  }
 }

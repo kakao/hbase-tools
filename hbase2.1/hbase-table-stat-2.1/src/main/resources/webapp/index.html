@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>hbase-table-stat</title>
+    <script type="text/javascript" src="jquery"></script>
+</head>
+<body style="color: white;background: black;font-family: monospace">
+<div class="container">
+    <div id="stat">
+    </div>
+</div>
+</body>
+</html>
+
+<script type="text/javascript">
+    const interval = 1000 * 10 /*interval*/;    // milliseconds
+    var count = 0;
+    var scrollToBottom = true;
+
+    printData(count);
+    startRefresh();
+
+    var paused = false;
+    var intervalId;
+    function startRefresh() {
+        intervalId = setInterval(function () {
+            printData();
+        }, interval);
+    }
+
+    function rollDiv() {
+        count++;
+        $('#stat').append($('<div>', {id: 'stat' + count.toString()})).appendTo('#stat');
+        $('#stat' + (count - 360).toString()).remove();
+    }
+
+    function printData() {
+        rollDiv();
+        $.ajax({
+            url: 'stat',
+            success: function (data) {
+                $('#stat' + count.toString()).html("<pre>" + data + "</pre>");
+                if (scrollToBottom) {
+                    $('html, body').scrollTop($(document).height());
+                }
+            }
+        });
+    }
+
+    $(window).scroll(function () {
+        if ($(window).scrollTop() + $(window).height() == $(document).height()) {
+            if (!scrollToBottom) {
+                scrollToBottom = true;
+            }
+        } else {
+            if (scrollToBottom) {
+                scrollToBottom = false;
+            }
+        }
+    });
+
+    $(document).keypress(function (e) {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        rollDiv();
+        $.post("keyInput", {key: String.fromCharCode(e.keyCode || e.which)}, function (data) {
+                    var key = String.fromCharCode(e.keyCode || e.which);
+                    if (key == "p") {
+                        if (paused) {
+                            startRefresh();
+                        } else {
+                            window.clearInterval(intervalId);
+                        }
+                        paused = !paused;
+                    }
+                    $('#stat' + count.toString()).html("<pre>" + data + "</pre>");
+                    if (scrollToBottom) {
+                        $('html, body').scrollTop($(document).height());
+                    }
+                    if (!paused) printData();
+                }
+        );
+    });
+</script>
